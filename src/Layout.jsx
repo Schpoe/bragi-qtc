@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { LayoutDashboard, Users, FolderKanban, CalendarRange, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, FolderKanban, CalendarRange, BarChart3, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
