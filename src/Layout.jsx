@@ -9,6 +9,7 @@ const navItems = [
   { name: "Teams", page: "Teams", icon: Users },
   { name: "Bereiche", page: "WorkAreas", icon: FolderKanban },
   { name: "Sprintplanung", page: "SprintPlanning", icon: CalendarRange },
+  { name: "Team-Übersicht", page: "TeamSprintOverview", icon: BarChart3 },
 ];
 
 export default function Layout({ children, currentPageName }) {
