@@ -190,12 +190,12 @@ export default function SprintPlanning() {
               </CardHeader>
               <CardContent>
                 <SprintAllocationTable
-                  sprint={sprint}
-                  members={teamMembers}
-                  workAreas={teamWorkAreas}
-                  allocations={allocations}
-                  onAllocationChange={handleAllocationChange}
-                />
+                   sprint={sprint}
+                   members={teamMembers}
+                   workAreas={workAreas}
+                   allocations={allocations}
+                   onAllocationChange={handleAllocationChange}
+                 />
               </CardContent>
             </Card>
           ))}
