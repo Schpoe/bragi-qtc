@@ -74,6 +74,7 @@ Deno.serve(async (req) => {
     const workAreaTypes = new Set();
     const teams = new Set();
     const workAreas = [];
+    let sampleCustomFields = [];
 
     for (const issue of issues) {
       const fields = issue.fields || {};
