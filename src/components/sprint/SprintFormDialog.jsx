@@ -51,6 +51,7 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
         relevant_work_area_ids: [],
       });
     }
+    setSearchQuery("");
   }, [sprint, open, defaultTeamId, defaultQuarter])
 
   const handleSave = () => {
