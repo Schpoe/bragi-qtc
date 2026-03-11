@@ -14,10 +14,10 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
   };
 
   const getMemberTotal = (memberId) => {
-    return workAreas.reduce((sum, wa) => sum + getAllocation(memberId, wa.id), 0);
+    return relevantWorkAreas.reduce((sum, wa) => sum + getAllocation(memberId, wa.id), 0);
   };
 
-  if (members.length === 0 || workAreas.length === 0) {
+  if (members.length === 0 || relevantWorkAreas.length === 0) {
     return (
       <div className="text-center py-8 text-sm text-muted-foreground">
         {members.length === 0 ? "No team members found." : "No work areas defined."}
