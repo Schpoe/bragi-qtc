@@ -111,32 +111,55 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
           </div>
           <div className="space-y-2">
             <Label>Relevant Work Areas</Label>
-            <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
+            <div className="border rounded-md p-3 space-y-3 max-h-56 overflow-y-auto">
               {(() => {
-                const filteredWAs = form.team_id 
-                  ? workAreas.filter(wa => wa.leading_team_id === form.team_id || wa.supporting_team_ids?.includes(form.team_id))
-                  : workAreas;
-                return filteredWAs.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No work areas available for this team</p>
-                ) : (
-                  filteredWAs.map(wa => (
-                    <label key={wa.id} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={(form.relevant_work_area_ids || []).includes(wa.id)}
-                        onChange={(e) => {
-                          const ids = form.relevant_work_area_ids || [];
-                          if (e.target.checked) {
-                            setForm({ ...form, relevant_work_area_ids: [...ids, wa.id] });
-                          } else {
-                            setForm({ ...form, relevant_work_area_ids: ids.filter(id => id !== wa.id) });
-                          }
-                        }}
-                        className="w-4 h-4 rounded"
-                      />
-                      <span className="text-sm">{wa.name}</span>
-                    </label>
-                  ))
+                const leadingWAs = form.team_id ? workAreas.filter(wa => wa.leading_team_id === form.team_id) : [];
+                const supportingWAs = form.team_id ? workAreas.filter(wa => wa.supporting_team_ids?.includes(form.team_id) && wa.leading_team_id !== form.team_id) : [];
+                const otherWAs = form.team_id ? workAreas.filter(wa => !wa.leading_team_ids?.includes(form.team_id) && !wa.supporting_team_ids?.includes(form.team_id)) : workAreas;
+
+                const renderWAItem = (wa) => (
+                  <label key={wa.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
+                    <input
+                      type="checkbox"
+                      checked={(form.relevant_work_area_ids || []).includes(wa.id)}
+                      onChange={(e) => {
+                        const ids = form.relevant_work_area_ids || [];
+                        if (e.target.checked) {
+                          setForm({ ...form, relevant_work_area_ids: [...ids, wa.id] });
+                        } else {
+                          setForm({ ...form, relevant_work_area_ids: ids.filter(id => id !== wa.id) });
+                        }
+                      }}
+                      className="w-4 h-4 rounded"
+                    />
+                    <span className="text-sm">{wa.name}</span>
+                  </label>
+                );
+
+                return (
+                  <>
+                    {leadingWAs.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-1">Leading Team</p>
+                        <div className="space-y-1 ml-2">{leadingWAs.map(renderWAItem)}</div>
+                      </div>
+                    )}
+                    {supportingWAs.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-1">Supporting Team</p>
+                        <div className="space-y-1 ml-2">{supportingWAs.map(renderWAItem)}</div>
+                      </div>
+                    )}
+                    {otherWAs.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground mb-1">Other</p>
+                        <div className="space-y-1 ml-2">{otherWAs.map(renderWAItem)}</div>
+                      </div>
+                    )}
+                    {leadingWAs.length === 0 && supportingWAs.length === 0 && otherWAs.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No work areas available</p>
+                    )}
+                  </>
                 );
               })()}
             </div>
