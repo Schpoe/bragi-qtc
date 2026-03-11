@@ -158,6 +158,10 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
                     </label>
                   );
 
+                  const filteredLeading = filterBySearch(leadingWAs);
+                  const filteredSupporting = filterBySearch(supportingWAs);
+                  const filteredOther = filterBySearch(otherWAs);
+
                   if (leadingWAs.length === 0 && supportingWAs.length === 0 && otherWAs.length === 0) {
                     return <p className="text-xs text-muted-foreground border rounded-md p-3">No work areas available</p>;
                   }
@@ -165,29 +169,29 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
                   return (
                     <Tabs defaultValue="leading" className="w-full">
                       <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="leading" disabled={leadingWAs.length === 0}>Leading ({leadingWAs.length})</TabsTrigger>
-                        <TabsTrigger value="supporting" disabled={supportingWAs.length === 0}>Supporting ({supportingWAs.length})</TabsTrigger>
-                        <TabsTrigger value="other" disabled={otherWAs.length === 0}>Other ({otherWAs.length})</TabsTrigger>
+                        <TabsTrigger value="leading" disabled={leadingWAs.length === 0}>Leading ({filteredLeading.length})</TabsTrigger>
+                        <TabsTrigger value="supporting" disabled={supportingWAs.length === 0}>Supporting ({filteredSupporting.length})</TabsTrigger>
+                        <TabsTrigger value="other" disabled={otherWAs.length === 0}>Other ({filteredOther.length})</TabsTrigger>
                       </TabsList>
                       <TabsContent value="leading" className="border rounded-md p-3 max-h-56 overflow-y-auto">
-                        {leadingWAs.length === 0 ? (
+                        {filteredLeading.length === 0 ? (
                           <p className="text-xs text-muted-foreground">No work areas</p>
                         ) : (
-                          <div className="space-y-1">{leadingWAs.map(renderWAItem)}</div>
+                          <div className="space-y-1">{filteredLeading.map(renderWAItem)}</div>
                         )}
                       </TabsContent>
                       <TabsContent value="supporting" className="border rounded-md p-3 max-h-56 overflow-y-auto">
-                        {supportingWAs.length === 0 ? (
+                        {filteredSupporting.length === 0 ? (
                           <p className="text-xs text-muted-foreground">No work areas</p>
                         ) : (
-                          <div className="space-y-1">{supportingWAs.map(renderWAItem)}</div>
+                          <div className="space-y-1">{filteredSupporting.map(renderWAItem)}</div>
                         )}
                       </TabsContent>
                       <TabsContent value="other" className="border rounded-md p-3 max-h-56 overflow-y-auto">
-                        {otherWAs.length === 0 ? (
+                        {filteredOther.length === 0 ? (
                           <p className="text-xs text-muted-foreground">No work areas</p>
                         ) : (
-                          <div className="space-y-1">{otherWAs.map(renderWAItem)}</div>
+                          <div className="space-y-1">{filteredOther.map(renderWAItem)}</div>
                         )}
                       </TabsContent>
                     </Tabs>
