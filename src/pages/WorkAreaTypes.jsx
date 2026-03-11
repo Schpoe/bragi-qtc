@@ -75,7 +75,7 @@ export default function WorkAreaTypes() {
 
   return (
     <div>
-      <PageHeader title="Work Area Types" subtitle="Manage categories for work areas">
+      <PageHeader title="Work Item Types" subtitle="Manage categories for work items">
         <Button onClick={handleNew}>
           <Plus className="w-4 h-4 mr-2" /> New Type
         </Button>
