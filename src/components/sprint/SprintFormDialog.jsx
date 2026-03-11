@@ -142,11 +142,12 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
               })()}
             </div>
           </div>
+          </div>
           <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave} disabled={!form.name.trim() || (!form.is_cross_team && !form.team_id)}>Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </DialogFooter>
+          </DialogContent>
+          </Dialog>
   );
 }
