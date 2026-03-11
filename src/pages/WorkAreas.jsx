@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import WorkAreaFormDialog from "../components/workareas/WorkAreaFormDialog";
+import JiraImportDialog from "../components/workareas/JiraImportDialog";
 
 export default function WorkAreas() {
   const [dialogOpen, setDialogOpen] = useState(false);
