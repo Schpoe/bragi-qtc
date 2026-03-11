@@ -52,12 +52,13 @@ export default function JiraImport() {
         json_schema: {
           type: "object",
           properties: {
-            items: {
+            data: {
               type: "array",
               items: {
                 type: "object",
                 properties: {
                   name: { type: "string" },
+                  title: { type: "string" },
                   type: { type: "string" },
                   description: { type: "string" },
                 },
@@ -73,7 +74,12 @@ export default function JiraImport() {
         return;
       }
 
-      const items = extractResult.output?.items || extractResult.output || [];
+      let items = extractResult.output?.data || extractResult.output || [];
+      
+      // Handle if the output is directly an array (common for CSV)
+      if (!Array.isArray(items) && typeof items === 'object') {
+        items = Object.values(items).find(val => Array.isArray(val)) || [];
+      }
       if (!Array.isArray(items)) {
         setResult({ success: false, message: "Invalid file format" });
         setUploading(false);
@@ -86,18 +92,20 @@ export default function JiraImport() {
       let failed = 0;
 
       for (const item of items) {
-        if (!item.name) continue;
+        const itemName = item.name || item.title || item.Name || item.Title;
+        if (!itemName) continue;
 
         try {
           await createWorkArea.mutateAsync({
-            name: item.name,
-            type: item.type || mapping.defaultType,
+            name: itemName,
+            type: item.type || item.Type || mapping.defaultType,
             leading_team_id: mapping.leadingTeamId,
             supporting_team_ids: [],
             color: colors[imported % colors.length],
           });
           imported++;
         } catch (error) {
+          console.error("Failed to import item:", error);
           failed++;
         }
       }
