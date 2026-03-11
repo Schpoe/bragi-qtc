@@ -107,11 +107,13 @@ export default function SprintPlanning() {
   };
 
   // Filter sprints: must belong to selected team OR be cross-team, AND match quarter
-  const quarterSprints = sprints
-    .filter(s => s.quarter === selectedQuarter && (s.is_cross_team || s.team_id === effectiveTeamId))
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+   const quarterSprints = sprints
+     .filter(s => s.quarter === selectedQuarter && (s.is_cross_team || s.team_id === effectiveTeamId))
+     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  const teamMembers = members.filter(m => m.team_id === effectiveTeamId);
+   const teamMembers = members.filter(m => m.team_id === effectiveTeamId);
+
+   const filteredWorkAreas = workAreas.filter(wa => wa.is_cross_team || wa.leading_team_id === effectiveTeamId || wa.supporting_team_ids.includes(effectiveTeamId));
 
   const quarters = [...new Set(sprints.map(s => s.quarter))];
   if (!quarters.includes(selectedQuarter)) quarters.push(selectedQuarter);
