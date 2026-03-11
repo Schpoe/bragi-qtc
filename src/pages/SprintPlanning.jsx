@@ -168,12 +168,8 @@ export default function SprintPlanning() {
       ) : (
         <div className="space-y-6">
           {quarterSprints.map(sprint => {
-            const sprintWorkAreaIds = new Set(
-              allocations
-                .filter(a => a.sprint_id === sprint.id && teamMembers.some(m => m.id === a.team_member_id))
-                .map(a => a.work_area_id)
-            );
-            const sprintWorkAreas = filteredWorkAreas.filter(wa => sprintWorkAreaIds.has(wa.id));
+            const sprintRelevantWorkAreaIds = new Set(sprint.relevant_work_area_ids || []);
+            const sprintWorkAreas = filteredWorkAreas.filter(wa => sprintRelevantWorkAreaIds.has(wa.id));
 
             return (
             <Card key={sprint.id} className="border-border/60">
