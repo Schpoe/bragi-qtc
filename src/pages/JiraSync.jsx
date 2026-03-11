@@ -141,7 +141,7 @@ export default function JiraSync() {
         try {
           // Use first team as leading team, or first existing team as fallback
           const leadingTeamId = teamMap[workArea.leadingTeam] || Object.values(teamMap)[0] || existingTeams[0]?.id;
-          
+
           if (!leadingTeamId) {
             stats.errors.push(`Work Area ${workArea.name}: No team available`);
             continue;
@@ -151,15 +151,42 @@ export default function JiraSync() {
             .map(t => teamMap[t])
             .filter(Boolean);
 
-          await createWorkArea.mutateAsync({
+          const newData = {
             name: workArea.name,
             prod_id: workArea.key,
             type: workArea.type || '',
             leading_team_id: leadingTeamId,
-            supporting_team_ids: supportingTeamIds,
-            color: colors[stats.workAreasCreated % colors.length]
-          });
-          stats.workAreasCreated++;
+            supporting_team_ids: supportingTeamIds
+          };
+
+          // Check if work area already exists by prod_id
+          const existingWA = existingWorkAreas.find(wa => wa.prod_id === workArea.key);
+
+          if (existingWA) {
+            // Check if anything changed
+            const hasChanged = 
+              existingWA.name !== newData.name ||
+              existingWA.type !== newData.type ||
+              existingWA.leading_team_id !== newData.leading_team_id ||
+              JSON.stringify(existingWA.supporting_team_ids || []) !== JSON.stringify(supportingTeamIds);
+
+            if (hasChanged) {
+              await updateWorkArea.mutateAsync({
+                id: existingWA.id,
+                workAreaData: newData
+              });
+              stats.workAreasUpdated++;
+            } else {
+              stats.workAreasSkipped++;
+            }
+          } else {
+            // Create new work area
+            await createWorkArea.mutateAsync({
+              ...newData,
+              color: colors[stats.workAreasCreated % colors.length]
+            });
+            stats.workAreasCreated++;
+          }
         } catch (err) {
           stats.errors.push(`Work Area ${workArea.name}: ${err.message}`);
         }
