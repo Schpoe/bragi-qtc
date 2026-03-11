@@ -122,7 +122,7 @@ export default function WorkAreaTypes() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit" : "New"} Work Area Type</DialogTitle>
+            <DialogTitle>{editing ? "Edit" : "New"} Work Item Type</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
