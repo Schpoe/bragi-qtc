@@ -50,6 +50,7 @@ export default function WorkAreas() {
     } else {
       createWA.mutate(data);
     }
+    setDialogOpen(false);
     setEditing(null);
   };
 
