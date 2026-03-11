@@ -269,7 +269,25 @@ export default function JiraSync() {
             <Alert>
               <CheckCircle2 className="w-4 h-4" />
               <AlertDescription>
-                Found {syncResult.totalIssues} issues, {syncResult.workAreaTypes.length} types, and {syncResult.teams.length} teams
+                <div className="space-y-2">
+                  <p>Found {syncResult.totalIssues} issues, {syncResult.workAreaTypes.length} types, and {syncResult.teams.length} teams</p>
+                  <div className="mt-3 pt-3 border-t border-border/50 space-y-1 text-xs">
+                    <p className="font-semibold">Work Area Summary:</p>
+                    <ul className="space-y-1 ml-2">
+                      <li>Will be added: {syncResult.workAreas?.filter(wa => !existingWorkAreas.find(ewa => ewa.prod_id === wa.key)).length || 0}</li>
+                      <li>Will be updated: {syncResult.workAreas?.filter(wa => {
+                        const existing = existingWorkAreas.find(ewa => ewa.prod_id === wa.key);
+                        if (!existing) return false;
+                        return existing.name !== wa.name || existing.type !== wa.type || existing.leading_team_id !== wa.leadingTeam || JSON.stringify(existing.supporting_team_ids || []) !== JSON.stringify(wa.supportingTeams);
+                      }).length || 0}</li>
+                      <li>Will be skipped (no changes): {syncResult.workAreas?.filter(wa => {
+                        const existing = existingWorkAreas.find(ewa => ewa.prod_id === wa.key);
+                        if (!existing) return false;
+                        return existing.name === wa.name && existing.type === wa.type && existing.leading_team_id === wa.leadingTeam && JSON.stringify(existing.supporting_team_ids || []) === JSON.stringify(wa.supportingTeams);
+                      }).length || 0}</li>
+                    </ul>
+                  </div>
+                </div>
               </AlertDescription>
             </Alert>
           )}
