@@ -30,22 +30,33 @@ Deno.serve(async (req) => {
       'Content-Type': 'application/json'
     };
 
-    // Fetch issues from Jira
-    const searchUrl = `${jiraBaseUrl}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=summary,issuetype,customfield_*`;
-    
-    const response = await fetch(searchUrl, { headers });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      return Response.json({ 
-        error: 'Failed to fetch from Jira', 
-        details: errorText,
-        status: response.status 
-      }, { status: response.status });
-    }
+    // Fetch all issues from Jira with pagination
+    let allIssues = [];
+    let startAt = 0;
+    const maxResults = 100; // Jira's maximum per request
+    let total = 0;
 
-    const data = await response.json();
-    const issues = data.issues || [];
+    do {
+      const searchUrl = `${jiraBaseUrl}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${maxResults}&fields=summary,issuetype,customfield_*`;
+      
+      const response = await fetch(searchUrl, { headers });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        return Response.json({ 
+          error: 'Failed to fetch from Jira', 
+          details: errorText,
+          status: response.status 
+        }, { status: response.status });
+      }
+
+      const data = await response.json();
+      allIssues = allIssues.concat(data.issues || []);
+      total = data.total || 0;
+      startAt += maxResults;
+    } while (startAt < total);
+
+    const issues = allIssues;
 
     // Process issues and extract unique types and teams
     const workAreaTypes = new Set();
