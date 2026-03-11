@@ -150,18 +150,12 @@ export default function JiraImport() {
           .map(name => teamNameMap[name.toLowerCase()])
           .filter(id => id); // Remove undefined/null values
 
-        const workAreaType = item.Type || item.type;
-        
-        if (!workAreaType || !workAreaType.trim()) {
-          console.log("Skipping item without Type field:", itemName);
-          failed++;
-          continue;
-        }
+        const workAreaType = (item.Type || item.type || '').trim();
 
         try {
           await createWorkArea.mutateAsync({
             name: itemName.trim(),
-            type: workAreaType.trim(),
+            type: workAreaType,
             leading_team_id: leadingTeamId,
             supporting_team_ids: supportingTeamIds,
             color: colors[imported % colors.length],
