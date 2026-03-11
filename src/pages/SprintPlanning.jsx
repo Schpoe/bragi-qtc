@@ -22,6 +22,9 @@ export default function SprintPlanning() {
   const [editingSprint, setEditingSprint] = useState(null);
   const [selectedQuarter, setSelectedQuarter] = useState(`Q${currentQ} ${currentYear}`);
   const [selectedTeamId, setSelectedTeamId] = useState("");
+  const [teamSelectDialogOpen, setTeamSelectDialogOpen] = useState(false);
+  const [teamSelectValue, setTeamSelectValue] = useState("");
+  const [sprintToCopy, setSprintToCopy] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: sprints = [], isLoading: sprintsLoading } = useQuery({
