@@ -152,17 +152,11 @@ export default function JiraImport() {
               
               <div className="space-y-2">
                 <Label>Default Type</Label>
-                <Select value={mapping.defaultType} onValueChange={(v) => setMapping({ ...mapping, defaultType: v })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Product">Product</SelectItem>
-                    <SelectItem value="Feature">Feature</SelectItem>
-                    <SelectItem value="Project">Project</SelectItem>
-                    <SelectItem value="Support/Maintenance">Support/Maintenance</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input 
+                  value={mapping.defaultType} 
+                  onChange={(e) => setMapping({ ...mapping, defaultType: e.target.value })}
+                  placeholder="e.g. Product, Feature, Project"
+                />
               </div>
 
               <div className="flex items-center gap-3">
