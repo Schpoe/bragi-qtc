@@ -38,9 +38,33 @@ export default function UtilizationByWorkItemType({ workAreas, allocations, memb
     );
   }
 
+  const sortedTypes = [...types].sort((a, b) => {
+    const utilA = getUtilization(a);
+    const utilB = getUtilization(b);
+    if (sortBy === "name") return a.localeCompare(b);
+    if (sortBy === "utilization-asc") return utilA - utilB;
+    if (sortBy === "utilization-desc") return utilB - utilA;
+    return 0;
+  });
+
   return (
-    <div className="space-y-4">
-      {types.map(type => {
+    <Card>
+      <CardHeader className="pb-3 flex flex-row items-center justify-between">
+        <CardTitle className="text-base font-semibold">Utilization by Work Item Type</CardTitle>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">Sort by Name</SelectItem>
+            <SelectItem value="utilization-asc">Low to High</SelectItem>
+            <SelectItem value="utilization-desc">High to Low</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {sortedTypes.map(type => {
         const util = getUtilization(type);
         const count = workAreas.filter(wa => wa.type === type).length;
         const color = typeColors[type] || "hsl(var(--chart-1))";
