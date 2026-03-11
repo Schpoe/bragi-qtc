@@ -139,7 +139,6 @@ export default function WorkAreas() {
         workArea={editing}
         teams={teams}
         onSave={handleSave}
-        existingTypes={[...new Set(workAreas.map(wa => wa.type))]}
       />
     </div>
   );

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,14 +13,17 @@ const areaColors = [
   "#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#6366f1"
 ];
 
-export default function WorkAreaFormDialog({ open, onOpenChange, workArea, teams, onSave, existingTypes = [] }) {
+export default function WorkAreaFormDialog({ open, onOpenChange, workArea, teams, onSave }) {
   const [form, setForm] = useState({
-    name: "", type: "Product", leading_team_id: "", supporting_team_ids: [], color: areaColors[0]
+    name: "", type: "", leading_team_id: "", supporting_team_ids: [], color: areaColors[0]
   });
-  const [customType, setCustomType] = useState("");
-  const [showCustomType, setShowCustomType] = useState(false);
-  
-  const allTypes = [...new Set([...existingTypes, "Product", "Feature", "Project", "Support/Maintenance"])];
+
+  const { data: workAreaTypes = [] } = useQuery({
+    queryKey: ["workAreaTypes"],
+    queryFn: () => base44.entities.WorkAreaType.list("order"),
+  });
+
+  const allTypes = workAreaTypes.map(t => t.name);
 
   useEffect(() => {
     if (workArea) {
@@ -30,17 +35,9 @@ export default function WorkAreaFormDialog({ open, onOpenChange, workArea, teams
         color: workArea.color || areaColors[0],
       });
     } else {
-      setForm({ name: "", type: "Product", leading_team_id: "", supporting_team_ids: [], color: areaColors[Math.floor(Math.random() * areaColors.length)] });
+      setForm({ name: "", type: allTypes[0] || "", leading_team_id: "", supporting_team_ids: [], color: areaColors[Math.floor(Math.random() * areaColors.length)] });
     }
-  }, [workArea, open]);
-
-  const handleAddCustomType = () => {
-    if (customType.trim()) {
-      setForm({ ...form, type: customType.trim() });
-      setCustomType("");
-      setShowCustomType(false);
-    }
-  };
+  }, [workArea, open, allTypes]);
 
   const toggleSupportingTeam = (teamId) => {
     const current = form.supporting_team_ids || [];
@@ -70,35 +67,14 @@ export default function WorkAreaFormDialog({ open, onOpenChange, workArea, teams
           </div>
           <div className="space-y-2">
             <Label>Type</Label>
-            {!showCustomType ? (
-              <div className="flex gap-2">
-                <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {allTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => setShowCustomType(true)}
-                  title="Add custom type"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Input 
-                  value={customType} 
-                  onChange={(e) => setCustomType(e.target.value)}
-                  placeholder="Enter custom type"
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddCustomType()}
-                />
-                <Button type="button" onClick={handleAddCustomType} size="sm">Add</Button>
-                <Button type="button" variant="outline" onClick={() => setShowCustomType(false)} size="sm">Cancel</Button>
-              </div>
+            <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+              <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+              <SelectContent>
+                {allTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {allTypes.length === 0 && (
+              <p className="text-xs text-muted-foreground">No types available. Create types in Work Area Types page.</p>
             )}
           </div>
           <div className="space-y-2">
@@ -146,7 +122,7 @@ export default function WorkAreaFormDialog({ open, onOpenChange, workArea, teams
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!form.name.trim() || !form.leading_team_id}>Save</Button>
+          <Button onClick={handleSave} disabled={!form.name.trim() || !form.leading_team_id || !form.type}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
