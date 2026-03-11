@@ -134,9 +134,21 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
 
         {/* Discipline breakdown per team */}
         <div>
-          <h3 className="text-sm font-semibold mb-3">Discipline Breakdown by Team</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold">Discipline Breakdown by Team</h3>
+            <Select value={sortTeamsBy} onValueChange={setSortTeamsBy}>
+              <SelectTrigger className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name</SelectItem>
+                <SelectItem value="utilization-asc">Low to High</SelectItem>
+                <SelectItem value="utilization-desc">High to Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-4">
-            {teamsToDisplay.map(team => {
+            {getSortedTeams().map(team => {
               const teamDisciplines = [...new Set(members.filter(m => m.team_id === team.id).map(m => m.discipline))].sort();
               if (teamDisciplines.length === 0) return null;
               
