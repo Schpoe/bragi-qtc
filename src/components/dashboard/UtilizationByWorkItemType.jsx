@@ -65,38 +65,38 @@ export default function UtilizationByWorkItemType({ workAreas, allocations, memb
       <CardContent>
         <div className="space-y-4">
           {sortedTypes.map(type => {
-        const util = getUtilization(type);
-        const count = workAreas.filter(wa => wa.type === type).length;
-        const color = typeColors[type] || "hsl(var(--chart-1))";
-        return (
-          <div key={type}>
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
-                <span className="text-sm font-medium">{type}</span>
-                <span className="text-xs text-muted-foreground">({count})</span>
+            const util = getUtilization(type);
+            const count = workAreas.filter(wa => wa.type === type).length;
+            const color = typeColors[type] || "hsl(var(--chart-1))";
+            return (
+              <div key={type}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+                    <span className="text-sm font-medium">{type}</span>
+                    <span className="text-xs text-muted-foreground">({count})</span>
+                  </div>
+                  <span className={cn(
+                    "text-sm font-semibold tabular-nums",
+                    util > 100 ? "text-destructive" : util > 80 ? "text-amber-600" : "text-foreground"
+                  )}>
+                    {util}%
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(util, 100)}%`,
+                      backgroundColor: color,
+                    }}
+                  />
+                </div>
               </div>
-              <span className={cn(
-                "text-sm font-semibold tabular-nums",
-                util > 100 ? "text-destructive" : util > 80 ? "text-amber-600" : "text-foreground"
-              )}>
-                {util}%
-              </span>
-            </div>
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(util, 100)}%`,
-                  backgroundColor: color,
-                }}
-              />
-            </div>
-          </div>
-        );
+            );
           })}
         </div>
-        </CardContent>
-        </Card>
-        );
-        }
+      </CardContent>
+      </Card>
+      );
+      }
