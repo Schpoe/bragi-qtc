@@ -52,8 +52,8 @@ import JiraImport from './pages/JiraImport';
 import SprintPlanning from './pages/SprintPlanning';
 import TeamSprintOverview from './pages/TeamSprintOverview';
 import Teams from './pages/Teams';
-import WorkAreas from './pages/WorkAreas';
 import WorkAreaTypes from './pages/WorkAreaTypes';
+import WorkAreas from './pages/WorkAreas';
 import __Layout from './Layout.jsx';
 
 
@@ -63,12 +63,12 @@ export const PAGES = {
     "SprintPlanning": SprintPlanning,
     "TeamSprintOverview": TeamSprintOverview,
     "Teams": Teams,
-    "WorkAreas": WorkAreas,
     "WorkAreaTypes": WorkAreaTypes,
+    "WorkAreas": WorkAreas,
 }
 
 export const pagesConfig = {
-    mainPage: "Teams",
+    mainPage: "Dashboard",
     Pages: PAGES,
     Layout: __Layout,
 };
