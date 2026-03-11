@@ -24,7 +24,7 @@ export default function SprintPlanning() {
   const [sprintDialogOpen, setSprintDialogOpen] = useState(false);
   const [editingSprint, setEditingSprint] = useState(null);
   const [selectedQuarter, setSelectedQuarter] = useState(`Q${currentQ} ${currentYear}`);
-  const [selectedTeamId, setSelectedTeamId] = useState("");
+  const [selectedTeamId, setSelectedTeamId] = useState("all");
   const [teamSelectDialogOpen, setTeamSelectDialogOpen] = useState(false);
   const [teamSelectValue, setTeamSelectValue] = useState("");
   const [sprintToCopy, setSprintToCopy] = useState(null);
