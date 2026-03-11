@@ -86,7 +86,7 @@ export default function WorkAreaTypes() {
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 rounded-lg" />)}
         </div>
       ) : types.length === 0 ? (
-        <EmptyState icon={Tag} title="No work area types yet" description="Create categories to organize your work areas.">
+        <EmptyState icon={Tag} title="No work item types yet" description="Create categories to organize your work items.">
           <Button onClick={handleNew}>
             <Plus className="w-4 h-4 mr-2" /> Create First Type
           </Button>
