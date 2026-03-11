@@ -204,9 +204,26 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
   }
 
   // For specific team selected, show discipline and member breakdown
-  const selectedTeam = teams.find(t => t.id === selectedTeamId);
-  const teamMembers = members.filter(m => m.team_id === selectedTeamId);
-  const disciplines = [...new Set(teamMembers.map(m => m.discipline))].sort();
+   const selectedTeam = teams.find(t => t.id === selectedTeamId);
+   const teamMembers = members.filter(m => m.team_id === selectedTeamId);
+   const disciplines = [...new Set(teamMembers.map(m => m.discipline))].sort();
+
+   const getSortedMembers = () => {
+     const getMemberAvgUtil = (memberId) => {
+       const totalAlloc = allocations
+         .filter(a => a.team_member_id === memberId)
+         .reduce((sum, a) => sum + (a.percent || 0), 0);
+       const maxCapacity = teamMembers.find(m => m.id === memberId)?.availability_percent || 100;
+       return maxCapacity > 0 ? Math.round((totalAlloc / maxCapacity) * 100) : 0;
+     };
+
+     return [...teamMembers].sort((a, b) => {
+       if (sortMembersBy === "name") return a.name.localeCompare(b.name);
+       if (sortMembersBy === "utilization-asc") return getMemberAvgUtil(a.id) - getMemberAvgUtil(b.id);
+       if (sortMembersBy === "utilization-desc") return getMemberAvgUtil(b.id) - getMemberAvgUtil(a.id);
+       return 0;
+     });
+   };
 
   const getMemberCapacity = (sprintId, memberId) => {
     return allocations
