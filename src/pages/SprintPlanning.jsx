@@ -177,6 +177,7 @@ export default function SprintPlanning() {
     const teamSpecificSprints = sprints.filter(s => s.quarter === selectedQuarter && s.team_id === teamSelectValue);
     const team = teams.find(t => t.id === teamSelectValue);
     const teamName = team ? team.name : "";
+    setCopiedToTeamName(teamName);
     const newSprint = {
       name: teamName ? `${teamName} - ${sprintToCopy.name}` : sprintToCopy.name,
       quarter: sprintToCopy.quarter,
