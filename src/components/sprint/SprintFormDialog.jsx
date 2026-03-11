@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 const currentYear = new Date().getFullYear();
 const quarters = [];
@@ -14,7 +15,7 @@ for (let y = currentYear; y <= currentYear + 1; y++) {
 }
 
 export default function SprintFormDialog({ open, onOpenChange, sprint, existingSprints, teams, defaultTeamId, defaultQuarter, onSave }) {
-  const [form, setForm] = useState({ name: "", quarter: quarters[0], team_id: "", start_date: "", end_date: "", order: 1 });
+  const [form, setForm] = useState({ name: "", quarter: quarters[0], team_id: "", is_cross_team: false, start_date: "", end_date: "", order: 1 });
 
   useEffect(() => {
     if (sprint) {
@@ -22,6 +23,7 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
         name: sprint.name,
         quarter: sprint.quarter,
         team_id: sprint.team_id || "",
+        is_cross_team: sprint.is_cross_team || false,
         start_date: sprint.start_date || "",
         end_date: sprint.end_date || "",
         order: sprint.order || 1,
@@ -32,6 +34,7 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
         name: `Sprint ${nextOrder}`,
         quarter: defaultQuarter || quarters[0],
         team_id: defaultTeamId || (teams && teams.length > 0 ? teams[0].id : ""),
+        is_cross_team: false,
         start_date: "",
         end_date: "",
         order: nextOrder,
@@ -40,8 +43,11 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
   }, [sprint, open, existingSprints, defaultTeamId, defaultQuarter]);
 
   const handleSave = () => {
-    if (!form.name.trim() || !form.team_id) return;
-    onSave(form);
+    if (!form.name.trim()) return;
+    if (!form.is_cross_team && !form.team_id) return;
+    const data = { ...form };
+    if (data.is_cross_team) data.team_id = "";
+    onSave(data);
     onOpenChange(false);
   };
 
@@ -52,15 +58,21 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
           <DialogTitle>{sprint ? "Edit Sprint" : "New Sprint"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <Label>Team</Label>
-            <Select value={form.team_id} onValueChange={(v) => setForm({ ...form, team_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Select team" /></SelectTrigger>
-              <SelectContent>
-                {(teams || []).map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center justify-between">
+            <Label>Cross-team Sprint</Label>
+            <Switch checked={form.is_cross_team} onCheckedChange={(v) => setForm({ ...form, is_cross_team: v })} />
           </div>
+          {!form.is_cross_team && (
+            <div className="space-y-2">
+              <Label>Team</Label>
+              <Select value={form.team_id} onValueChange={(v) => setForm({ ...form, team_id: v })}>
+                <SelectTrigger><SelectValue placeholder="Select team" /></SelectTrigger>
+                <SelectContent>
+                  {(teams || []).map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Name</Label>
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Sprint 1" />
@@ -91,7 +103,7 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!form.name.trim() || !form.team_id}>Save</Button>
+          <Button onClick={handleSave} disabled={!form.name.trim() || (!form.is_cross_team && !form.team_id)}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

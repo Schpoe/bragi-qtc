@@ -4,23 +4,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-const disciplines = ["iOS", "Android", "Cloud", "QA", "Embedded"];
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 
 export default function MemberFormDialog({ open, onOpenChange, member, teamId, onSave }) {
-  const [form, setForm] = useState({ name: "", discipline: "iOS", availability_percent: 100 });
+  const [form, setForm] = useState({ name: "", discipline: "", availability_percent: 100 });
+  const [newDiscipline, setNewDiscipline] = useState("");
+  const [showNewDiscipline, setShowNewDiscipline] = useState(false);
+
+  const { data: members = [] } = useQuery({
+    queryKey: ["teamMembers"],
+    queryFn: () => base44.entities.TeamMember.list(),
+  });
+
+  const existingDisciplines = [...new Set(members.map(m => m.discipline).filter(Boolean))].sort();
 
   useEffect(() => {
     if (member) {
       setForm({ name: member.name, discipline: member.discipline, availability_percent: member.availability_percent || 100 });
     } else {
-      setForm({ name: "", discipline: "iOS", availability_percent: 100 });
+      setForm({ name: "", discipline: existingDisciplines[0] || "", availability_percent: 100 });
     }
+    setNewDiscipline("");
+    setShowNewDiscipline(false);
   }, [member, open]);
 
   const handleSave = () => {
     if (!form.name.trim()) return;
-    onSave({ ...form, team_id: teamId });
+    const disciplineToSave = showNewDiscipline ? newDiscipline.trim() : form.discipline;
+    if (!disciplineToSave) return;
+    onSave({ ...form, discipline: disciplineToSave, team_id: teamId });
     onOpenChange(false);
   };
 
@@ -36,13 +50,33 @@ export default function MemberFormDialog({ open, onOpenChange, member, teamId, o
             <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="First and last name" />
           </div>
           <div className="space-y-2">
-            <Label>Discipline</Label>
-            <Select value={form.discipline} onValueChange={(v) => setForm({ ...form, discipline: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {disciplines.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center justify-between">
+              <Label>Discipline</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setShowNewDiscipline(!showNewDiscipline)}
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                {showNewDiscipline ? "Select Existing" : "Add New"}
+              </Button>
+            </div>
+            {showNewDiscipline ? (
+              <Input
+                value={newDiscipline}
+                onChange={(e) => setNewDiscipline(e.target.value)}
+                placeholder="Enter new discipline"
+                autoFocus
+              />
+            ) : (
+              <Select value={form.discipline} onValueChange={(v) => setForm({ ...form, discipline: v })}>
+                <SelectTrigger><SelectValue placeholder="Select discipline" /></SelectTrigger>
+                <SelectContent>
+                  {existingDisciplines.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Availability (%)</Label>
@@ -51,7 +85,12 @@ export default function MemberFormDialog({ open, onOpenChange, member, teamId, o
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!form.name.trim()}>Save</Button>
+          <Button 
+            onClick={handleSave} 
+            disabled={!form.name.trim() || (!showNewDiscipline && !form.discipline) || (showNewDiscipline && !newDiscipline.trim())}
+          >
+            Save
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
