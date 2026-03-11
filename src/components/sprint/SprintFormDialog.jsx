@@ -27,6 +27,8 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
   });
 
   useEffect(() => {
+    if (!open) return;
+    
     if (sprint) {
       setForm({
         name: sprint.name,
