@@ -86,15 +86,14 @@ export default function WorkAreas() {
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: wa.color || "#3b82f6" }} />
                     <div>
                       <p className="font-medium text-sm">{wa.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <Badge variant="outline" className="text-xs">{wa.type}</Badge>
-                        {wa.is_cross_team ? (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Globe className="w-3 h-3" /> Cross-team
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Users className="w-3 h-3" /> {teamMap[wa.team_id] || "—"}
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Users className="w-3 h-3" /> {teamMap[wa.leading_team_id] || "—"}
+                        </span>
+                        {wa.supporting_team_ids && wa.supporting_team_ids.length > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{wa.supporting_team_ids.length} supporting
                           </span>
                         )}
                       </div>

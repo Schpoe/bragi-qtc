@@ -14,8 +14,7 @@ export default function JiraImport() {
   const [uploading, setUploading] = useState(false);
   const [mapping, setMapping] = useState({
     defaultType: "Product",
-    defaultTeamId: "",
-    isCrossTeam: true,
+    leadingTeamId: "",
   });
   const [result, setResult] = useState(null);
   const queryClient = useQueryClient();
@@ -93,8 +92,8 @@ export default function JiraImport() {
           await createWorkArea.mutateAsync({
             name: item.name,
             type: item.type || mapping.defaultType,
-            team_id: mapping.isCrossTeam ? "" : mapping.defaultTeamId,
-            is_cross_team: mapping.isCrossTeam,
+            leading_team_id: mapping.leadingTeamId,
+            supporting_team_ids: [],
             color: colors[imported % colors.length],
           });
           imported++;
@@ -159,30 +158,17 @@ export default function JiraImport() {
                 />
               </div>
 
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="crossTeam"
-                  checked={mapping.isCrossTeam}
-                  onChange={(e) => setMapping({ ...mapping, isCrossTeam: e.target.checked })}
-                  className="w-4 h-4 rounded"
-                />
-                <Label htmlFor="crossTeam" className="cursor-pointer">Import as cross-team work areas</Label>
+              <div className="space-y-2">
+                <Label>Leading Team *</Label>
+                <Select value={mapping.leadingTeamId} onValueChange={(v) => setMapping({ ...mapping, leadingTeamId: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select leading team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
-
-              {!mapping.isCrossTeam && (
-                <div className="space-y-2">
-                  <Label>Assign to Team</Label>
-                  <Select value={mapping.defaultTeamId} onValueChange={(v) => setMapping({ ...mapping, defaultTeamId: v })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
 
             {result && (
@@ -215,7 +201,7 @@ export default function JiraImport() {
 
             <Button 
               onClick={handleImport} 
-              disabled={!file || uploading || (!mapping.isCrossTeam && !mapping.defaultTeamId)}
+              disabled={!file || uploading || !mapping.leadingTeamId}
               className="w-full"
             >
               <Upload className="w-4 h-4 mr-2" />
