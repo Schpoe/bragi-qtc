@@ -41,7 +41,7 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
       setForm({
         name: `Sprint ${nextOrder}`,
         quarter: defaultQuarter || quarters[0],
-        team_id: defaultTeamId || (teams && teams.length > 0 ? teams[0].id : ""),
+        team_id: defaultTeamId || "",
         is_cross_team: false,
         start_date: "",
         end_date: "",
@@ -49,7 +49,7 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
         relevant_work_area_ids: [],
       });
     }
-  }, [sprint, open, existingSprints, defaultTeamId, defaultQuarter]);
+  }, [sprint, open, defaultTeamId, defaultQuarter])
 
   const handleSave = () => {
     if (!form.name.trim()) return;
