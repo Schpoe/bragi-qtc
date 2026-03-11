@@ -82,8 +82,25 @@ export default function SprintPlanning() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allocations"] }),
   });
 
-  const handleSaveSprint = (data) => {
+  const handleSaveSprint = async (data) => {
     if (editingSprint) {
+      // When updating a sprint, clean up allocations for removed work areas
+      const oldWorkAreaIds = new Set(editingSprint.relevant_work_area_ids || []);
+      const newWorkAreaIds = new Set(data.relevant_work_area_ids || []);
+      
+      // Find work areas that were removed
+      for (const waId of oldWorkAreaIds) {
+        if (!newWorkAreaIds.has(waId)) {
+          // Delete allocations for this work area in this sprint
+          const allocationsToDelete = allocations.filter(
+            a => a.sprint_id === editingSprint.id && a.work_area_id === waId
+          );
+          for (const alloc of allocationsToDelete) {
+            await base44.entities.Allocation.delete(alloc.id);
+          }
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["allocations"] });
       updateSprint.mutate({ id: editingSprint.id, data });
     } else {
       createSprint.mutate(data);
