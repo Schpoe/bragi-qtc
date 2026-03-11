@@ -148,14 +148,14 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (issueType) {
-        workAreaTypes.add(issueType);
+      if (workAreaType) {
+        workAreaTypes.add(workAreaType);
       }
 
       workAreas.push({
         key: issue.key,
         name: summary,
-        type: issueType,
+        type: workAreaType,
         leadingTeam: leadingTeam,
         supportingTeams: supportingTeams,
         rawFields: fields
