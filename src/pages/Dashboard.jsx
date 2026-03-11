@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import PageHeader from "../components/shared/PageHeader";
+import FilterBar from "../components/shared/FilterBar";
 import StatsRow from "../components/dashboard/StatsRow";
 import CapacityOverviewTable from "../components/dashboard/CapacityOverviewTable";
 import DisciplineBreakdown from "../components/dashboard/DisciplineBreakdown";
