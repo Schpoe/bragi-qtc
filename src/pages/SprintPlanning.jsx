@@ -106,9 +106,9 @@ export default function SprintPlanning() {
     }
   };
 
-  // Filter sprints: must belong to selected team AND quarter
+  // Filter sprints: must belong to selected team OR be cross-team, AND match quarter
   const quarterSprints = sprints
-    .filter(s => s.quarter === selectedQuarter && s.team_id === effectiveTeamId)
+    .filter(s => s.quarter === selectedQuarter && (s.is_cross_team || s.team_id === effectiveTeamId))
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
   const teamMembers = members.filter(m => m.team_id === effectiveTeamId);
@@ -170,7 +170,10 @@ export default function SprintPlanning() {
             <Card key={sprint.id} className="border-border/60">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold">{sprint.name}</CardTitle>
+                  <CardTitle className="text-base font-semibold">
+                    {sprint.name}
+                    {sprint.is_cross_team && <span className="ml-2 text-xs font-normal text-muted-foreground">(Cross-team)</span>}
+                  </CardTitle>
                   <div className="flex items-center gap-1">
                     {sprint.start_date && sprint.end_date && (
                       <span className="text-xs text-muted-foreground mr-3">
