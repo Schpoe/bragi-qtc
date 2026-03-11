@@ -168,7 +168,11 @@ Deno.serve(async (req) => {
       teams: Array.from(teams),
       workAreas: workAreas,
       totalIssues: issues.length,
-      sampleCustomFields: sampleCustomFields
+      fieldMapping: {
+        leadingTeam: leadingTeamField,
+        contributingTeams: contributingTeamsField,
+        type: typeField
+      }
     });
 
   } catch (error) {
