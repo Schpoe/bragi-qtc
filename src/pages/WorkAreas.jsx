@@ -157,9 +157,9 @@ export default function WorkAreas() {
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
       ) : filteredWorkAreas.length === 0 ? (
-        <EmptyState icon={FolderKanban} title={filterTeamId === "all" ? "No work areas yet" : "No work areas for this team"} description={filterTeamId === "all" ? "Define products, features or projects for capacity planning." : "Try selecting a different team or create a new work area."}>
+        <EmptyState icon={FolderKanban} title={filterTeamId === "all" ? "No work items yet" : "No work items for this team"} description={filterTeamId === "all" ? "Define products, features or projects for capacity planning." : "Try selecting a different team or create a new work item."}>
           <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" /> Create First Work Area
+            <Plus className="w-4 h-4 mr-2" /> Create First Work Item
           </Button>
         </EmptyState>
       ) : (
