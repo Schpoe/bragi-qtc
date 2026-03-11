@@ -252,7 +252,19 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
     <div className="space-y-6">
       {/* Discipline-level view */}
       <div>
-        <h3 className="text-sm font-semibold mb-3">Capacity by Discipline</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold">Capacity by Discipline</h3>
+          <Select value={sortTeamsBy} onValueChange={setSortTeamsBy}>
+            <SelectTrigger className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Name</SelectItem>
+              <SelectItem value="utilization-asc">Low to High</SelectItem>
+              <SelectItem value="utilization-desc">High to Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="overflow-x-auto border rounded-lg">
           <Table>
             <TableHeader>
