@@ -121,26 +121,7 @@ export default function Dashboard() {
              allocations={allocations}
              selectedTeamId={selectedTeamId}
            />
-           {selectedTeamId !== "all" && (
-             <Card>
-               <CardHeader className="pb-3">
-                 <CardTitle className="text-base font-semibold">
-                   Work Area Distribution
-                 </CardTitle>
-               </CardHeader>
-               <CardContent>
-                 <WorkAreaDistribution
-                   teams={teams}
-                   members={members}
-                   workAreas={filteredWorkAreas}
-                   allocations={allocations}
-                   sprints={quarterSprints}
-                   selectedTeamId={selectedTeamId}
-                 />
-               </CardContent>
-             </Card>
-           )}
-           <Card>
+           <Card className="col-span-full">
              <CardHeader className="pb-3">
                <CardTitle className="text-base font-semibold">
                  Work Area Types Distribution
