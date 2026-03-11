@@ -23,8 +23,18 @@ export default function JiraImport() {
     queryFn: () => base44.entities.Team.list(),
   });
 
+  const { data: workAreaTypes = [] } = useQuery({
+    queryKey: ["workAreaTypes"],
+    queryFn: () => base44.entities.WorkAreaType.list(),
+  });
+
   const createWorkArea = useMutation({
     mutationFn: (data) => base44.entities.WorkArea.create(data),
+  });
+
+  const createWorkAreaType = useMutation({
+    mutationFn: (data) => base44.entities.WorkAreaType.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workAreaTypes"] }),
   });
 
   const handleFileChange = (e) => {
@@ -82,6 +92,33 @@ export default function JiraImport() {
         teams.map(t => [t.name.toLowerCase().trim(), t.id])
       );
 
+      // Create work area type name -> exists lookup and track new types to create
+      const existingTypeNames = new Set(workAreaTypes.map(t => t.name.toLowerCase().trim()));
+      const newTypesToCreate = new Set();
+
+      // First pass: collect unique types from CSV
+      for (const item of items) {
+        const typeName = item.Type || item.type || mapping.defaultType;
+        if (typeName && !existingTypeNames.has(typeName.toLowerCase().trim())) {
+          newTypesToCreate.add(typeName.trim());
+        }
+      }
+
+      // Create missing types
+      for (const typeName of newTypesToCreate) {
+        try {
+          await createWorkAreaType.mutateAsync({
+            name: typeName,
+            description: "",
+            order: workAreaTypes.length + Array.from(newTypesToCreate).indexOf(typeName),
+          });
+          existingTypeNames.add(typeName.toLowerCase());
+        } catch (error) {
+          console.error("Failed to create work area type:", typeName, error);
+        }
+      }
+
+      // Second pass: import work areas
       for (const item of items) {
         // Use "Summary" field for work area name
         const itemName = item.Summary || item.summary || 
