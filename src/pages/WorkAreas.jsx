@@ -105,16 +105,16 @@ export default function WorkAreas() {
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: wa.color || "#3b82f6" }} />
                     <div>
                       <p className="font-medium text-sm">{wa.name}</p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <Badge variant="outline" className="text-xs">{wa.type}</Badge>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                           <Users className="w-3 h-3" /> {teamMap[wa.leading_team_id] || "—"}
-                         </span>
-                         {wa.supporting_team_ids && wa.supporting_team_ids.length > 0 && (
-                           <span className="text-xs text-muted-foreground">
-                             {wa.supporting_team_ids.map(id => teamMap[id]).filter(Boolean).join(", ")}
-                           </span>
-                         )}
+                        <Badge className="text-xs bg-primary/20 text-primary border-0">
+                          <Users className="w-3 h-3 mr-1" /> {teamMap[wa.leading_team_id] || "—"}
+                        </Badge>
+                        {wa.supporting_team_ids && wa.supporting_team_ids.length > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            + {wa.supporting_team_ids.map(id => teamMap[id]).filter(Boolean).join(", ")}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
