@@ -118,16 +118,16 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
                 }
 
                 let leadingWAs = [];
-                let supportingWAs = [];
-                let otherWAs = [];
+                 let supportingWAs = [];
+                 let otherWAs = [];
 
-                if (form.is_cross_team) {
-                  otherWAs = workAreas;
-                } else if (form.team_id) {
-                  leadingWAs = workAreas.filter(wa => wa.leading_team_id === form.team_id);
-                  supportingWAs = workAreas.filter(wa => wa.supporting_team_ids?.includes(form.team_id) && wa.leading_team_id !== form.team_id);
-                  otherWAs = workAreas.filter(wa => wa.leading_team_id !== form.team_id && !wa.supporting_team_ids?.includes(form.team_id));
-                }
+                 if (form.team_id) {
+                   leadingWAs = workAreas.filter(wa => wa.leading_team_id === form.team_id);
+                   supportingWAs = workAreas.filter(wa => wa.supporting_team_ids?.includes(form.team_id) && wa.leading_team_id !== form.team_id);
+                   otherWAs = workAreas.filter(wa => wa.leading_team_id !== form.team_id && !wa.supporting_team_ids?.includes(form.team_id));
+                 } else if (form.is_cross_team) {
+                   otherWAs = workAreas;
+                 }
 
                 const renderWAItem = (wa) => (
                   <label key={wa.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
