@@ -30,6 +30,23 @@ Deno.serve(async (req) => {
       'Content-Type': 'application/json'
     };
 
+    // Fetch field metadata to map field names to IDs
+    const fieldsResponse = await fetch(`${jiraBaseUrl}/rest/api/3/field`, { headers });
+    if (!fieldsResponse.ok) {
+      return Response.json({ error: 'Failed to fetch Jira fields' }, { status: 500 });
+    }
+    const allFields = await fieldsResponse.json();
+    
+    // Map field names to their custom field IDs
+    const fieldMap = {};
+    allFields.forEach(field => {
+      fieldMap[field.name] = field.id;
+    });
+    
+    const leadingTeamField = fieldMap['Leading Team'];
+    const contributingTeamsField = fieldMap['Contributing Teams'];
+    const typeField = fieldMap['Type'];
+
     // Fetch all issues from Jira with pagination using nextPageToken
     let allIssues = [];
     let nextPageToken = null;
