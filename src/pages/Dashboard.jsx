@@ -121,7 +121,7 @@ export default function Dashboard() {
              allocations={allocations}
              selectedTeamId={selectedTeamId}
            />
-           <Card className="col-span-full">
+           <Card>
              <CardHeader className="pb-3">
                <CardTitle className="text-base font-semibold">
                  Work Area Types Distribution
