@@ -11,14 +11,16 @@ export default function AllocationCell({ value, onChange, disabled }) {
 
   const handleBlur = () => {
     const num = Number(localValue);
-    if (localValue === "" || isNaN(num)) {
-      if (value) onChange(0);
+    if (localValue === "") {
+      onChange(0);
+      return;
+    }
+    if (isNaN(num)) {
+      setLocalValue(value || "");
       return;
     }
     const clamped = Math.max(0, Math.min(100, num));
-    if (clamped !== value) {
-      onChange(clamped);
-    }
+    onChange(clamped);
   };
 
   const numVal = Number(localValue) || 0;
