@@ -95,34 +95,30 @@ export default function Dashboard() {
             selectedTeamId={selectedTeamId}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">
-                    Capacity Overview — {selectedQuarter}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CapacityOverviewTable
-                    sprints={quarterSprints}
-                    teams={teams}
-                    members={members}
-                    workAreas={filteredWorkAreas}
-                    allocations={allocations}
-                    selectedTeamId={selectedTeamId}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-            <div>
-              <DisciplineBreakdown
-                sprints={quarterSprints}
-                members={members}
-                allocations={allocations}
-                selectedTeamId={selectedTeamId}
-              />
-            </div>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold">
+                  Capacity Overview — {selectedQuarter}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CapacityOverviewTable
+                  sprints={quarterSprints}
+                  teams={teams}
+                  members={members}
+                  workAreas={filteredWorkAreas}
+                  allocations={allocations}
+                  selectedTeamId={selectedTeamId}
+                />
+              </CardContent>
+            </Card>
+            <DisciplineBreakdown
+              sprints={quarterSprints}
+              members={members}
+              allocations={allocations}
+              selectedTeamId={selectedTeamId}
+            />
           </div>
         </>
       )}
