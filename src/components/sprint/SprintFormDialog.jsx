@@ -113,9 +113,13 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
             <Label>Relevant Work Areas</Label>
             <div className="border rounded-md p-3 space-y-3 max-h-56 overflow-y-auto">
               {(() => {
-                const leadingWAs = form.team_id ? workAreas.filter(wa => wa.leading_team_id === form.team_id) : [];
-                const supportingWAs = form.team_id ? workAreas.filter(wa => wa.supporting_team_ids?.includes(form.team_id) && wa.leading_team_id !== form.team_id) : [];
-                const otherWAs = !form.team_id ? workAreas : workAreas.filter(wa => wa.leading_team_id !== form.team_id && !wa.supporting_team_ids?.includes(form.team_id));
+                if (!form.team_id) {
+                  return <p className="text-xs text-muted-foreground">Select a team or choose cross-team to select work areas</p>;
+                }
+
+                const leadingWAs = workAreas.filter(wa => wa.leading_team_id === form.team_id);
+                const supportingWAs = workAreas.filter(wa => wa.supporting_team_ids?.includes(form.team_id) && wa.leading_team_id !== form.team_id);
+                const otherWAs = workAreas.filter(wa => wa.leading_team_id !== form.team_id && !wa.supporting_team_ids?.includes(form.team_id));
 
                 const renderWAItem = (wa) => (
                   <label key={wa.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
