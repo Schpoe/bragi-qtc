@@ -167,7 +167,15 @@ export default function SprintPlanning() {
         </EmptyState>
       ) : (
         <div className="space-y-6">
-          {quarterSprints.map(sprint => (
+          {quarterSprints.map(sprint => {
+            const sprintWorkAreaIds = new Set(
+              allocations
+                .filter(a => a.sprint_id === sprint.id && teamMembers.some(m => m.id === a.team_member_id))
+                .map(a => a.work_area_id)
+            );
+            const sprintWorkAreas = filteredWorkAreas.filter(wa => sprintWorkAreaIds.has(wa.id));
+
+            return (
             <Card key={sprint.id} className="border-border/60">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -192,15 +200,16 @@ export default function SprintPlanning() {
               </CardHeader>
               <CardContent>
                 <SprintAllocationTable
-                   sprint={sprint}
-                   members={teamMembers}
-                   workAreas={filteredWorkAreas}
-                   allocations={allocations}
-                   onAllocationChange={handleAllocationChange}
-                 />
+                  sprint={sprint}
+                  members={teamMembers}
+                  workAreas={sprintWorkAreas}
+                  allocations={allocations}
+                  onAllocationChange={handleAllocationChange}
+                />
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
