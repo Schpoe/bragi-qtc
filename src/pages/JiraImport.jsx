@@ -96,10 +96,10 @@ export default function JiraImport() {
       const existingTypeNames = new Set(workAreaTypes.map(t => t.name.toLowerCase().trim()));
       const newTypesToCreate = new Set();
 
-      // First pass: collect unique types from CSV
+      // First pass: collect unique types from CSV "Type" field only
       for (const item of items) {
-        const typeName = item.Type || item.type || mapping.defaultType;
-        if (typeName && !existingTypeNames.has(typeName.toLowerCase().trim())) {
+        const typeName = item.Type || item.type;
+        if (typeName && typeName.trim() && !existingTypeNames.has(typeName.toLowerCase().trim())) {
           newTypesToCreate.add(typeName.trim());
         }
       }
