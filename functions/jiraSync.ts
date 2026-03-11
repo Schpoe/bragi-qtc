@@ -45,8 +45,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           jql: jql,
           startAt: startAt,
-          maxResults: maxResults,
-          fields: ['summary', 'issuetype', 'customfield_*']
+          maxResults: maxResults
         })
       });
       
