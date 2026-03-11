@@ -78,14 +78,9 @@ Deno.serve(async (req) => {
     for (const issue of issues) {
       const fields = issue.fields || {};
       
-      // Log first issue custom fields to find team fields
+      // Get sample of custom field keys from first issue
       if (issues.indexOf(issue) === 0) {
-        console.log('Custom fields with "team" or "area":', 
-          Object.keys(fields)
-            .filter(k => k.startsWith('customfield'))
-            .map(k => `${k}: ${JSON.stringify(fields[k])}`)
-            .join('\n')
-        );
+        sampleCustomFields = Object.keys(fields).filter(k => k.startsWith('customfield'));
       }
       
       const issueType = fields.issuetype?.name || '';
