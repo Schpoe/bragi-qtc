@@ -332,6 +332,39 @@ export default function SprintPlanning() {
         defaultQuarter={selectedQuarter}
         onSave={handleSaveSprint}
       />
+
+      <Dialog open={teamSelectDialogOpen} onOpenChange={setTeamSelectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Team to Copy Sprint</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Team</Label>
+              <Select value={teamSelectValue} onValueChange={setTeamSelectValue}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map(team => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTeamSelectDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmTeamSelect} disabled={!teamSelectValue}>
+              Copy Sprint
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
