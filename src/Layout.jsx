@@ -8,6 +8,7 @@ const navItems = [
   { name: "Dashboard", page: "Dashboard", icon: LayoutDashboard },
   { name: "Teams", page: "Teams", icon: Users },
   { name: "Work Areas", page: "WorkAreas", icon: FolderKanban },
+  { name: "Work Area Types", page: "WorkAreaTypes", icon: FolderKanban },
   { name: "Sprint Planning", page: "SprintPlanning", icon: CalendarRange },
   { name: "Team Overview", page: "TeamSprintOverview", icon: BarChart3 },
 ];
