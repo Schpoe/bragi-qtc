@@ -209,6 +209,7 @@ export default function SprintPlanning() {
   quarters.sort();
 
   return (
+    <>
     <div>
       <PageHeader title="Sprint Planning" subtitle="Record capacities per team and sprint">
         <Button
