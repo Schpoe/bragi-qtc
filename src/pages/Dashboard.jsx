@@ -43,7 +43,11 @@ export default function Dashboard() {
   });
 
   const quarterSprints = sprints
-    .filter(s => s.quarter === selectedQuarter)
+    .filter(s => {
+      if (s.quarter !== selectedQuarter) return false;
+      if (selectedTeamId === "all") return true;
+      return s.is_cross_team || s.team_id === selectedTeamId;
+    })
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
   const quarters = [...new Set(sprints.map(s => s.quarter))];
