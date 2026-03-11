@@ -135,6 +135,7 @@ export default function Dashboard() {
                    workAreas={filteredWorkAreas}
                    allocations={allocations}
                    members={members}
+                   sprints={quarterSprints}
                    selectedTeamId={selectedTeamId}
                  />
                </CardContent>
