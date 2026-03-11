@@ -5,16 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Plus } from "lucide-react";
 
-const types = ["Product", "Feature", "Project", "Support/Maintenance"];
 const areaColors = [
   "#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#6366f1"
 ];
 
-export default function WorkAreaFormDialog({ open, onOpenChange, workArea, teams, onSave }) {
+export default function WorkAreaFormDialog({ open, onOpenChange, workArea, teams, onSave, existingTypes = [] }) {
   const [form, setForm] = useState({
     name: "", type: "Product", team_id: "", is_cross_team: true, color: areaColors[0]
   });
+  const [customType, setCustomType] = useState("");
+  const [showCustomType, setShowCustomType] = useState(false);
+  
+  const allTypes = [...new Set([...existingTypes, "Product", "Feature", "Project", "Support/Maintenance"])];
 
   useEffect(() => {
     if (workArea) {
@@ -29,6 +33,14 @@ export default function WorkAreaFormDialog({ open, onOpenChange, workArea, teams
       setForm({ name: "", type: "Product", team_id: "", is_cross_team: true, color: areaColors[Math.floor(Math.random() * areaColors.length)] });
     }
   }, [workArea, open]);
+
+  const handleAddCustomType = () => {
+    if (customType.trim()) {
+      setForm({ ...form, type: customType.trim() });
+      setCustomType("");
+      setShowCustomType(false);
+    }
+  };
 
   const handleSave = () => {
     if (!form.name.trim()) return;
@@ -51,12 +63,36 @@ export default function WorkAreaFormDialog({ open, onOpenChange, workArea, teams
           </div>
           <div className="space-y-2">
             <Label>Type</Label>
-            <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {types.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            {!showCustomType ? (
+              <div className="flex gap-2">
+                <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {allTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setShowCustomType(true)}
+                  title="Add custom type"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input 
+                  value={customType} 
+                  onChange={(e) => setCustomType(e.target.value)}
+                  placeholder="Enter custom type"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCustomType()}
+                />
+                <Button type="button" onClick={handleAddCustomType} size="sm">Add</Button>
+                <Button type="button" variant="outline" onClick={() => setShowCustomType(false)} size="sm">Cancel</Button>
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between">
             <Label>Cross-team</Label>
