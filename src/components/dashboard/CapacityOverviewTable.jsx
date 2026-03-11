@@ -85,7 +85,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="min-w-[120px]">Sprint</TableHead>
-                  {teamsToDisplay.map(team => (
+                  {getSortedTeams().map(team => (
                     <TableHead key={team.id} className="text-center min-w-[100px]">
                       <div className="flex items-center justify-center gap-1.5">
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: team.color || "#3b82f6" }} />
