@@ -30,6 +30,8 @@ export default function SprintPlanning() {
   const [sprintToCopy, setSprintToCopy] = useState(null);
    const [isCopyOperation, setIsCopyOperation] = useState(false);
    const [copiedToTeamName, setCopiedToTeamName] = useState("");
+   const [deleteSprintId, setDeleteSprintId] = useState(null);
+   const [deleteAllocationId, setDeleteAllocationId] = useState(null);
    const queryClient = useQueryClient();
 
   const { data: sprints = [], isLoading: sprintsLoading } = useQuery({
