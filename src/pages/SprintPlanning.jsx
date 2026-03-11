@@ -124,9 +124,26 @@ export default function SprintPlanning() {
   };
 
   // Filter sprints: must belong to selected team OR be cross-team, AND match quarter
-   const quarterSprints = sprints
-     .filter(s => s.quarter === selectedQuarter && (s.is_cross_team || s.team_id === effectiveTeamId))
-     .sort((a, b) => (a.order || 0) - (b.order || 0));
+    const quarterSprints = sprints
+      .filter(s => s.quarter === selectedQuarter && (s.is_cross_team || s.team_id === effectiveTeamId))
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // Get cross-team sprints for current quarter
+    const crossTeamSprints = sprints.filter(s => s.quarter === selectedQuarter && s.is_cross_team);
+
+    const handleCopyCrossTeamSprint = async (crossTeamSprint) => {
+      const newSprint = {
+        name: crossTeamSprint.name,
+        quarter: crossTeamSprint.quarter,
+        team_id: effectiveTeamId,
+        is_cross_team: false,
+        start_date: crossTeamSprint.start_date || "",
+        end_date: crossTeamSprint.end_date || "",
+        order: quarterSprints.length + 1,
+        relevant_work_area_ids: crossTeamSprint.relevant_work_area_ids || [],
+      };
+      createSprint.mutate(newSprint);
+    };
 
    const teamMembers = members.filter(m => m.team_id === effectiveTeamId);
 
