@@ -10,7 +10,7 @@ import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
 
 export default function JiraSync() {
-  const [jql, setJql] = useState('project = PROJ AND type = "Product discovery"');
+  const [jql, setJql] = useState('project = PROD');
   const [syncResult, setSyncResult] = useState(null);
   const [error, setError] = useState(null);
   const [importing, setImporting] = useState(false);
