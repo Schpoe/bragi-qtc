@@ -112,70 +112,79 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
           </div>
           <div className="space-y-2">
             <Label>Relevant Work Areas</Label>
-            <div className="border rounded-md p-3 space-y-3 max-h-56 overflow-y-auto">
-              {(() => {
-                if (!form.team_id && !form.is_cross_team) {
-                  return <p className="text-xs text-muted-foreground">Select a team or enable cross-team to select work areas</p>;
-                }
+            {!form.team_id && !form.is_cross_team ? (
+              <p className="text-xs text-muted-foreground border rounded-md p-3">Select a team or enable cross-team to select work areas</p>
+            ) : (
+              <div>
+                {(() => {
+                  let leadingWAs = [];
+                  let supportingWAs = [];
+                  let otherWAs = [];
 
-                let leadingWAs = [];
-                 let supportingWAs = [];
-                 let otherWAs = [];
+                  if (form.team_id) {
+                    leadingWAs = workAreas.filter(wa => wa.leading_team_id === form.team_id);
+                    supportingWAs = workAreas.filter(wa => wa.supporting_team_ids?.includes(form.team_id) && wa.leading_team_id !== form.team_id);
+                    otherWAs = workAreas.filter(wa => wa.leading_team_id !== form.team_id && !wa.supporting_team_ids?.includes(form.team_id));
+                  } else if (form.is_cross_team) {
+                    otherWAs = workAreas;
+                  }
 
-                 if (form.team_id) {
-                   leadingWAs = workAreas.filter(wa => wa.leading_team_id === form.team_id);
-                   supportingWAs = workAreas.filter(wa => wa.supporting_team_ids?.includes(form.team_id) && wa.leading_team_id !== form.team_id);
-                   otherWAs = workAreas.filter(wa => wa.leading_team_id !== form.team_id && !wa.supporting_team_ids?.includes(form.team_id));
-                 } else if (form.is_cross_team) {
-                   otherWAs = workAreas;
-                 }
+                  const renderWAItem = (wa) => (
+                    <label key={wa.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded">
+                      <input
+                        type="checkbox"
+                        checked={(form.relevant_work_area_ids || []).includes(wa.id)}
+                        onChange={(e) => {
+                          const ids = form.relevant_work_area_ids || [];
+                          if (e.target.checked) {
+                            setForm({ ...form, relevant_work_area_ids: [...ids, wa.id] });
+                          } else {
+                            setForm({ ...form, relevant_work_area_ids: ids.filter(id => id !== wa.id) });
+                          }
+                        }}
+                        className="w-4 h-4 rounded"
+                      />
+                      <span className="text-sm">{wa.name}</span>
+                    </label>
+                  );
 
-                const renderWAItem = (wa) => (
-                  <label key={wa.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
-                    <input
-                      type="checkbox"
-                      checked={(form.relevant_work_area_ids || []).includes(wa.id)}
-                      onChange={(e) => {
-                        const ids = form.relevant_work_area_ids || [];
-                        if (e.target.checked) {
-                          setForm({ ...form, relevant_work_area_ids: [...ids, wa.id] });
-                        } else {
-                          setForm({ ...form, relevant_work_area_ids: ids.filter(id => id !== wa.id) });
-                        }
-                      }}
-                      className="w-4 h-4 rounded"
-                    />
-                    <span className="text-sm">{wa.name}</span>
-                  </label>
-                );
+                  if (leadingWAs.length === 0 && supportingWAs.length === 0 && otherWAs.length === 0) {
+                    return <p className="text-xs text-muted-foreground border rounded-md p-3">No work areas available</p>;
+                  }
 
-                return (
-                   <>
-                     {leadingWAs.length > 0 && (
-                       <div>
-                         <p className="text-xs font-semibold text-muted-foreground mb-1">Leading Team</p>
-                         <div className="space-y-1 ml-2">{leadingWAs.map(renderWAItem)}</div>
-                       </div>
-                     )}
-                     {supportingWAs.length > 0 && (
-                       <div>
-                         <p className="text-xs font-semibold text-muted-foreground mb-1">Supporting Team</p>
-                         <div className="space-y-1 ml-2">{supportingWAs.map(renderWAItem)}</div>
-                       </div>
-                     )}
-                     {otherWAs.length > 0 && (
-                       <div>
-                         <p className="text-xs font-semibold text-muted-foreground mb-1">Other</p>
-                         <div className="space-y-1 ml-2">{otherWAs.map(renderWAItem)}</div>
-                       </div>
-                     )}
-                     {leadingWAs.length === 0 && supportingWAs.length === 0 && otherWAs.length === 0 && (
-                       <p className="text-xs text-muted-foreground">No work areas available</p>
-                     )}
-                   </>
-                );
-              })()}
-            </div>
+                  return (
+                    <Tabs defaultValue="leading" className="w-full">
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="leading" disabled={leadingWAs.length === 0}>Leading ({leadingWAs.length})</TabsTrigger>
+                        <TabsTrigger value="supporting" disabled={supportingWAs.length === 0}>Supporting ({supportingWAs.length})</TabsTrigger>
+                        <TabsTrigger value="other" disabled={otherWAs.length === 0}>Other ({otherWAs.length})</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="leading" className="border rounded-md p-3 max-h-56 overflow-y-auto">
+                        {leadingWAs.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No work areas</p>
+                        ) : (
+                          <div className="space-y-1">{leadingWAs.map(renderWAItem)}</div>
+                        )}
+                      </TabsContent>
+                      <TabsContent value="supporting" className="border rounded-md p-3 max-h-56 overflow-y-auto">
+                        {supportingWAs.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No work areas</p>
+                        ) : (
+                          <div className="space-y-1">{supportingWAs.map(renderWAItem)}</div>
+                        )}
+                      </TabsContent>
+                      <TabsContent value="other" className="border rounded-md p-3 max-h-56 overflow-y-auto">
+                        {otherWAs.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No work areas</p>
+                        ) : (
+                          <div className="space-y-1">{otherWAs.map(renderWAItem)}</div>
+                        )}
+                      </TabsContent>
+                    </Tabs>
+                  );
+                })()}
+              </div>
+            )}
           </div>
           </div>
           <DialogFooter>
