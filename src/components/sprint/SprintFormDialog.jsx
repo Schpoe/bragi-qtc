@@ -115,7 +115,7 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
               {(() => {
                 const leadingWAs = form.team_id ? workAreas.filter(wa => wa.leading_team_id === form.team_id) : [];
                 const supportingWAs = form.team_id ? workAreas.filter(wa => wa.supporting_team_ids?.includes(form.team_id) && wa.leading_team_id !== form.team_id) : [];
-                const otherWAs = form.team_id ? workAreas.filter(wa => !wa.leading_team_ids?.includes(form.team_id) && !wa.supporting_team_ids?.includes(form.team_id)) : workAreas;
+                const otherWAs = form.team_id ? workAreas.filter(wa => wa.leading_team_id !== form.team_id && !wa.supporting_team_ids?.includes(form.team_id)) : workAreas;
 
                 const renderWAItem = (wa) => (
                   <label key={wa.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded">
