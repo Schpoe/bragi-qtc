@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: "Dashboard", page: "Dashboard", icon: LayoutDashboard },
-  { name: "Jira Sync", page: "JiraSync", icon: RefreshCw },
   { name: "Teams", page: "Teams", icon: Users },
   { name: "Work Items", page: "WorkAreas", icon: FolderKanban },
   { name: "Work Item Types", page: "WorkAreaTypes", icon: FolderKanban },
