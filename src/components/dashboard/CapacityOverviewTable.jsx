@@ -230,8 +230,10 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
    };
 
   const getMemberCapacity = (sprintId, memberId) => {
+    const sprint = sprints.find(s => s.id === sprintId);
+    const relevantWorkAreaIds = new Set(sprint?.relevant_work_area_ids || []);
     return allocations
-      .filter(a => a.sprint_id === sprintId && a.team_member_id === memberId)
+      .filter(a => a.sprint_id === sprintId && a.team_member_id === memberId && relevantWorkAreaIds.has(a.work_area_id))
       .reduce((sum, a) => sum + (a.percent || 0), 0);
   };
 
