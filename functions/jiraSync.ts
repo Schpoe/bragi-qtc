@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     const workAreas = [];
 
     for (const issue of issues) {
-      const fields = issue.fields;
+      const fields = issue.fields || {};
       const issueType = fields.issuetype?.name || '';
       const summary = fields.summary || '';
       
