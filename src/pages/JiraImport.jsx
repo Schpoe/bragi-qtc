@@ -46,45 +46,32 @@ export default function JiraImport() {
       // Upload file
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
 
-      // Extract data from file
-      const extractResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url,
-        json_schema: {
-          type: "object",
-          properties: {
-            data: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  title: { type: "string" },
-                  type: { type: "string" },
-                  description: { type: "string" },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      if (extractResult.status === "error") {
-        setResult({ success: false, message: extractResult.details || "Failed to extract data from file" });
-        setUploading(false);
-        return;
-      }
-
-      let items = extractResult.output?.data || extractResult.output || [];
+      // Fetch and parse CSV directly
+      const response = await fetch(file_url);
+      const text = await response.text();
       
-      // Handle if the output is directly an array (common for CSV)
-      if (!Array.isArray(items) && typeof items === 'object') {
-        items = Object.values(items).find(val => Array.isArray(val)) || [];
-      }
-      if (!Array.isArray(items)) {
-        setResult({ success: false, message: "Invalid file format" });
+      // Simple CSV parser
+      const lines = text.trim().split('\n');
+      if (lines.length < 2) {
+        setResult({ success: false, message: "CSV file is empty or has no data rows" });
         setUploading(false);
         return;
       }
+      
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      const items = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        const item = {};
+        headers.forEach((header, index) => {
+          item[header] = values[index] || '';
+        });
+        items.push(item);
+      }
+      
+      console.log("CSV Headers:", headers);
+      console.log("Parsed items:", items.length, items[0]);
 
       // Import each item as a WorkArea
       const colors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899"];
@@ -92,20 +79,26 @@ export default function JiraImport() {
       let failed = 0;
 
       for (const item of items) {
-        const itemName = item.name || item.title || item.Name || item.Title;
-        if (!itemName) continue;
+        // Try various common column names for the work area name
+        const itemName = item.Name || item.name || item.Title || item.title || 
+                        item.Summary || item.summary || item.Subject || item.subject;
+        
+        if (!itemName || !itemName.trim()) {
+          console.log("Skipping item without name:", item);
+          continue;
+        }
 
         try {
           await createWorkArea.mutateAsync({
-            name: itemName,
-            type: item.type || item.Type || mapping.defaultType,
+            name: itemName.trim(),
+            type: item.Type || item.type || mapping.defaultType,
             leading_team_id: mapping.leadingTeamId,
             supporting_team_ids: [],
             color: colors[imported % colors.length],
           });
           imported++;
         } catch (error) {
-          console.error("Failed to import item:", error);
+          console.error("Failed to import item:", itemName, error);
           failed++;
         }
       }
