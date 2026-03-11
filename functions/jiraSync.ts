@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     };
 
     // Fetch issues from Jira
-    const searchUrl = `${jiraBaseUrl}/rest/api/3/search?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=summary,issuetype,customfield_*`;
+    const searchUrl = `${jiraBaseUrl}/rest/api/3/search/jql?jql=${encodeURIComponent(jql)}&maxResults=1000&fields=summary,issuetype,customfield_*`;
     
     const response = await fetch(searchUrl, { headers });
     
