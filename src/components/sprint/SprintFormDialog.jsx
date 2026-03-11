@@ -111,37 +111,36 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
             <Input type="number" min={1} value={form.order} onChange={(e) => setForm({ ...form, order: Number(e.target.value) })} />
           </div>
           <div className="space-y-2">
-          <Label>Relevant Work Areas</Label>
-          <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
-            {(() => {
-              const filteredWAs = form.team_id 
-                ? workAreas.filter(wa => wa.leading_team_id === form.team_id || wa.supporting_team_ids?.includes(form.team_id))
-                : workAreas;
-              return filteredWAs.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No work areas available for this team</p>
-            ) : (
-              filteredWAs.map(wa => (
-                  <label key={wa.id} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={(form.relevant_work_area_ids || []).includes(wa.id)}
-                      onChange={(e) => {
-                        const ids = form.relevant_work_area_ids || [];
-                        if (e.target.checked) {
-                          setForm({ ...form, relevant_work_area_ids: [...ids, wa.id] });
-                        } else {
-                          setForm({ ...form, relevant_work_area_ids: ids.filter(id => id !== wa.id) });
-                        }
-                      }}
-                      className="w-4 h-4 rounded"
-                    />
-                    <span className="text-sm">{wa.name}</span>
-                  </label>
+            <Label>Relevant Work Areas</Label>
+            <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
+              {(() => {
+                const filteredWAs = form.team_id 
+                  ? workAreas.filter(wa => wa.leading_team_id === form.team_id || wa.supporting_team_ids?.includes(form.team_id))
+                  : workAreas;
+                return filteredWAs.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No work areas available for this team</p>
+                ) : (
+                  filteredWAs.map(wa => (
+                    <label key={wa.id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(form.relevant_work_area_ids || []).includes(wa.id)}
+                        onChange={(e) => {
+                          const ids = form.relevant_work_area_ids || [];
+                          if (e.target.checked) {
+                            setForm({ ...form, relevant_work_area_ids: [...ids, wa.id] });
+                          } else {
+                            setForm({ ...form, relevant_work_area_ids: ids.filter(id => id !== wa.id) });
+                          }
+                        }}
+                        className="w-4 h-4 rounded"
+                      />
+                      <span className="text-sm">{wa.name}</span>
+                    </label>
                   ))
-                  );
-                  })()}
-                  </div>
-                  </div>
+                );
+              })()}
+            </div>
           </div>
           <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
