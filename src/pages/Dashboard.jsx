@@ -108,7 +108,6 @@ export default function Dashboard() {
                  sprints={quarterSprints}
                  teams={teams}
                  members={members}
-                 workAreas={filteredWorkAreas}
                  allocations={allocations}
                  selectedTeamId={selectedTeamId}
                />
