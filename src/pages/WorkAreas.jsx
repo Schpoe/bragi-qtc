@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, FolderKanban, Pencil, Trash2, Globe, Users, Upload } from "lucide-react";
+import { Plus, FolderKanban, Pencil, Trash2, Globe, Users, Upload, Filter } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import WorkAreaFormDialog from "../components/workareas/WorkAreaFormDialog";
@@ -15,6 +16,7 @@ import WorkAreaFormDialog from "../components/workareas/WorkAreaFormDialog";
 export default function WorkAreas() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [filterTeamId, setFilterTeamId] = useState("all");
   const queryClient = useQueryClient();
 
   const { data: workAreas = [], isLoading } = useQuery({
@@ -53,6 +55,10 @@ export default function WorkAreas() {
 
   const teamMap = Object.fromEntries(teams.map(t => [t.id, t.name]));
 
+  const filteredWorkAreas = filterTeamId === "all"
+    ? workAreas
+    : workAreas.filter(wa => wa.leading_team_id === filterTeamId || (wa.supporting_team_ids || []).includes(filterTeamId));
+
   return (
     <div>
       <PageHeader title="Work Areas" subtitle="Products, Features, Projects & Support">
@@ -66,19 +72,32 @@ export default function WorkAreas() {
         </Button>
       </PageHeader>
 
+      <div className="mb-6 flex items-center gap-3">
+        <Filter className="w-4 h-4 text-muted-foreground" />
+        <Select value={filterTeamId} onValueChange={setFilterTeamId}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filter by team" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Teams</SelectItem>
+            {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
-      ) : workAreas.length === 0 ? (
-        <EmptyState icon={FolderKanban} title="No work areas yet" description="Define products, features or projects for capacity planning.">
+      ) : filteredWorkAreas.length === 0 ? (
+        <EmptyState icon={FolderKanban} title={filterTeamId === "all" ? "No work areas yet" : "No work areas for this team"} description={filterTeamId === "all" ? "Define products, features or projects for capacity planning." : "Try selecting a different team or create a new work area."}>
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" /> Create First Work Area
           </Button>
         </EmptyState>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {workAreas.map(wa => (
+          {filteredWorkAreas.map(wa => (
             <Card key={wa.id} className="group border-border/60 hover:shadow-md transition-all">
               <CardContent className="py-4 px-5">
                 <div className="flex items-start justify-between">
