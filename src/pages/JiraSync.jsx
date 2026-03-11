@@ -193,12 +193,31 @@ export default function JiraSync() {
           </div>
           <Button 
             onClick={fetchFromJira} 
-            disabled={!jql.trim() || importing}
+            disabled={!jql.trim() || importing || fetching}
             className="w-full"
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Fetch from Jira
+            {fetching ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Fetching from Jira...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Fetch from Jira
+              </>
+            )}
           </Button>
+
+          {fetching && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Fetching Product Discovery issues...</span>
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              </div>
+              <Progress value={50} className="h-2" />
+            </div>
+          )}
 
           {error && (
             <Alert variant="destructive">
