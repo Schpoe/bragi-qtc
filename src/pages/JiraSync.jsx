@@ -122,23 +122,12 @@ export default function JiraSync() {
        errors: []
       };
 
-      // Import teams
+      // Map teams to existing teams only (don't create new ones)
       const teamMap = {};
       for (const teamName of syncResult.teams) {
         const existing = existingTeams.find(t => t.name.toLowerCase() === teamName.toLowerCase());
         if (existing) {
           teamMap[teamName] = existing.id;
-        } else {
-          try {
-            const newTeam = await createTeam.mutateAsync({
-              name: teamName,
-              color: colors[stats.teamsCreated % colors.length]
-            });
-            teamMap[teamName] = newTeam.id;
-            stats.teamsCreated++;
-          } catch (err) {
-            stats.errors.push(`Team ${teamName}: ${err.message}`);
-          }
         }
       }
 
