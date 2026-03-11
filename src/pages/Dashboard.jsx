@@ -62,25 +62,17 @@ export default function Dashboard() {
 
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="Capacity Overview">
-        <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
-          <SelectTrigger className="w-36">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {quarters.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Team filtern" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Teams</SelectItem>
-            {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </PageHeader>
+      <PageHeader title="Dashboard" subtitle="Capacity Overview" />
+
+      <FilterBar
+        quarter={selectedQuarter}
+        onQuarterChange={setSelectedQuarter}
+        team={selectedTeamId}
+        onTeamChange={setSelectedTeamId}
+        teams={teams}
+        quarters={quarters}
+        showTeamFilter={true}
+      />
 
       {isLoading ? (
         <div className="space-y-4">
