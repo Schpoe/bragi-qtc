@@ -236,9 +236,11 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
   };
 
   const getDisciplineCapacity = (sprintId, discipline) => {
+    const sprint = sprints.find(s => s.id === sprintId);
+    const relevantWorkAreaIds = new Set(sprint?.relevant_work_area_ids || []);
     const disciplineMembers = teamMembers.filter(m => m.discipline === discipline).map(m => m.id);
     return allocations
-      .filter(a => a.sprint_id === sprintId && disciplineMembers.includes(a.team_member_id))
+      .filter(a => a.sprint_id === sprintId && disciplineMembers.includes(a.team_member_id) && relevantWorkAreaIds.has(a.work_area_id))
       .reduce((sum, a) => sum + (a.percent || 0), 0);
   };
 
