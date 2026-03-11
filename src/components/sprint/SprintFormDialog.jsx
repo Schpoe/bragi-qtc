@@ -117,7 +117,13 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
             {!form.team_id && !form.is_cross_team ? (
               <p className="text-xs text-muted-foreground border rounded-md p-3">Select a team or enable cross-team to select work areas</p>
             ) : (
-              <div>
+              <div className="space-y-2">
+                <Input 
+                  placeholder="Search work areas..." 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 text-sm"
+                />
                 {(() => {
                   let leadingWAs = [];
                   let supportingWAs = [];
@@ -130,6 +136,8 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
                   } else if (form.is_cross_team) {
                     otherWAs = workAreas;
                   }
+
+                  const filterBySearch = (items) => items.filter(wa => wa.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
                   const renderWAItem = (wa) => (
                     <label key={wa.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded">
