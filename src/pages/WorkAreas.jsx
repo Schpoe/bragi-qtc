@@ -98,17 +98,48 @@ export default function WorkAreas() {
         </Button>
       </PageHeader>
 
-      <div className="mb-6 flex items-center gap-3">
-        <Filter className="w-4 h-4 text-muted-foreground" />
-        <Select value={filterTeamId} onValueChange={setFilterTeamId}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Filter by team" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Teams</SelectItem>
-            {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      <div className="mb-6 space-y-4">
+        {/* Search and Team Filter */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search work areas..."
+              className="pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+              >
+                <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+              </button>
+            )}
+          </div>
+          <Select value={filterTeamId} onValueChange={(val) => { setFilterTeamId(val); setRoleTab("all"); }}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filter by team" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Teams</SelectItem>
+              {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Role Tabs (only visible when team is selected) */}
+        {filterTeamId !== "all" && (
+          <Tabs value={roleTab} onValueChange={setRoleTab} className="w-full">
+            <TabsList className="grid w-fit grid-cols-4">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="leading">Leading</TabsTrigger>
+              <TabsTrigger value="supporting">Supporting</TabsTrigger>
+              <TabsTrigger value="other">Other</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
       </div>
 
       {isLoading ? (
