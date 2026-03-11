@@ -188,16 +188,16 @@ export default function TeamSprintOverview() {
 
   return (
     <div>
-      <PageHeader title="Team Overview" subtitle="Sprint utilization of all teams at a glance">
-        <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
-          <SelectTrigger className="w-36">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {quarters.map(q => <SelectItem key={q} value={q}>{q}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </PageHeader>
+      <PageHeader title="Team Overview" subtitle="Sprint utilization of all teams at a glance" />
+
+      <FilterBar
+        quarter={selectedQuarter}
+        onQuarterChange={setSelectedQuarter}
+        team=""
+        teams={[]}
+        quarters={quarters}
+        showTeamFilter={false}
+      />
 
       {teamsLoading ? (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
