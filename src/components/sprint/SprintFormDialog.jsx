@@ -149,29 +149,29 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
                 );
 
                 return (
-                  <>
-                    {leadingWAs.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-muted-foreground mb-1">Leading Team</p>
-                        <div className="space-y-1 ml-2">{leadingWAs.map(renderWAItem)}</div>
-                      </div>
-                    )}
-                    {supportingWAs.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-muted-foreground mb-1">Supporting Team</p>
-                        <div className="space-y-1 ml-2">{supportingWAs.map(renderWAItem)}</div>
-                      </div>
-                    )}
-                    {otherWAs.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-muted-foreground mb-1">Other</p>
-                        <div className="space-y-1 ml-2">{otherWAs.map(renderWAItem)}</div>
-                      </div>
-                    )}
-                    {leadingWAs.length === 0 && supportingWAs.length === 0 && otherWAs.length === 0 && (
-                      <p className="text-xs text-muted-foreground">No work areas available</p>
-                    )}
-                  </>
+                   <>
+                     {leadingWAs.length > 0 && (
+                       <div>
+                         <p className="text-xs font-semibold text-muted-foreground mb-1">Leading Team</p>
+                         <div className="space-y-1 ml-2">{leadingWAs.map(renderWAItem)}</div>
+                       </div>
+                     )}
+                     {supportingWAs.length > 0 && (
+                       <div>
+                         <p className="text-xs font-semibold text-muted-foreground mb-1">Supporting Team</p>
+                         <div className="space-y-1 ml-2">{supportingWAs.map(renderWAItem)}</div>
+                       </div>
+                     )}
+                     {form.is_cross_team && otherWAs.length > 0 && (
+                       <div>
+                         <p className="text-xs font-semibold text-muted-foreground mb-1">Other</p>
+                         <div className="space-y-1 ml-2">{otherWAs.map(renderWAItem)}</div>
+                       </div>
+                     )}
+                     {leadingWAs.length === 0 && supportingWAs.length === 0 && (
+                       <p className="text-xs text-muted-foreground">No work areas available</p>
+                     )}
+                   </>
                 );
               })()}
             </div>
