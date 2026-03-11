@@ -225,6 +225,30 @@ export default function SprintPlanning() {
                         {sprint.start_date} — {sprint.end_date}
                       </span>
                     )}
+                    {!sprint.is_cross_team && crossTeamSprints.length > 0 && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7" 
+                        title="Copy this sprint to another team"
+                        onClick={() => {
+                          // Create team-specific copy
+                          const newSprint = {
+                            name: sprint.name,
+                            quarter: sprint.quarter,
+                            team_id: effectiveTeamId,
+                            is_cross_team: false,
+                            start_date: sprint.start_date || "",
+                            end_date: sprint.end_date || "",
+                            order: (quarterSprints.filter(s => s.team_id === effectiveTeamId).length + 1),
+                            relevant_work_area_ids: sprint.relevant_work_area_ids || [],
+                          };
+                          createSprint.mutate(newSprint);
+                        }}
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingSprint(sprint); setSprintDialogOpen(true); }}>
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>
