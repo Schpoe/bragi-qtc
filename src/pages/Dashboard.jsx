@@ -10,6 +10,7 @@ import CapacityOverviewTable from "../components/dashboard/CapacityOverviewTable
 import DisciplineBreakdown from "../components/dashboard/DisciplineBreakdown";
 import UtilizationByWorkItemType from "../components/dashboard/UtilizationByWorkItemType";
 import TeamCapacityChart from "../components/dashboard/TeamCapacityChart";
+import ExecutiveSummary from "../components/dashboard/ExecutiveSummary";
 
 const currentYear = new Date().getFullYear();
 const currentQ = Math.ceil((new Date().getMonth() + 1) / 3);
