@@ -379,7 +379,7 @@ export default function SprintPlanning() {
                   quarter={selectedQuarter}
                   onAllocationChange={handleQuarterlyAllocationChange}
                   selectedTeamId={effectiveTeamId}
-                  onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: effectiveTeamId, quarter: selectedQuarter, workAreaIds })}
+                  onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: effectiveTeamId, quarter: selectedQuarter, workAreaIds: workAreaIds })}
                   initialSelectedWorkAreaIds={manuallySelectedIds}
                 />
               </CardContent>
