@@ -346,8 +346,36 @@ export default function SprintPlanning() {
      manuallySelectedIds.has(wa.id)
    ) : [];
 
-  const quarters = [...new Set(sprints.map(s => s.quarter))];
-  if (!quarters.includes(selectedQuarter)) quarters.push(selectedQuarter);
+  const generateQuarters = () => {
+    const currentQuarter = getCurrentQuarter();
+    const quarters = new Set([currentQuarter]);
+    
+    // Add quarters from existing sprints
+    sprints.forEach(s => quarters.add(s.quarter));
+    
+    // Add next 8 quarters and previous 4 quarters
+    const [currYear, currQ] = currentQuarter.match(/Q(\d) (\d{4})/).slice(1);
+    const currYearNum = parseInt(currYear);
+    const currQNum = parseInt(currQ);
+    
+    for (let i = -4; i <= 8; i++) {
+      let q = currQNum + i;
+      let y = currYearNum;
+      while (q > 4) {
+        q -= 4;
+        y += 1;
+      }
+      while (q < 1) {
+        q += 4;
+        y -= 1;
+      }
+      quarters.add(`Q${q} ${y}`);
+    }
+    
+    return Array.from(quarters);
+  };
+  
+  const quarters = generateQuarters();
   sortQuarters(quarters);
 
   return (
