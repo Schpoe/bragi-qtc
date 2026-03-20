@@ -36,6 +36,7 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
     e.preventDefault();
     const data = {
       email,
+      full_name: `${firstName} ${lastName}`,
       first_name: firstName,
       last_name: lastName,
       position,
@@ -46,7 +47,8 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
     // For editing, only include changed fields
     if (user) {
       delete data.email; // Can't change email for existing users
-      delete data.first_name; // Keep full_name for existing
+      delete data.full_name; // Can't change full_name for existing users
+      delete data.first_name;
       delete data.last_name;
     }
     
