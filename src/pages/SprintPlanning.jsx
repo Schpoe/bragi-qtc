@@ -251,9 +251,9 @@ export default function SprintPlanning() {
     setTeamSelectValue("");
   };
 
-  // Filter sprints: must belong to selected team OR be cross-team, AND match quarter
+  // Filter sprints: only show team-specific sprints for the selected team
     const quarterSprints = sprints
-      .filter(s => s.quarter === selectedQuarter && (s.is_cross_team || s.team_id === effectiveTeamId))
+      .filter(s => s.quarter === selectedQuarter && !s.is_cross_team && s.team_id === effectiveTeamId)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
     // Get cross-team sprints for current quarter
