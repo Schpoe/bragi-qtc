@@ -99,7 +99,7 @@ export const AuthProvider = ({ children }) => {
       try {
         // Use backend function to ensure user record exists (handles RLS)
         const ensureUserResponse = await base44.functions.invoke('ensureUserExists', {});
-        const userRecord = ensureUserResponse.userRecord;
+        const userRecord = ensureUserResponse.data?.userRecord;
         
         if (!userRecord) {
           throw new Error('Failed to get or create user record');
