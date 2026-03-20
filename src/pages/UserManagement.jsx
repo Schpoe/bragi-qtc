@@ -55,6 +55,8 @@ export default function UserManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      setEditingUser(null);
+      setUserDialogOpen(false);
       toast.success("User invited successfully");
     },
     onError: (error) => {
@@ -66,8 +68,13 @@ export default function UserManagement() {
     mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      setEditingUser(null);
+      setUserDialogOpen(false);
       toast.success("User updated successfully");
     },
+    onError: (error) => {
+      toast.error("Failed to update user: " + error.message);
+    }
   });
 
   const deleteUser = useMutation({
@@ -84,8 +91,6 @@ export default function UserManagement() {
     } else {
       createUser.mutate(data);
     }
-    setEditingUser(null);
-    setUserDialogOpen(false);
   };
 
   const getRoleBadge = (role) => {
