@@ -7,6 +7,7 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [actualUser, setActualUser] = useState(null); // Track the real user when impersonating
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
@@ -150,6 +151,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = (shouldRedirect = true) => {
     setUser(null);
+    setActualUser(null);
     setIsAuthenticated(false);
     
     if (shouldRedirect) {
@@ -166,9 +168,50 @@ export const AuthProvider = ({ children }) => {
     base44.auth.redirectToLogin(window.location.href);
   };
 
+  const impersonateUser = async (targetUserEmail) => {
+    if (!actualUser || actualUser.role !== 'admin') {
+      return false;
+    }
+    
+    try {
+      const users = await base44.entities.User.list();
+      const targetUser = users.find(u => u.email === targetUserEmail);
+      
+      if (!targetUser) {
+        return false;
+      }
+      
+      // Store the actual admin user if not already stored
+      if (!actualUser) {
+        setActualUser(user);
+      }
+      
+      const mergedUser = {
+        ...targetUser,
+        role: targetUser.role || 'viewer',
+        managed_team_ids: targetUser.managed_team_ids || [],
+        _impersonating: true
+      };
+      
+      setUser(mergedUser);
+      return true;
+    } catch (error) {
+      console.error('Impersonation failed:', error);
+      return false;
+    }
+  };
+
+  const stopImpersonation = () => {
+    if (actualUser) {
+      setUser(actualUser);
+      setActualUser(null);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
+      actualUser,
       isAuthenticated, 
       isLoadingAuth,
       isLoadingPublicSettings,
@@ -176,7 +219,9 @@ export const AuthProvider = ({ children }) => {
       appPublicSettings,
       logout,
       navigateToLogin,
-      checkAppState
+      checkAppState,
+      impersonateUser,
+      stopImpersonation
     }}>
       {children}
     </AuthContext.Provider>
