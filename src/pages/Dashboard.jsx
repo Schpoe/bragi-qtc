@@ -44,6 +44,11 @@ export default function Dashboard() {
     queryFn: () => base44.entities.Allocation.list(),
   });
 
+  const { data: quarterlyAllocations = [] } = useQuery({
+    queryKey: ["quarterlyAllocations"],
+    queryFn: () => base44.entities.QuarterlyAllocation.list(),
+  });
+
   // Cleanup template sprint allocations on mount
   React.useEffect(() => {
     const cleanupTemplateAllocations = async () => {
