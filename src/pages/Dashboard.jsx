@@ -105,7 +105,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-           <StatsRow
+          <StatsRow
             teams={teams}
             members={members}
             workAreas={filteredWorkAreas}
@@ -114,83 +114,93 @@ export default function Dashboard() {
             selectedTeamId={selectedTeamId}
           />
 
-          <div className="space-y-6">
-           <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-              <CardHeader className="pb-3 border-b border-primary/10">
-                <CardTitle className="text-base font-bold text-primary">
-                  Executive Summary — {selectedQuarter}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <ExecutiveSummary
-                  teams={teams}
-                  sprints={sprints}
-                  members={members}
-                  allocations={allocations}
-                  workAreas={workAreas}
-                  selectedQuarter={selectedQuarter}
-                />
-              </CardContent>
-            </Card>
-            <TeamCapacityChart
-              teams={teams}
-              sprints={sprints}
-              members={members}
-              allocations={allocations}
-              selectedTeamId={selectedTeamId}
-              selectedQuarter={selectedQuarter}
-            />
-            <AllocationHeatMap
-              teams={teams}
-              members={members}
-              sprints={sprints}
-              allocations={allocations}
-              workAreas={workAreas}
-              selectedQuarter={selectedQuarter}
-              selectedTeamId={selectedTeamId}
-            />
-            <Card>
-              <CardHeader className="pb-3 border-b">
-                <CardTitle className="text-base font-bold">
-                  Capacity Overview — {selectedQuarter}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <CapacityOverviewTable
+          <Tabs defaultValue="quarterly" className="mt-6">
+            <TabsList className="grid w-full grid-cols-2 max-w-md">
+              <TabsTrigger value="quarterly">Quarterly Planning</TabsTrigger>
+              <TabsTrigger value="sprint">Sprint Planning</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="quarterly" className="space-y-6 mt-6">
+              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                <CardHeader className="pb-3 border-b border-primary/10">
+                  <CardTitle className="text-base font-bold text-primary">
+                    Executive Summary — {selectedQuarter}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <ExecutiveSummary
+                    teams={teams}
+                    sprints={sprints}
+                    members={members}
+                    allocations={allocations}
+                    workAreas={workAreas}
+                    selectedQuarter={selectedQuarter}
+                  />
+                </CardContent>
+              </Card>
+              <TeamCapacityChart
+                teams={teams}
+                sprints={sprints}
+                members={members}
+                allocations={allocations}
+                selectedTeamId={selectedTeamId}
+                selectedQuarter={selectedQuarter}
+              />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <DisciplineBreakdown
                   sprints={quarterSprints}
-                  teams={teams}
                   members={members}
                   allocations={allocations}
                   selectedTeamId={selectedTeamId}
-                  workAreas={filteredWorkAreas}
                 />
-              </CardContent>
-            </Card>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <DisciplineBreakdown
-                sprints={quarterSprints}
+                <Card>
+                  <CardHeader className="pb-3 border-b">
+                    <CardTitle className="text-base font-bold">
+                      Utilization by Work Item Types
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <UtilizationByWorkItemType
+                      workAreas={filteredWorkAreas}
+                      allocations={allocations}
+                      members={members}
+                      sprints={quarterSprints}
+                      selectedTeamId={selectedTeamId}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="sprint" className="space-y-6 mt-6">
+              <AllocationHeatMap
+                teams={teams}
                 members={members}
+                sprints={sprints}
                 allocations={allocations}
+                workAreas={workAreas}
+                selectedQuarter={selectedQuarter}
                 selectedTeamId={selectedTeamId}
               />
               <Card>
                 <CardHeader className="pb-3 border-b">
                   <CardTitle className="text-base font-bold">
-                    Utilization by Work Item Types
+                    Capacity Overview — {selectedQuarter}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <UtilizationByWorkItemType
-                    workAreas={filteredWorkAreas}
-                    allocations={allocations}
-                    members={members}
+                  <CapacityOverviewTable
                     sprints={quarterSprints}
+                    teams={teams}
+                    members={members}
+                    allocations={allocations}
                     selectedTeamId={selectedTeamId}
+                    workAreas={filteredWorkAreas}
                   />
                 </CardContent>
               </Card>
-            </div>
-            </div>
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </div>
