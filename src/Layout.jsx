@@ -87,7 +87,12 @@ export default function Layout({ children, currentPageName }) {
             );
           })}
         </nav>
-        <div className="p-3 border-t border-border">
+        <div className="p-3 border-t border-border space-y-3">
+          <div className="px-3">
+            <div className="text-xs text-muted-foreground">Logged in as</div>
+            <div className="text-sm font-medium truncate">{user?.full_name || user?.email}</div>
+            <div className="text-xs text-muted-foreground capitalize">{user?.role?.replace('_', ' ')}</div>
+          </div>
           <Button
             variant="ghost"
             className="w-full justify-start text-muted-foreground hover:text-foreground"
@@ -121,11 +126,6 @@ export default function Layout({ children, currentPageName }) {
               <button onClick={() => setMobileOpen(false)}>
                 <X className="w-5 h-5" />
               </button>
-            </div>
-            <div className="px-6 py-3 border-b border-border bg-muted/50">
-              <div className="text-xs text-muted-foreground">Logged in as</div>
-              <div className="text-sm font-medium truncate">{user?.full_name || user?.email}</div>
-              <div className="text-xs text-muted-foreground capitalize">{user?.role?.replace('_', ' ')}</div>
             </div>
             <nav className="flex-1 p-3 space-y-1">
               {filteredNavItems.map((item) => {
