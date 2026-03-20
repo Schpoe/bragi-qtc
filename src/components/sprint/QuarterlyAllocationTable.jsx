@@ -30,9 +30,7 @@ export default function QuarterlyAllocationTable({
     ? workAreas
     : workAreas.filter(wa => wa.is_cross_team || wa.leading_team_id === selectedTeamId || wa.supporting_team_ids.includes(selectedTeamId));
 
-  const relevantWorkAreas = selectedWorkAreaIds.size > 0
-    ? allRelevantWorkAreas.filter(wa => selectedWorkAreaIds.has(wa.id))
-    : allRelevantWorkAreas;
+  const relevantWorkAreas = allRelevantWorkAreas.filter(wa => selectedWorkAreaIds.has(wa.id));
 
   const quarterAllocations = allocations.filter(a => a.quarter === quarter);
 
@@ -57,6 +55,38 @@ export default function QuarterlyAllocationTable({
         title="No data available"
         description="Add team members and work areas to start planning allocations."
       />
+    );
+  }
+
+  if (selectedWorkAreaIds.size === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h4 className="text-sm font-medium">Work Areas</h4>
+          {canEdit && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDialogOpen(true)}
+            >
+              <Settings2 className="w-4 h-4 mr-2" />
+              Select Work Areas
+            </Button>
+          )}
+        </div>
+        <EmptyState
+          icon={Users}
+          title="No work areas selected"
+          description="Click 'Select Work Areas' to choose which areas to allocate."
+        />
+        <QuarterlyAllocationDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          quarter={quarter}
+          teamId={selectedTeamId}
+          onConfirm={handleWorkAreaSelectionChange}
+        />
+      </div>
     );
   }
 
