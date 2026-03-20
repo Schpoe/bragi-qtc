@@ -6,6 +6,7 @@ import { canManageAllocations } from "@/lib/permissions";
 import { useAuth } from "@/lib/AuthContext";
 import EmptyState from "@/components/shared/EmptyState";
 import { Users, Settings2 } from "lucide-react";
+import DisciplineBadge from "../shared/DisciplineBadge";
 import QuarterlyAllocationDialog from "./QuarterlyAllocationDialog";
 
 export default function QuarterlyAllocationTable({
@@ -126,7 +127,10 @@ export default function QuarterlyAllocationTable({
             {memberAllocations.map(({ member, allocations: memberAllocs, totalPercent, isOverAllocated }) => (
               <TableRow key={member.id} className={isOverAllocated ? "bg-destructive/5" : ""}>
                 <TableCell className="font-medium sticky left-0 z-10 bg-background border-r">
-                  {member.name}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{member.name}</span>
+                    <DisciplineBadge discipline={member.discipline} />
+                  </div>
                 </TableCell>
                 {relevantWorkAreas.map(wa => {
                   const alloc = memberAllocs.find(a => a.work_area_id === wa.id);
