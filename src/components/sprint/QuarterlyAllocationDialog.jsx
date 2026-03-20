@@ -42,23 +42,21 @@ export default function QuarterlyAllocationDialog({ open, onOpenChange, quarter,
   const filterBySearch = (items) => items.filter(wa => wa.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const renderWAItem = (wa) => (
-    <label key={wa.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded">
-      <input
-        type="checkbox"
-        checked={selectedWorkAreaIds.has(wa.id)}
-        onChange={(e) => {
-          const newSelection = new Set(selectedWorkAreaIds);
-          if (e.target.checked) {
-            newSelection.add(wa.id);
-          } else {
-            newSelection.delete(wa.id);
-          }
-          setSelectedWorkAreaIds(newSelection);
-        }}
-        className="w-4 h-4 rounded"
-      />
-      <span className="text-sm">{wa.name}</span>
-    </label>
+   <div key={wa.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded">
+     <Checkbox
+       checked={selectedWorkAreaIds.has(wa.id)}
+       onCheckedChange={(checked) => {
+         const newSelection = new Set(selectedWorkAreaIds);
+         if (checked) {
+           newSelection.add(wa.id);
+         } else {
+           newSelection.delete(wa.id);
+         }
+         setSelectedWorkAreaIds(newSelection);
+       }}
+     />
+     <span className="text-sm">{wa.name}</span>
+   </div>
   );
 
   const filteredLeading = filterBySearch(leadingWAs);
