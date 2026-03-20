@@ -104,7 +104,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          <StatsRow
+           <StatsRow
             teams={teams}
             members={members}
             workAreas={filteredWorkAreas}
@@ -114,82 +114,82 @@ export default function Dashboard() {
           />
 
           <div className="space-y-6">
-           <Card>
-             <CardHeader className="pb-3">
-               <CardTitle className="text-base font-semibold">
-                 Executive Summary — {selectedQuarter}
-               </CardTitle>
-             </CardHeader>
-             <CardContent>
-               <ExecutiveSummary
-                 teams={teams}
-                 sprints={sprints}
-                 members={members}
-                 allocations={allocations}
-                 workAreas={workAreas}
-                 selectedQuarter={selectedQuarter}
-               />
-             </CardContent>
-           </Card>
-           <TeamCapacityChart
-             teams={teams}
-             sprints={sprints}
-             members={members}
-             allocations={allocations}
-             selectedTeamId={selectedTeamId}
-             selectedQuarter={selectedQuarter}
-           />
-           <AllocationHeatMap
-             teams={teams}
-             members={members}
-             sprints={sprints}
-             allocations={allocations}
-             workAreas={workAreas}
-             selectedQuarter={selectedQuarter}
-             selectedTeamId={selectedTeamId}
-           />
-           <Card>
-             <CardHeader className="pb-3">
-               <CardTitle className="text-base font-semibold">
-                 Capacity Overview — {selectedQuarter}
-               </CardTitle>
-             </CardHeader>
-             <CardContent>
-               <CapacityOverviewTable
-                 sprints={quarterSprints}
-                 teams={teams}
-                 members={members}
-                 allocations={allocations}
-                 selectedTeamId={selectedTeamId}
-                 workAreas={filteredWorkAreas}
-               />
-             </CardContent>
-           </Card>
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-             <DisciplineBreakdown
-               sprints={quarterSprints}
-               members={members}
-               allocations={allocations}
-               selectedTeamId={selectedTeamId}
-             />
-             <Card>
-               <CardHeader className="pb-3">
-                 <CardTitle className="text-base font-semibold">
-                   Utilization by Work Item Types
-                 </CardTitle>
-               </CardHeader>
-               <CardContent>
-                 <UtilizationByWorkItemType
-                   workAreas={filteredWorkAreas}
-                   allocations={allocations}
-                   members={members}
-                   sprints={quarterSprints}
-                   selectedTeamId={selectedTeamId}
-                 />
-               </CardContent>
-             </Card>
-           </div>
-           </div>
+           <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+              <CardHeader className="pb-3 border-b border-primary/10">
+                <CardTitle className="text-base font-bold text-primary">
+                  Executive Summary — {selectedQuarter}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <ExecutiveSummary
+                  teams={teams}
+                  sprints={sprints}
+                  members={members}
+                  allocations={allocations}
+                  workAreas={workAreas}
+                  selectedQuarter={selectedQuarter}
+                />
+              </CardContent>
+            </Card>
+            <TeamCapacityChart
+              teams={teams}
+              sprints={sprints}
+              members={members}
+              allocations={allocations}
+              selectedTeamId={selectedTeamId}
+              selectedQuarter={selectedQuarter}
+            />
+            <AllocationHeatMap
+              teams={teams}
+              members={members}
+              sprints={sprints}
+              allocations={allocations}
+              workAreas={workAreas}
+              selectedQuarter={selectedQuarter}
+              selectedTeamId={selectedTeamId}
+            />
+            <Card>
+              <CardHeader className="pb-3 border-b">
+                <CardTitle className="text-base font-bold">
+                  Capacity Overview — {selectedQuarter}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <CapacityOverviewTable
+                  sprints={quarterSprints}
+                  teams={teams}
+                  members={members}
+                  allocations={allocations}
+                  selectedTeamId={selectedTeamId}
+                  workAreas={filteredWorkAreas}
+                />
+              </CardContent>
+            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <DisciplineBreakdown
+                sprints={quarterSprints}
+                members={members}
+                allocations={allocations}
+                selectedTeamId={selectedTeamId}
+              />
+              <Card>
+                <CardHeader className="pb-3 border-b">
+                  <CardTitle className="text-base font-bold">
+                    Utilization by Work Item Types
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <UtilizationByWorkItemType
+                    workAreas={filteredWorkAreas}
+                    allocations={allocations}
+                    members={members}
+                    sprints={quarterSprints}
+                    selectedTeamId={selectedTeamId}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+            </div>
         </>
       )}
     </div>
