@@ -89,8 +89,10 @@ export default function CleanupPage() {
       queryClient.invalidateQueries({ queryKey: ["teamMembers"] });
       queryClient.invalidateQueries({ queryKey: ["sprints"] });
       queryClient.invalidateQueries({ queryKey: ["allocations"] });
+      queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] });
+      queryClient.invalidateQueries({ queryKey: ["workAreaSelections"] });
       queryClient.invalidateQueries({ queryKey: ["workAreas"] });
-      setSelectedOrphans({ members: new Set(), sprints: new Set(), allocations: new Set(), workAreas: new Set() });
+      setSelectedOrphans({ members: new Set(), sprints: new Set(), allocations: new Set(), quarterlyAllocations: new Set(), workAreaSelections: new Set(), workAreas: new Set() });
       setConfirmDialogOpen(false);
       toast.success("Cleanup completed successfully");
     },
