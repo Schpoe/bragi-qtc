@@ -264,7 +264,20 @@ export default function SprintPlanning() {
 
    const teamMembers = members.filter(m => m.team_id === effectiveTeamId);
 
-   const filteredWorkAreas = workAreas.filter(wa => wa.is_cross_team || wa.leading_team_id === effectiveTeamId || wa.supporting_team_ids.includes(effectiveTeamId));
+   // Get work areas relevant to this team (leading/supporting) plus any with allocations
+   const teamMemberIds = new Set(teamMembers.map(m => m.id));
+   const workAreasWithAllocations = new Set(
+     quarterlyAllocations
+       .filter(a => teamMemberIds.has(a.team_member_id) && a.quarter === selectedQuarter)
+       .map(a => a.work_area_id)
+   );
+
+   const filteredWorkAreas = workAreas.filter(wa => 
+     wa.is_cross_team || 
+     wa.leading_team_id === effectiveTeamId || 
+     wa.supporting_team_ids.includes(effectiveTeamId) ||
+     workAreasWithAllocations.has(wa.id)
+   );
 
   const quarters = [...new Set(sprints.map(s => s.quarter))];
   if (!quarters.includes(selectedQuarter)) quarters.push(selectedQuarter);
