@@ -18,6 +18,8 @@ export default function CleanupPage() {
     members: new Set(),
     sprints: new Set(),
     allocations: new Set(),
+    quarterlyAllocations: new Set(),
+    workAreaSelections: new Set(),
     workAreas: new Set(),
   });
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
