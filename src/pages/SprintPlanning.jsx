@@ -372,7 +372,7 @@ export default function SprintPlanning() {
       quarters.add(`Q${q} ${y}`);
     }
     
-    return Array.from(quarters);
+    return Array.from(quarters).filter(quarter => !quarter.includes('2025'));
   };
   
   const quarters = generateQuarters();
