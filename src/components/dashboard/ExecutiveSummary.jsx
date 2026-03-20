@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, TrendingUp, TrendingDown, Minus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ExportButtons from "./ExportButtons";
 
 function UtilBar({ pct }) {
   const capped = Math.min(pct, 100);
@@ -154,7 +155,11 @@ export default function ExecutiveSummary({ teams, sprints, members, allocations,
   }
 
   return (
-    <div className="space-y-6">
+    <div id="executive-summary-content" className="space-y-6">
+      {/* Export button */}
+      <div className="flex justify-end print:hidden">
+        <ExportButtons data={data} selectedQuarter={selectedQuarter} />
+      </div>
       {/* Alert banner */}
       {alerts.length > 0 && (
         <Card className="border-destructive/40 bg-destructive/5">
