@@ -1,0 +1,200 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/lib/AuthContext";
+import { Users, Plus, Pencil, Trash2, Shield, UserCog } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import PageHeader from "../components/shared/PageHeader";
+import EmptyState from "../components/shared/EmptyState";
+import UserFormDialog from "../components/users/UserFormDialog";
+import ConfirmDeleteDialog from "../components/shared/ConfirmDeleteDialog";
+import { isAdmin } from "@/lib/permissions";
+import { toast } from "sonner";
+
+export default function UserManagement() {
+  const { user: currentUser } = useAuth();
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [deleteUserId, setDeleteUserId] = useState(null);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("viewer");
+  const queryClient = useQueryClient();
+
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => base44.entities.User.list(),
+  });
+
+  const { data: teams = [] } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => base44.entities.Team.list(),
+  });
+
+  const updateUser = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("User updated successfully");
+    },
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: (id) => base44.entities.User.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("User deleted successfully");
+    },
+  });
+
+  const handleSaveUser = (data) => {
+    if (editingUser) {
+      updateUser.mutate({ id: editingUser.id, data });
+    }
+    setEditingUser(null);
+    setUserDialogOpen(false);
+  };
+
+  const handleInviteUser = async () => {
+    if (!inviteEmail) {
+      toast.error("Please enter an email address");
+      return;
+    }
+    try {
+      await base44.users.inviteUser(inviteEmail, inviteRole);
+      toast.success(`Invitation sent to ${inviteEmail}`);
+      setInviteEmail("");
+      setInviteRole("viewer");
+    } catch (error) {
+      toast.error("Failed to invite user: " + error.message);
+    }
+  };
+
+  const getRoleBadge = (role) => {
+    if (role === "admin") return <Badge className="bg-red-500 text-white"><Shield className="w-3 h-3 mr-1" />Admin</Badge>;
+    if (role === "team_manager") return <Badge className="bg-blue-500 text-white"><UserCog className="w-3 h-3 mr-1" />Team Manager</Badge>;
+    return <Badge variant="secondary">Viewer</Badge>;
+  };
+
+  if (!isAdmin(currentUser)) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <EmptyState
+          icon={Shield}
+          title="Access Denied"
+          description="You need administrator privileges to access user management."
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <PageHeader title="User Management" subtitle="Manage users, roles, and permissions">
+        <Button onClick={() => setUserDialogOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" /> Invite User
+        </Button>
+      </PageHeader>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
+        </div>
+      ) : users.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No users yet"
+          description="Invite users to get started."
+        >
+          <Button onClick={() => setUserDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" /> Invite First User
+          </Button>
+        </EmptyState>
+      ) : (
+        <div className="space-y-4">
+          {users.map(user => (
+            <Card key={user.id}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Users className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">{user.full_name}</CardTitle>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getRoleBadge(user.role)}
+                    {user.id !== currentUser.id && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => {
+                            setEditingUser(user);
+                            setUserDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => setDeleteUserId(user.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              {user.role === "team_manager" && user.managed_team_ids?.length > 0 && (
+                <CardContent className="pt-0">
+                  <div className="text-xs text-muted-foreground mb-1">Manages teams:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {user.managed_team_ids.map(teamId => {
+                      const team = teams.find(t => t.id === teamId);
+                      return team ? (
+                        <Badge key={teamId} variant="outline" className="text-xs">
+                          {team.name}
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <UserFormDialog
+        open={userDialogOpen}
+        onOpenChange={setUserDialogOpen}
+        user={editingUser}
+        teams={teams}
+        onSave={handleSaveUser}
+        currentUserId={currentUser?.id}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteUserId !== null}
+        title="Delete User?"
+        description="Are you sure you want to delete this user? This action cannot be undone."
+        onConfirm={() => {
+          deleteUser.mutate(deleteUserId);
+          setDeleteUserId(null);
+        }}
+        onCancel={() => setDeleteUserId(null)}
+        isLoading={deleteUser.isPending}
+      />
+    </div>
+  );
+}
