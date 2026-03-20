@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
+import { toast } from "sonner";
 import { Users, Plus, Pencil, Trash2, Shield, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,6 @@ import UserFormDialog from "../components/users/UserFormDialog";
 import ConfirmDeleteDialog from "../components/shared/ConfirmDeleteDialog";
 import PasswordResetInfo from "../components/auth/PasswordResetInfo";
 import { isAdmin } from "@/lib/permissions";
-import { toast } from "sonner";
 
 export default function UserManagement() {
   const { user: currentUser } = useAuth();
@@ -57,6 +57,10 @@ export default function UserManagement() {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setEditingUser(null);
       setUserDialogOpen(false);
+      // If updating the current user, refresh auth context to sync managed_team_ids
+      if (currentUser?.id === editingUser?.id) {
+        window.location.reload();
+      }
       toast.success("User updated successfully");
     },
     onError: (error) => {
