@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { canManageAllocations } from "@/lib/permissions";
 import { useAuth } from "@/lib/AuthContext";
 import EmptyState from "@/components/shared/EmptyState";
-import { Users } from "lucide-react";
+import { Users, Settings2 } from "lucide-react";
+import QuarterlyAllocationDialog from "./QuarterlyAllocationDialog";
 
 export default function QuarterlyAllocationTable({
   members,
@@ -16,6 +17,7 @@ export default function QuarterlyAllocationTable({
   selectedTeamId
 }) {
   const [selectedWorkAreaIds, setSelectedWorkAreaIds] = useState(new Set());
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { user } = useAuth();
   const relevantTeamId = selectedTeamId === "all" ? members[0]?.team_id : selectedTeamId;
   const canEdit = relevantTeamId && canManageAllocations(user, relevantTeamId);
@@ -58,32 +60,24 @@ export default function QuarterlyAllocationTable({
     );
   }
 
-  const handleWorkAreaToggle = (waId) => {
-    const newSelection = new Set(selectedWorkAreaIds);
-    if (newSelection.has(waId)) {
-      newSelection.delete(waId);
-    } else {
-      newSelection.add(waId);
-    }
-    setSelectedWorkAreaIds(newSelection);
+  const handleWorkAreaSelectionChange = (selected) => {
+    setSelectedWorkAreaIds(new Set(selected));
   };
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <h4 className="text-sm font-medium">Select Work Areas</h4>
-        <div className="flex flex-wrap gap-4">
-          {allRelevantWorkAreas.map(wa => (
-            <label key={wa.id} className="flex items-center gap-2 cursor-pointer">
-              <Checkbox
-                checked={selectedWorkAreaIds.size === 0 || selectedWorkAreaIds.has(wa.id)}
-                onCheckedChange={() => handleWorkAreaToggle(wa.id)}
-                disabled={!canEdit}
-              />
-              <span className="text-sm">{wa.name}</span>
-            </label>
-          ))}
-        </div>
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium">Work Areas</h4>
+        {canEdit && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDialogOpen(true)}
+          >
+            <Settings2 className="w-4 h-4 mr-2" />
+            Select Work Areas
+          </Button>
+        )}
       </div>
       <div className="overflow-x-auto rounded-lg border border-border">
         <Table>
@@ -139,6 +133,14 @@ export default function QuarterlyAllocationTable({
           </TableBody>
         </Table>
       </div>
+
+      <QuarterlyAllocationDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        quarter={quarter}
+        teamId={selectedTeamId}
+        onConfirm={handleWorkAreaSelectionChange}
+      />
     </div>
   );
 }
