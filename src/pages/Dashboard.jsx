@@ -3,7 +3,6 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentQuarter, sortQuarters } from "@/lib/quarter-utils";
 import PageHeader from "../components/shared/PageHeader";
 import FilterBar from "../components/shared/FilterBar";
@@ -105,7 +104,7 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          <StatsRow
+           <StatsRow
             teams={teams}
             members={members}
             workAreas={filteredWorkAreas}
@@ -114,93 +113,83 @@ export default function Dashboard() {
             selectedTeamId={selectedTeamId}
           />
 
-          <Tabs defaultValue="quarterly" className="mt-6">
-            <TabsList className="grid w-full grid-cols-2 max-w-md">
-              <TabsTrigger value="quarterly">Quarterly Planning</TabsTrigger>
-              <TabsTrigger value="sprint">Sprint Planning</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="quarterly" className="space-y-6 mt-6">
-              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-                <CardHeader className="pb-3 border-b border-primary/10">
-                  <CardTitle className="text-base font-bold text-primary">
-                    Executive Summary — {selectedQuarter}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <ExecutiveSummary
-                    teams={teams}
-                    sprints={sprints}
-                    members={members}
-                    allocations={allocations}
-                    workAreas={workAreas}
-                    selectedQuarter={selectedQuarter}
-                  />
-                </CardContent>
-              </Card>
-              <TeamCapacityChart
-                teams={teams}
-                sprints={sprints}
-                members={members}
-                allocations={allocations}
-                selectedTeamId={selectedTeamId}
-                selectedQuarter={selectedQuarter}
-              />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <DisciplineBreakdown
+          <div className="space-y-6">
+           <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+              <CardHeader className="pb-3 border-b border-primary/10">
+                <CardTitle className="text-base font-bold text-primary">
+                  Executive Summary — {selectedQuarter}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <ExecutiveSummary
+                  teams={teams}
+                  sprints={sprints}
+                  members={members}
+                  allocations={allocations}
+                  workAreas={workAreas}
+                  selectedQuarter={selectedQuarter}
+                />
+              </CardContent>
+            </Card>
+            <TeamCapacityChart
+              teams={teams}
+              sprints={sprints}
+              members={members}
+              allocations={allocations}
+              selectedTeamId={selectedTeamId}
+              selectedQuarter={selectedQuarter}
+            />
+            <AllocationHeatMap
+              teams={teams}
+              members={members}
+              sprints={sprints}
+              allocations={allocations}
+              workAreas={workAreas}
+              selectedQuarter={selectedQuarter}
+              selectedTeamId={selectedTeamId}
+            />
+            <Card>
+              <CardHeader className="pb-3 border-b">
+                <CardTitle className="text-base font-bold">
+                  Capacity Overview — {selectedQuarter}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <CapacityOverviewTable
                   sprints={quarterSprints}
+                  teams={teams}
                   members={members}
                   allocations={allocations}
                   selectedTeamId={selectedTeamId}
+                  workAreas={filteredWorkAreas}
                 />
-                <Card>
-                  <CardHeader className="pb-3 border-b">
-                    <CardTitle className="text-base font-bold">
-                      Utilization by Work Item Types
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <UtilizationByWorkItemType
-                      workAreas={filteredWorkAreas}
-                      allocations={allocations}
-                      members={members}
-                      sprints={quarterSprints}
-                      selectedTeamId={selectedTeamId}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="sprint" className="space-y-6 mt-6">
-              <AllocationHeatMap
-                teams={teams}
+              </CardContent>
+            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <DisciplineBreakdown
+                sprints={quarterSprints}
                 members={members}
-                sprints={sprints}
                 allocations={allocations}
-                workAreas={workAreas}
-                selectedQuarter={selectedQuarter}
                 selectedTeamId={selectedTeamId}
               />
               <Card>
                 <CardHeader className="pb-3 border-b">
                   <CardTitle className="text-base font-bold">
-                    Capacity Overview — {selectedQuarter}
+                    Utilization by Work Item Types
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <CapacityOverviewTable
-                    sprints={quarterSprints}
-                    teams={teams}
-                    members={members}
-                    allocations={allocations}
-                    selectedTeamId={selectedTeamId}
+                  <UtilizationByWorkItemType
                     workAreas={filteredWorkAreas}
+                    allocations={allocations}
+                    members={members}
+                    sprints={quarterSprints}
+                    selectedTeamId={selectedTeamId}
                   />
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+            </div>
+            </div>
         </>
       )}
     </div>
