@@ -298,6 +298,14 @@ export default function WorkAreas() {
           })}
         </div>
       )}
+        </TabsContent>
+
+        {canCreateWorkArea(user) && (
+          <TabsContent value="history" className="mt-6">
+            <JiraSyncHistoryTab />
+          </TabsContent>
+        )}
+      </Tabs>
 
       <WorkAreaFormDialog
         open={dialogOpen}
