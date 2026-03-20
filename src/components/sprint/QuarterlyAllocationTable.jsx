@@ -1,6 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { canManageAllocations } from "@/lib/permissions";
 import { useAuth } from "@/lib/AuthContext";
 import EmptyState from "@/components/shared/EmptyState";
@@ -14,6 +15,7 @@ export default function QuarterlyAllocationTable({
   onAllocationChange,
   selectedTeamId
 }) {
+  const [selectedWorkAreaIds, setSelectedWorkAreaIds] = useState(new Set());
   const { user } = useAuth();
   const relevantTeamId = selectedTeamId === "all" ? members[0]?.team_id : selectedTeamId;
   const canEdit = relevantTeamId && canManageAllocations(user, relevantTeamId);
@@ -22,9 +24,13 @@ export default function QuarterlyAllocationTable({
     ? members
     : members.filter(m => m.team_id === selectedTeamId);
 
-  const relevantWorkAreas = selectedTeamId === "all"
+  const allRelevantWorkAreas = selectedTeamId === "all"
     ? workAreas
-    : workAreas.filter(wa => wa.is_cross_team || wa.team_id === selectedTeamId);
+    : workAreas.filter(wa => wa.is_cross_team || wa.leading_team_id === selectedTeamId || wa.supporting_team_ids.includes(selectedTeamId));
+
+  const relevantWorkAreas = selectedWorkAreaIds.size > 0
+    ? allRelevantWorkAreas.filter(wa => selectedWorkAreaIds.has(wa.id))
+    : allRelevantWorkAreas;
 
   const quarterAllocations = allocations.filter(a => a.quarter === quarter);
 
@@ -42,7 +48,7 @@ export default function QuarterlyAllocationTable({
     });
   }, [relevantMembers, quarterAllocations]);
 
-  if (relevantMembers.length === 0 || relevantWorkAreas.length === 0) {
+  if (relevantMembers.length === 0 || allRelevantWorkAreas.length === 0) {
     return (
       <EmptyState
         icon={Users}
@@ -52,8 +58,33 @@ export default function QuarterlyAllocationTable({
     );
   }
 
+  const handleWorkAreaToggle = (waId) => {
+    const newSelection = new Set(selectedWorkAreaIds);
+    if (newSelection.has(waId)) {
+      newSelection.delete(waId);
+    } else {
+      newSelection.add(waId);
+    }
+    setSelectedWorkAreaIds(newSelection);
+  };
+
   return (
     <div className="space-y-4">
+      <div className="space-y-2">
+        <h4 className="text-sm font-medium">Select Work Areas</h4>
+        <div className="flex flex-wrap gap-4">
+          {allRelevantWorkAreas.map(wa => (
+            <label key={wa.id} className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={selectedWorkAreaIds.size === 0 || selectedWorkAreaIds.has(wa.id)}
+                onCheckedChange={() => handleWorkAreaToggle(wa.id)}
+                disabled={!canEdit}
+              />
+              <span className="text-sm">{wa.name}</span>
+            </label>
+          ))}
+        </div>
+      </div>
       <div className="overflow-x-auto rounded-lg border border-border">
         <Table>
           <TableHeader className="bg-secondary/50 sticky top-0 z-10">
