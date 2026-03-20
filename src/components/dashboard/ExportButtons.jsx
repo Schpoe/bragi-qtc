@@ -11,9 +11,13 @@ export default function ExportButtons({ data, selectedQuarter }) {
 
   const exportToExcel = () => {
     const workbook = XLSX.utils.book_new();
+    const timestamp = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' });
 
     // Sheet 1: Team Summary
     const teamSummaryData = [
+      [`Executive Summary - ${selectedQuarter}`],
+      [`Exported: ${timestamp}`],
+      [],
       ["Team", "Members", "Q Utilization %", "Status"],
       ...data.map(d => [
         d.team.name,
@@ -26,7 +30,12 @@ export default function ExportButtons({ data, selectedQuarter }) {
     XLSX.utils.book_append_sheet(workbook, ws1, "Team Summary");
 
     // Sheet 2: Sprint Breakdown
-    const sprintData = [["Team", "Sprint", "Utilization %", "Over-allocated Members"]];
+    const sprintData = [
+      [`Sprint Breakdown - ${selectedQuarter}`],
+      [`Exported: ${timestamp}`],
+      [],
+      ["Team", "Sprint", "Utilization %", "Over-allocated Members"]
+    ];
     data.forEach(d => {
       d.sprintStats.forEach(ss => {
         sprintData.push([
@@ -41,7 +50,12 @@ export default function ExportButtons({ data, selectedQuarter }) {
     XLSX.utils.book_append_sheet(workbook, ws2, "Sprint Breakdown");
 
     // Sheet 3: Discipline Breakdown
-    const disciplineData = [["Team", "Discipline", "Members", "Q Utilization %"]];
+    const disciplineData = [
+      [`Discipline Breakdown - ${selectedQuarter}`],
+      [`Exported: ${timestamp}`],
+      [],
+      ["Team", "Discipline", "Members", "Q Utilization %"]
+    ];
     data.forEach(d => {
       d.disciplineStats.forEach(ds => {
         disciplineData.push([
@@ -56,7 +70,12 @@ export default function ExportButtons({ data, selectedQuarter }) {
     XLSX.utils.book_append_sheet(workbook, ws3, "Discipline Breakdown");
 
     // Sheet 4: Top Work Areas
-    const workAreaData = [["Team", "Work Area", "Avg % per Sprint"]];
+    const workAreaData = [
+      [`Top Work Areas - ${selectedQuarter}`],
+      [`Exported: ${timestamp}`],
+      [],
+      ["Team", "Work Area", "Avg % per Sprint"]
+    ];
     data.forEach(d => {
       d.topWorkAreasQuarterly.forEach(wa => {
         workAreaData.push([
@@ -73,7 +92,10 @@ export default function ExportButtons({ data, selectedQuarter }) {
   };
 
   const exportToCSV = () => {
+    const timestamp = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' });
     const rows = [
+      ["Executive Summary", selectedQuarter, "Exported", timestamp],
+      [],
       ["Section", "Team", "Metric", "Value"],
       ...data.flatMap(d => [
         ["Summary", d.team.name, "Members", d.teamMemberCount],
@@ -93,9 +115,11 @@ export default function ExportButtons({ data, selectedQuarter }) {
   };
 
   const exportToJSON = () => {
+    const timestamp = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' });
     const jsonData = {
       quarter: selectedQuarter,
-      exportDate: new Date().toISOString(),
+      exportedAt: timestamp,
+      exportDateISO: new Date().toISOString(),
       teams: data.map(d => ({
         name: d.team.name,
         memberCount: d.teamMemberCount,
@@ -141,7 +165,7 @@ export default function ExportButtons({ data, selectedQuarter }) {
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const margin = 10;
       const contentWidth = pdfWidth - (2 * margin);
-      const headerHeight = 15;
+      const headerHeight = 18;
       const footerHeight = 10;
       const availableHeight = pdfHeight - headerHeight - footerHeight - (2 * margin);
 
@@ -157,8 +181,11 @@ export default function ExportButtons({ data, selectedQuarter }) {
       let pageNumber = 1;
 
       // Add first page with header
+      const timestamp = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' });
       pdf.setFontSize(16);
       pdf.text(`Executive Summary - ${selectedQuarter}`, pdfWidth / 2, margin + 5, { align: "center" });
+      pdf.setFontSize(9);
+      pdf.text(`Exported: ${timestamp}`, pdfWidth / 2, margin + 11, { align: "center" });
       
       // Add first page content
       pdf.addImage(imgData, "PNG", margin, headerHeight + margin, imgWidth, imgHeight, undefined, "FAST");
@@ -179,7 +206,7 @@ export default function ExportButtons({ data, selectedQuarter }) {
         pdf.setPage(i);
         pdf.setFontSize(8);
         pdf.text(
-          `Generated on ${new Date().toLocaleDateString()} | Page ${i} of ${totalPages}`,
+          `Page ${i} of ${totalPages}`,
           pdfWidth / 2,
           pdfHeight - 5,
           { align: "center" }
