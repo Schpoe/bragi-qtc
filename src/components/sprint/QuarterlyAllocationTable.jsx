@@ -26,6 +26,11 @@ export default function QuarterlyAllocationTable({
   const relevantTeamId = selectedTeamId === "all" ? members[0]?.team_id : selectedTeamId;
   const canEdit = relevantTeamId && canManageAllocations(user, relevantTeamId);
 
+  // Sync local state when parent updates initialSelectedWorkAreaIds
+  useEffect(() => {
+    setSelectedWorkAreaIds(new Set(initialSelectedWorkAreaIds));
+  }, [initialSelectedWorkAreaIds]);
+
   const relevantMembers = selectedTeamId === "all"
     ? members
     : members.filter(m => m.team_id === selectedTeamId);
