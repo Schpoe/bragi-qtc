@@ -195,14 +195,14 @@ export default function ExecutiveSummary({ teams, sprints, members, allocations,
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Quarterly Capacity Summary — All Teams × Disciplines</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse">
+        <CardContent className="overflow-x-auto -mx-6 px-6">
+          <table className="text-xs border-collapse">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left py-2 pr-4 font-semibold text-muted-foreground min-w-[120px]">Team</th>
-                <th className="text-left py-2 pr-4 font-semibold text-muted-foreground min-w-[100px]">Discipline</th>
-                <th className="text-right py-2 pr-4 font-semibold text-muted-foreground"># Members</th>
-                <th className="text-right py-2 font-semibold text-muted-foreground min-w-[100px]">Q Utilization</th>
+                <th className="text-left py-2 pr-3 font-semibold text-muted-foreground whitespace-nowrap">Team</th>
+                <th className="text-left py-2 px-3 font-semibold text-muted-foreground whitespace-nowrap">Discipline</th>
+                <th className="text-center py-2 px-3 font-semibold text-muted-foreground whitespace-nowrap"># Members</th>
+                <th className="text-right py-2 pl-3 font-semibold text-muted-foreground whitespace-nowrap">Q Util</th>
               </tr>
             </thead>
             <tbody>
@@ -210,18 +210,18 @@ export default function ExecutiveSummary({ teams, sprints, members, allocations,
               disciplineStats.map(({ discipline, utilPct, memberCount }, di) =>
               <tr key={`${team.id}-${discipline}`} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                     {di === 0 &&
-                <td className="py-2 pr-4 font-medium align-top" rowSpan={disciplineStats.length}>
+                <td className="py-2 pr-3 font-medium align-top whitespace-nowrap" rowSpan={disciplineStats.length}>
                         <div className="flex items-center gap-1.5">
                           <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: team.color || "#3b82f6" }} />
-                          {team.name}
+                          <span className="truncate max-w-[80px]">{team.name}</span>
                         </div>
                       </td>
                 }
-                    <td className="py-2 pr-4 text-muted-foreground">{discipline}</td>
-                    <td className="py-2 pr-4 text-right text-muted-foreground">{memberCount}</td>
-                    <td className="py-2 text-right">
+                    <td className="py-2 px-3 text-muted-foreground whitespace-nowrap text-xs">{discipline}</td>
+                    <td className="py-2 px-3 text-center text-muted-foreground whitespace-nowrap">{memberCount}</td>
+                    <td className="py-2 pl-3 text-right whitespace-nowrap">
                       <span className={cn(
-                    "font-semibold",
+                    "font-semibold tabular-nums",
                     utilPct > 100 ? "text-destructive" : utilPct >= 80 ? "text-amber-600" : "text-foreground"
                   )}>
                         {utilPct}%
