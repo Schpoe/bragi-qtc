@@ -18,7 +18,7 @@ import JiraImportDialog from "../components/workareas/JiraImportDialog";
 import JiraSyncButton from "../components/workareas/JiraSyncButton";
 import EpicLinkDialog from "../components/workareas/EpicLinkDialog";
 import { useAuth } from "@/lib/AuthContext";
-import { canManageWorkAreas } from "@/lib/permissions";
+import { canManageWorkAreas, canCreateWorkArea, isViewer } from "@/lib/permissions";
 
 export default function WorkAreas() {
   const { user } = useAuth();
@@ -101,13 +101,17 @@ export default function WorkAreas() {
   return (
     <div>
       <PageHeader title="Work Items" subtitle="Products, Features, Projects & Support">
-         <JiraSyncButton />
-         <Button variant="outline" onClick={() => setJiraDialogOpen(true)}>
-           <Upload className="w-4 h-4 mr-2" /> Import from Jira
-         </Button>
-         <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-           <Plus className="w-4 h-4 mr-2" /> New Work Item
-         </Button>
+         {canCreateWorkArea(user) && (
+           <>
+             <JiraSyncButton />
+             <Button variant="outline" onClick={() => setJiraDialogOpen(true)}>
+               <Upload className="w-4 h-4 mr-2" /> Import from Jira
+             </Button>
+             <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+               <Plus className="w-4 h-4 mr-2" /> New Work Item
+             </Button>
+           </>
+         )}
       </PageHeader>
 
       <div className="mb-6 space-y-4">
@@ -170,14 +174,16 @@ export default function WorkAreas() {
         </div>
       ) : filteredWorkAreas.length === 0 ? (
         <EmptyState icon={FolderKanban} title={filterTeamId === "all" ? "No work items yet" : "No work items for this team"} description={filterTeamId === "all" ? "Define products, features or projects for capacity planning." : "Try selecting a different team or create a new work item."}>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" /> Create First Work Item
-          </Button>
+          {canCreateWorkArea(user) && (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Create First Work Item
+            </Button>
+          )}
         </EmptyState>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredWorkAreas.map(wa => {
-            const canManage = canManageWorkAreas(user, wa.leading_team_id);
+            const canManage = canManageWorkAreas(user, wa);
             
             return (
               <Card key={wa.id} className="group border-border/60 hover:shadow-md transition-all">
