@@ -44,6 +44,9 @@ export default {
     "bg-rose-100", "text-rose-700", "border-rose-200",
     "bg-cyan-100", "text-cyan-700", "border-cyan-200",
     "bg-teal-100", "text-teal-700", "border-teal-200",
+    "bg-fuchsia-100", "text-fuchsia-700", "border-fuchsia-200",
+    "bg-orange-100", "text-orange-700", "border-orange-200",
+    "bg-indigo-100", "text-indigo-700", "border-indigo-200",
   ],
   plugins: [require("tailwindcss-animate")],
 };
