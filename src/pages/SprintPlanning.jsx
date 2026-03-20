@@ -134,15 +134,38 @@ export default function SprintPlanning() {
   });
 
   const updateWorkAreaSelection = useMutation({
-    mutationFn: ({ teamId, quarter, workAreaIds }) => {
+    mutationFn: async ({ teamId, quarter, workAreaIds }) => {
       const existing = workAreaSelections.find(s => s.team_id === teamId && s.quarter === quarter);
+      const oldIds = new Set(existing?.work_area_ids || []);
+      const newIds = new Set(workAreaIds);
+      
+      // Find removed work areas
+      const removedIds = Array.from(oldIds).filter(id => !newIds.has(id));
+      
+      // Delete allocations for removed work areas
+      if (removedIds.length > 0) {
+        const allocationsToDelete = quarterlyAllocations.filter(a => 
+          a.quarter === quarter && 
+          removedIds.includes(a.work_area_id) &&
+          members.some(m => m.id === a.team_member_id && m.team_id === teamId)
+        );
+        
+        for (const alloc of allocationsToDelete) {
+          await base44.entities.QuarterlyAllocation.delete(alloc.id);
+        }
+      }
+      
+      // Update selection
       if (existing) {
         return base44.entities.QuarterlyWorkAreaSelection.update(existing.id, { work_area_ids: workAreaIds });
       } else {
         return base44.entities.QuarterlyWorkAreaSelection.create({ team_id: teamId, quarter, work_area_ids: workAreaIds });
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workAreaSelections"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workAreaSelections"] });
+      queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] });
+    },
   });
 
   const handleSaveSprint = async (data) => {
