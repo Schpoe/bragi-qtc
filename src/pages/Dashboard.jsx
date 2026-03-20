@@ -13,6 +13,7 @@ import UtilizationByWorkItemType from "../components/dashboard/UtilizationByWork
 import TeamCapacityChart from "../components/dashboard/TeamCapacityChart";
 import ExecutiveSummary from "../components/dashboard/ExecutiveSummary";
 import AllocationHeatMap from "../components/dashboard/AllocationHeatMap";
+import QuarterlyPlanWidget from "../components/dashboard/QuarterlyPlanWidget";
 
 export default function Dashboard() {
   const [selectedQuarter, setSelectedQuarter] = useState(() => getCurrentQuarter());
