@@ -10,6 +10,9 @@ const disciplineStyles = {
   Embedded: "bg-rose-100 text-rose-700 border-rose-200",
   Algo: "bg-cyan-100 text-cyan-700 border-cyan-200",
   "Test Automation": "bg-teal-100 text-teal-700 border-teal-200",
+  UX: "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
+  Frontend: "bg-orange-100 text-orange-700 border-orange-200",
+  Backend: "bg-indigo-100 text-indigo-700 border-indigo-200",
 };
 
 export default function DisciplineBadge({ discipline }) {
