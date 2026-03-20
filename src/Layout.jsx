@@ -67,6 +67,11 @@ export default function Layout({ children, currentPageName }) {
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">Sprint & Quarter</p>
         </div>
+        <div className="px-6 py-3 border-b border-border bg-muted/50">
+          <div className="text-xs text-muted-foreground">Logged in as</div>
+          <div className="text-sm font-medium truncate">{user?.full_name || user?.email}</div>
+          <div className="text-xs text-muted-foreground capitalize">{user?.role?.replace('_', ' ')}</div>
+        </div>
         <nav className="flex-1 p-3 space-y-1">
           {filteredNavItems.map((item) => {
             const isActive = currentPageName === item.page;
@@ -113,7 +118,7 @@ export default function Layout({ children, currentPageName }) {
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
-          <aside className="relative w-64 h-full bg-card border-r border-border">
+          <aside className="relative w-64 h-full bg-card border-r border-border flex flex-col">
             <div className="p-6 border-b border-border flex items-center justify-between">
               <h1 className="text-lg font-bold">
                 Capacity<span className="text-primary">Planning</span>
@@ -121,6 +126,11 @@ export default function Layout({ children, currentPageName }) {
               <button onClick={() => setMobileOpen(false)}>
                 <X className="w-5 h-5" />
               </button>
+            </div>
+            <div className="px-6 py-3 border-b border-border bg-muted/50">
+              <div className="text-xs text-muted-foreground">Logged in as</div>
+              <div className="text-sm font-medium truncate">{user?.full_name || user?.email}</div>
+              <div className="text-xs text-muted-foreground capitalize">{user?.role?.replace('_', ' ')}</div>
             </div>
             <nav className="flex-1 p-3 space-y-1">
               {filteredNavItems.map((item) => {
