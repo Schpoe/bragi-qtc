@@ -83,9 +83,17 @@ export default function Dashboard() {
 
   const isLoading = teamsLoading;
 
+  const selectedTeam = selectedTeamId !== "all" ? teams.find(t => t.id === selectedTeamId) : null;
+
   return (
     <div>
-      <PageHeader title="Dashboard" subtitle="Capacity Overview" />
+      <PageHeader 
+        title="Dashboard" 
+        subtitle="Capacity Overview"
+        quarter={selectedQuarter}
+        team={selectedTeam?.name}
+        teamColor={selectedTeam?.color}
+      />
 
       <FilterBar
         quarter={selectedQuarter}
