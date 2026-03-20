@@ -190,50 +190,60 @@ export default function ExecutiveSummary({ teams, sprints, members, allocations,
         </Card>
       }
 
-      {/* Cross-team summary table */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Quarterly Capacity Summary — All Teams × Disciplines</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto -mx-6 px-6">
-          <table className="text-xs border-collapse">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-2 pr-3 font-semibold text-muted-foreground whitespace-nowrap">Team</th>
-                <th className="text-left py-2 px-3 font-semibold text-muted-foreground whitespace-nowrap">Discipline</th>
-                <th className="text-center py-2 px-3 font-semibold text-muted-foreground whitespace-nowrap"># Members</th>
-                <th className="text-right py-2 pl-3 font-semibold text-muted-foreground whitespace-nowrap">Q Util</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map(({ team, disciplineStats }) =>
-              disciplineStats.map(({ discipline, utilPct, memberCount }, di) =>
-              <tr key={`${team.id}-${discipline}`} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                    {di === 0 &&
-                <td className="py-2 pr-3 font-medium align-top whitespace-nowrap" rowSpan={disciplineStats.length}>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: team.color || "#3b82f6" }} />
-                          <span className="truncate max-w-[80px]">{team.name}</span>
-                        </div>
-                      </td>
-                }
-                    <td className="py-2 px-3 text-muted-foreground whitespace-nowrap text-xs">{discipline}</td>
-                    <td className="py-2 px-3 text-center text-muted-foreground whitespace-nowrap">{memberCount}</td>
-                    <td className="py-2 pl-3 text-right whitespace-nowrap">
-                      <span className={cn(
-                    "font-semibold tabular-nums",
-                    utilPct > 100 ? "text-destructive" : utilPct >= 80 ? "text-amber-600" : "text-foreground"
-                  )}>
-                        {utilPct}%
-                      </span>
-                    </td>
-                  </tr>
-              )
-              )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      {/* Cross-team summary tables - 2 columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {[0, 1].map(columnIdx => {
+          const itemsPerColumn = Math.ceil(data.length / 2);
+          const columnData = data.slice(columnIdx * itemsPerColumn, (columnIdx + 1) * itemsPerColumn);
+          return columnData.length > 0 ? (
+            <Card key={columnIdx}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Quarterly Capacity Summary — All Teams × Disciplines</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="text-xs border-collapse w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 pr-3 font-semibold text-muted-foreground whitespace-nowrap">Team</th>
+                        <th className="text-left py-2 px-3 font-semibold text-muted-foreground whitespace-nowrap">Discipline</th>
+                        <th className="text-center py-2 px-3 font-semibold text-muted-foreground whitespace-nowrap"># Mbr</th>
+                        <th className="text-right py-2 pl-3 font-semibold text-muted-foreground whitespace-nowrap">Q Util</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {columnData.map(({ team, disciplineStats }) =>
+                      disciplineStats.map(({ discipline, utilPct, memberCount }, di) =>
+                      <tr key={`${team.id}-${discipline}`} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                            {di === 0 &&
+                        <td className="py-2 pr-3 font-medium align-top whitespace-nowrap" rowSpan={disciplineStats.length}>
+                                <div className="flex items-center gap-1.5">
+                                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: team.color || "#3b82f6" }} />
+                                  <span className="truncate max-w-[70px]">{team.name}</span>
+                                </div>
+                              </td>
+                        }
+                            <td className="py-2 px-3 text-muted-foreground whitespace-nowrap text-xs">{discipline}</td>
+                            <td className="py-2 px-3 text-center text-muted-foreground whitespace-nowrap">{memberCount}</td>
+                            <td className="py-2 pl-3 text-right whitespace-nowrap">
+                              <span className={cn(
+                            "font-semibold tabular-nums",
+                            utilPct > 100 ? "text-destructive" : utilPct >= 80 ? "text-amber-600" : "text-foreground"
+                          )}>
+                                {utilPct}%
+                              </span>
+                            </td>
+                          </tr>
+                      )
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null;
+        })}
+      </div>
 
       {/* Per-team cards */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
