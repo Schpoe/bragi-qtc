@@ -302,11 +302,11 @@ export default function SprintPlanning() {
          ) : teams.length === 0 ? (
            <EmptyState icon={CalendarRange} title="No teams yet" description="First create a team under 'Teams'." />
          ) : (
-           <Card>
-             <CardHeader>
-               <CardTitle className="text-base">Quarterly Plan — {selectedQuarter}</CardTitle>
+           <Card className="border-primary/20">
+             <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
+               <CardTitle className="text-base font-bold text-foreground">Quarterly Plan — {selectedQuarter}</CardTitle>
              </CardHeader>
-             <CardContent>
+             <CardContent className="pt-6">
                <QuarterlyAllocationTable
                  members={members}
                  workAreas={workAreas}
