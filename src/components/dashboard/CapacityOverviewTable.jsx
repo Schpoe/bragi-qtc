@@ -4,6 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 
 export default function CapacityOverviewTable({ sprints, teams, members, allocations, selectedTeamId, workAreas }) {
+  // Filter out template sprints
+  const teamSpecificSprints = sprints.filter(s => !s.is_cross_team);
   const [sortTeamsBy, setSortTeamsBy] = useState("name");
   const [sortMembersBy, setSortMembersBy] = useState("name");
   // If all teams selected, show team-level overview
@@ -11,7 +13,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
     const teamsToDisplay = teams;
 
     const getTeamCapacity = (sprintId, teamId) => {
-      const sprint = sprints.find(s => s.id === sprintId);
+      const sprint = teamSpecificSprints.find(s => s.id === sprintId);
       const relevantWorkAreaIds = new Set(sprint?.relevant_work_area_ids || []);
       const teamMembers = members.filter(m => m.team_id === teamId);
       const memberIds = new Set(teamMembers.map(m => m.id));
@@ -26,7 +28,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
     };
 
     const getDisciplineCapacityForTeam = (sprintId, teamId, discipline) => {
-      const sprint = sprints.find(s => s.id === sprintId);
+      const sprint = teamSpecificSprints.find(s => s.id === sprintId);
       const relevantWorkAreaIds = new Set(sprint?.relevant_work_area_ids || []);
       const teamMembers = members.filter(m => m.team_id === teamId && m.discipline === discipline);
       const memberIds = new Set(teamMembers.map(m => m.id));
@@ -41,7 +43,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
         .reduce((sum, m) => sum + (m.availability_percent || 100), 0);
     };
 
-    if (sprints.length === 0 || teamsToDisplay.length === 0) {
+    if (teamSpecificSprints.length === 0 || teamsToDisplay.length === 0) {
        return <div className="text-center py-8 text-sm text-muted-foreground">No data available.</div>;
      }
 
@@ -100,7 +102,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sprints.map(sprint => (
+                {teamSpecificSprints.map(sprint => (
                     <TableRow key={sprint.id}>
                       <TableCell className="font-medium text-sm">{sprint.name}</TableCell>
                       {getSortedTeams().map(team => {
@@ -167,7 +169,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
                       <TableHeader>
                         <TableRow className="bg-muted/50">
                           <TableHead className="min-w-[100px] text-xs">Discipline</TableHead>
-                          {sprints.map(sprint => (
+                          {teamSpecificSprints.map(sprint => (
                             <TableHead key={sprint.id} className="text-center min-w-[80px]">
                               <span className="text-xs font-medium">{sprint.name}</span>
                             </TableHead>
@@ -178,7 +180,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
                         {teamDisciplines.map(discipline => (
                           <TableRow key={`${team.id}-${discipline}`}>
                             <TableCell className="text-xs font-medium">{discipline}</TableCell>
-                            {sprints.map(sprint => {
+                            {teamSpecificSprints.map(sprint => {
                               const capacity = getDisciplineCapacityForTeam(sprint.id, team.id, discipline);
                               const maxCapacity = getDisciplineMaxCapacityForTeam(team.id, discipline);
                               const utilPct = maxCapacity > 0 ? Math.round((capacity / maxCapacity) * 100) : 0;
@@ -230,7 +232,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
    };
 
   const getMemberCapacity = (sprintId, memberId) => {
-    const sprint = sprints.find(s => s.id === sprintId);
+    const sprint = teamSpecificSprints.find(s => s.id === sprintId);
     const relevantWorkAreaIds = new Set(sprint?.relevant_work_area_ids || []);
     return allocations
       .filter(a => a.sprint_id === sprintId && a.team_member_id === memberId && relevantWorkAreaIds.has(a.work_area_id))
@@ -238,7 +240,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
   };
 
   const getDisciplineCapacity = (sprintId, discipline) => {
-    const sprint = sprints.find(s => s.id === sprintId);
+    const sprint = teamSpecificSprints.find(s => s.id === sprintId);
     const relevantWorkAreaIds = new Set(sprint?.relevant_work_area_ids || []);
     const disciplineMembers = teamMembers.filter(m => m.discipline === discipline).map(m => m.id);
     return allocations
@@ -252,7 +254,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
       .reduce((sum, m) => sum + (m.availability_percent || 100), 0);
   };
 
-  if (sprints.length === 0 || disciplines.length === 0) {
+  if (teamSpecificSprints.length === 0 || disciplines.length === 0) {
     return <div className="text-center py-8 text-sm text-muted-foreground">No data available.</div>;
   }
 
@@ -286,7 +288,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sprints.map(sprint => (
+              {teamSpecificSprints.map(sprint => (
                 <TableRow key={sprint.id}>
                   <TableCell className="font-medium text-sm">{sprint.name}</TableCell>
                   {disciplines.map(discipline => {
@@ -342,7 +344,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="min-w-[140px]">Member</TableHead>
-                {sprints.map(sprint => (
+                {teamSpecificSprints.map(sprint => (
                   <TableHead key={sprint.id} className="text-center min-w-[90px]">
                     <span className="text-xs font-medium">{sprint.name}</span>
                   </TableHead>
@@ -358,7 +360,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
                       <div className="text-xs text-muted-foreground">{member.discipline}</div>
                     </div>
                   </TableCell>
-                  {sprints.map(sprint => {
+                  {teamSpecificSprints.map(sprint => {
                     const capacity = getMemberCapacity(sprint.id, member.id);
                     const maxCapacity = member.availability_percent || 100;
                     const utilPct = maxCapacity > 0 ? Math.round((capacity / maxCapacity) * 100) : 0;
