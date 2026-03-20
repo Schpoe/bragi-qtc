@@ -9,26 +9,47 @@ import { Checkbox } from "@/components/ui/checkbox";
 export default function UserFormDialog({ open, onOpenChange, user, teams, onSave, currentUserId }) {
   const [role, setRole] = useState("viewer");
   const [managedTeamIds, setManagedTeamIds] = useState([]);
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [email, setEmail] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [position, setPosition] = useState("");
 
   useEffect(() => {
     if (user) {
       setRole(user.role || "viewer");
       setManagedTeamIds(user.managed_team_ids || []);
-      setInviteEmail("");
+      setEmail(user.email || "");
+      setFirstName(user.first_name || "");
+      setLastName(user.last_name || "");
+      setPosition(user.position || "");
     } else {
       setRole("viewer");
       setManagedTeamIds([]);
-      setInviteEmail("");
+      setEmail("");
+      setFirstName("");
+      setLastName("");
+      setPosition("");
     }
   }, [user, open]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const data = {
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      position,
       role,
       managed_team_ids: role === "team_manager" ? managedTeamIds : []
     };
+    
+    // For editing, only include changed fields
+    if (user) {
+      delete data.email; // Can't change email for existing users
+      delete data.first_name; // Keep full_name for existing
+      delete data.last_name;
+    }
+    
     onSave(data);
   };
 
@@ -46,29 +67,64 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{user ? "Edit User Role" : "Invite User"}</DialogTitle>
+          <DialogTitle>{user ? "Edit User" : "Add User"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {user ? (
             <div className="space-y-2">
-              <Label>User</Label>
+              <Label>Current User</Label>
               <div className="p-2 bg-muted rounded text-sm">
                 <div className="font-medium">{user.full_name}</div>
                 <div className="text-xs text-muted-foreground">{user.email}</div>
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="user@example.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                required
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="position">Position</Label>
+                <Input
+                  id="position"
+                  placeholder="e.g., Developer, Manager"
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value)}
+                />
+              </div>
+            </>
           )}
 
           <div className="space-y-2">
@@ -120,7 +176,7 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
               Cancel
             </Button>
             <Button type="submit">
-              {user ? "Update" : "Invite"}
+              {user ? "Update" : "Add User"}
             </Button>
           </DialogFooter>
         </form>

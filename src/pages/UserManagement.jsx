@@ -33,6 +33,14 @@ export default function UserManagement() {
     queryFn: () => base44.entities.Team.list(),
   });
 
+  const createUser = useMutation({
+    mutationFn: (data) => base44.entities.User.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("User created successfully");
+    },
+  });
+
   const updateUser = useMutation({
     mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
     onSuccess: () => {
@@ -52,24 +60,11 @@ export default function UserManagement() {
   const handleSaveUser = (data) => {
     if (editingUser) {
       updateUser.mutate({ id: editingUser.id, data });
+    } else {
+      createUser.mutate(data);
     }
     setEditingUser(null);
     setUserDialogOpen(false);
-  };
-
-  const handleInviteUser = async () => {
-    if (!inviteEmail) {
-      toast.error("Please enter an email address");
-      return;
-    }
-    try {
-      await base44.users.inviteUser(inviteEmail, inviteRole);
-      toast.success(`Invitation sent to ${inviteEmail}`);
-      setInviteEmail("");
-      setInviteRole("viewer");
-    } catch (error) {
-      toast.error("Failed to invite user: " + error.message);
-    }
   };
 
   const getRoleBadge = (role) => {
@@ -93,8 +88,8 @@ export default function UserManagement() {
   return (
     <div>
       <PageHeader title="User Management" subtitle="Manage users, roles, and permissions">
-        <Button onClick={() => setUserDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" /> Invite User
+        <Button onClick={() => { setEditingUser(null); setUserDialogOpen(true); }}>
+          <Plus className="w-4 h-4 mr-2" /> Add User
         </Button>
       </PageHeader>
 
@@ -106,10 +101,10 @@ export default function UserManagement() {
         <EmptyState
           icon={Users}
           title="No users yet"
-          description="Invite users to get started."
+          description="Add users to get started."
         >
-          <Button onClick={() => setUserDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" /> Invite First User
+          <Button onClick={() => { setEditingUser(null); setUserDialogOpen(true); }}>
+            <Plus className="w-4 h-4 mr-2" /> Add First User
           </Button>
         </EmptyState>
       ) : (
@@ -123,8 +118,15 @@ export default function UserManagement() {
                       <Users className="w-5 h-5 text-primary" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">{user.full_name}</CardTitle>
+                      <CardTitle className="text-base">
+                        {user.first_name && user.last_name 
+                          ? `${user.first_name} ${user.last_name}` 
+                          : user.full_name}
+                      </CardTitle>
                       <p className="text-sm text-muted-foreground">{user.email}</p>
+                      {user.position && (
+                        <p className="text-xs text-muted-foreground">{user.position}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
