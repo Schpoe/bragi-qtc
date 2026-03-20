@@ -27,7 +27,7 @@ export default function QuarterlyAllocationDialog({ open, onOpenChange, quarter,
    }, [open, initialSelectedIds]);
 
   const handleSave = () => {
-    onConfirm(Array.from(selectedWorkAreaIds));
+    onConfirm(selectedWorkAreaIds);
     onOpenChange(false);
   };
 
