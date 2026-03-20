@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function QuarterlyAllocationDialog({ open, onOpenChange, quarter, teamId, onConfirm, initialSelectedIds = new Set() }) {
    const [selectedWorkAreaIds, setSelectedWorkAreaIds] = useState(new Set());
