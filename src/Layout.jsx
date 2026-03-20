@@ -15,6 +15,7 @@ const navItems = [
   { name: "Work Item Types", page: "WorkAreaTypes", icon: FolderKanban },
   { name: "Sprint Planning", page: "SprintPlanning", icon: CalendarRange },
   { name: "Team Overview", page: "TeamSprintOverview", icon: BarChart3 },
+  { name: "Profile", page: "UserProfile", icon: Users },
   { name: "User Management", page: "UserManagement", icon: Shield, adminOnly: true },
   { name: "Cleanup", page: "Cleanup", icon: Trash2, adminOnly: true },
 ];
