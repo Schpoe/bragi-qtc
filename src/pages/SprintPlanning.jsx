@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
@@ -18,6 +19,7 @@ import EmptyState from "../components/shared/EmptyState";
 import FilterBar from "../components/shared/FilterBar";
 import SprintFormDialog from "../components/sprint/SprintFormDialog";
 import SprintAllocationTable from "../components/sprint/SprintAllocationTable";
+import QuarterlyAllocationTable from "../components/sprint/QuarterlyAllocationTable";
 import ConfirmDeleteDialog from "../components/shared/ConfirmDeleteDialog";
 
 export default function SprintPlanning() {
@@ -58,6 +60,11 @@ export default function SprintPlanning() {
   const { data: allocations = [] } = useQuery({
     queryKey: ["allocations"],
     queryFn: () => base44.entities.Allocation.list(),
+  });
+
+  const { data: quarterlyAllocations = [] } = useQuery({
+    queryKey: ["quarterlyAllocations"],
+    queryFn: () => base44.entities.QuarterlyAllocation.list(),
   });
 
   // Only auto-select first team when actually viewing a specific team (not "all")
@@ -106,6 +113,21 @@ export default function SprintPlanning() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allocations"] }),
   });
 
+  const createQuarterlyAllocation = useMutation({
+    mutationFn: (data) => base44.entities.QuarterlyAllocation.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] }),
+  });
+
+  const updateQuarterlyAllocation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.QuarterlyAllocation.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] }),
+  });
+
+  const deleteQuarterlyAllocation = useMutation({
+    mutationFn: (id) => base44.entities.QuarterlyAllocation.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] }),
+  });
+
   const handleSaveSprint = async (data) => {
     if (editingSprint) {
       // When updating a sprint, clean up allocations for removed work areas
@@ -149,6 +171,32 @@ export default function SprintPlanning() {
       }
     } else if (value > 0) {
       createAllocation.mutate({ team_member_id: memberId, sprint_id: sprintId, work_area_id: workAreaId, percent: value });
+    }
+  };
+
+  const handleQuarterlyAllocationChange = (data) => {
+    const member = members.find(m => m.id === data.team_member_id);
+    if (!member || !canManageAllocations(user, member.team_id)) {
+      return;
+    }
+
+    const existing = quarterlyAllocations.find(
+      a => a.team_member_id === data.team_member_id && a.quarter === data.quarter && a.work_area_id === data.work_area_id
+    );
+    
+    if (existing) {
+      if (data.percent === 0) {
+        deleteQuarterlyAllocation.mutate(existing.id);
+      } else {
+        updateQuarterlyAllocation.mutate({ id: existing.id, data: { percent: data.percent } });
+      }
+    } else if (data.percent > 0) {
+      createQuarterlyAllocation.mutate({
+        team_member_id: data.team_member_id,
+        quarter: data.quarter,
+        work_area_id: data.work_area_id,
+        percent: data.percent
+      });
     }
   };
 
@@ -222,7 +270,7 @@ export default function SprintPlanning() {
   return (
     <>
     <div>
-      <PageHeader title="Sprint Planning" subtitle="Record capacities per team and sprint">
+      <PageHeader title="Capacity Planning" subtitle="Manage team capacity allocations">
         {effectiveTeamId && canCreateSprint(user) && canManageSprints(user, effectiveTeamId) && (
           <Button onClick={() => { setEditingSprint(null); setSprintDialogOpen(true); }}>
             <Plus className="w-4 h-4 mr-2" /> New Sprint
@@ -240,6 +288,13 @@ export default function SprintPlanning() {
          showTeamFilter={true}
        />
 
+      <Tabs defaultValue="sprints" className="mb-6">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="sprints">Sprint Planning</TabsTrigger>
+          <TabsTrigger value="quarterly">Quarterly Overview</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="sprints">
       {teamsLoading || sprintsLoading ? (
         <div className="space-y-4">
           {[1, 2].map(i => <Skeleton key={i} className="h-48 rounded-xl" />)}
@@ -373,6 +428,34 @@ export default function SprintPlanning() {
           })}
         </div>
       )}
+       </TabsContent>
+
+       <TabsContent value="quarterly">
+         {teamsLoading || sprintsLoading ? (
+           <div className="space-y-4">
+             <Skeleton className="h-64 rounded-xl" />
+           </div>
+         ) : teams.length === 0 ? (
+           <EmptyState icon={CalendarRange} title="No teams yet" description="First create a team under 'Teams'." />
+         ) : (
+           <Card>
+             <CardHeader>
+               <CardTitle className="text-base">Quarterly Allocation — {selectedQuarter}</CardTitle>
+             </CardHeader>
+             <CardContent>
+               <QuarterlyAllocationTable
+                 members={members}
+                 workAreas={workAreas}
+                 allocations={quarterlyAllocations}
+                 quarter={selectedQuarter}
+                 onAllocationChange={handleQuarterlyAllocationChange}
+                 selectedTeamId={selectedTeamId}
+               />
+             </CardContent>
+           </Card>
+         )}
+       </TabsContent>
+      </Tabs>
 
       <SprintFormDialog
         open={sprintDialogOpen}
