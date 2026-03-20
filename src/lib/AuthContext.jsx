@@ -94,12 +94,12 @@ export const AuthProvider = ({ children }) => {
       setIsLoadingAuth(true);
       const currentUser = await base44.auth.me();
       
-      // Verify user exists in User entity (access control)
+      // Verify user exists in User entity (access control) and merge custom fields
       try {
         const users = await base44.entities.User.list();
-        const userExists = users.some(u => u.email === currentUser.email);
+        const userRecord = users.find(u => u.email === currentUser.email);
         
-        if (!userExists) {
+        if (!userRecord) {
           setAuthError({
             type: 'user_not_authorized',
             message: 'Your account is not authorized to access this system. Please contact an administrator.'
@@ -108,6 +108,17 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(false);
           return;
         }
+        
+        // Merge custom fields from User entity into the current user object
+        const mergedUser = {
+          ...currentUser,
+          ...userRecord,
+          // Ensure role and managed_team_ids are available at top level
+          role: userRecord.role || currentUser.role,
+          managed_team_ids: userRecord.managed_team_ids || []
+        };
+        
+        setUser(mergedUser);
       } catch (accessError) {
         console.error('Access verification failed:', accessError);
         setAuthError({
@@ -119,7 +130,7 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       
-      setUser(currentUser);
+      // User is set above in the try block
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
     } catch (error) {
