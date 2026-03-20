@@ -48,6 +48,10 @@ export default function QuarterlyAllocationTable({
     });
   }, [relevantMembers, quarterAllocations]);
 
+  const handleWorkAreaSelectionChange = (selected) => {
+    setSelectedWorkAreaIds(new Set(selected));
+  };
+
   if (relevantMembers.length === 0 || allRelevantWorkAreas.length === 0) {
     return (
       <EmptyState
@@ -89,10 +93,6 @@ export default function QuarterlyAllocationTable({
       </div>
     );
   }
-
-  const handleWorkAreaSelectionChange = (selected) => {
-    setSelectedWorkAreaIds(new Set(selected));
-  };
 
   return (
     <div className="space-y-4">
