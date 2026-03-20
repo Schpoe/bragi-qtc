@@ -48,6 +48,7 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
         order: sprint.order || 1,
         relevant_work_area_ids: sprint.relevant_work_area_ids || [],
       });
+      setSelectedTemplate(null);
     } else {
       const nextOrder = existingSprints ? existingSprints.length + 1 : 1;
       setForm({
@@ -60,9 +61,21 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
         order: nextOrder,
         relevant_work_area_ids: [],
       });
+      setSelectedTemplate(null);
     }
     setSearchQuery("");
-  }, [sprint, open, defaultTeamId, defaultQuarter])
+  }, [sprint, open, defaultTeamId, defaultQuarter]);
+
+  const handleApplyTemplate = (template) => {
+    setSelectedTemplate(template);
+    setForm({
+      ...form,
+      name: `${template.name} - Copy`,
+      start_date: template.start_date || "",
+      end_date: template.end_date || "",
+      relevant_work_area_ids: [...(template.relevant_work_area_ids || [])],
+    });
+  };
 
   const handleSave = () => {
     if (!form.name.trim()) return;
