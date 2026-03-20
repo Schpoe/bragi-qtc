@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { LayoutDashboard, Users, FolderKanban, CalendarRange, BarChart3, Menu, X, Trash2 } from "lucide-react";
+import { LayoutDashboard, Users, FolderKanban, CalendarRange, BarChart3, Menu, X, Trash2, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/AuthContext";
+import { isAdmin } from "@/lib/permissions";
 
 const navItems = [
   { name: "Dashboard", page: "Dashboard", icon: LayoutDashboard },
@@ -11,11 +13,17 @@ const navItems = [
   { name: "Work Item Types", page: "WorkAreaTypes", icon: FolderKanban },
   { name: "Sprint Planning", page: "SprintPlanning", icon: CalendarRange },
   { name: "Team Overview", page: "TeamSprintOverview", icon: BarChart3 },
-  { name: "Cleanup", page: "Cleanup", icon: Trash2 },
+  { name: "User Management", page: "UserManagement", icon: Shield, adminOnly: true },
+  { name: "Cleanup", page: "Cleanup", icon: Trash2, adminOnly: true },
 ];
 
 export default function Layout({ children, currentPageName }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuth();
+  
+  const filteredNavItems = navItems.filter(item => 
+    !item.adminOnly || isAdmin(user)
+  );
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -28,7 +36,7 @@ export default function Layout({ children, currentPageName }) {
           <p className="text-xs text-muted-foreground mt-0.5">Sprint & Quarter</p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => {
+          {filteredNavItems.map((item) => {
             const isActive = currentPageName === item.page;
             return (
               <Link
@@ -73,7 +81,7 @@ export default function Layout({ children, currentPageName }) {
               </button>
             </div>
             <nav className="p-3 space-y-1">
-              {navItems.map((item) => {
+              {filteredNavItems.map((item) => {
                 const isActive = currentPageName === item.page;
                 return (
                   <Link
