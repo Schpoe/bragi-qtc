@@ -11,6 +11,7 @@ import DisciplineBreakdown from "../components/dashboard/DisciplineBreakdown";
 import UtilizationByWorkItemType from "../components/dashboard/UtilizationByWorkItemType";
 import TeamCapacityChart from "../components/dashboard/TeamCapacityChart";
 import ExecutiveSummary from "../components/dashboard/ExecutiveSummary";
+import AllocationHeatMap from "../components/dashboard/AllocationHeatMap";
 
 const currentYear = new Date().getFullYear();
 const currentQ = Math.ceil((new Date().getMonth() + 1) / 3);
@@ -139,6 +140,15 @@ export default function Dashboard() {
              allocations={allocations}
              selectedTeamId={selectedTeamId}
              selectedQuarter={selectedQuarter}
+           />
+           <AllocationHeatMap
+             teams={teams}
+             members={members}
+             sprints={sprints}
+             allocations={allocations}
+             workAreas={workAreas}
+             selectedQuarter={selectedQuarter}
+             selectedTeamId={selectedTeamId}
            />
            <Card>
              <CardHeader className="pb-3">
