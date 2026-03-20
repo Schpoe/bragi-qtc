@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
-import { getCurrentQuarter } from "@/lib/quarter-utils";
+import { getCurrentQuarter, sortQuarters } from "@/lib/quarter-utils";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import FilterBar from "../components/shared/FilterBar";
@@ -217,7 +217,7 @@ export default function SprintPlanning() {
 
   const quarters = [...new Set(sprints.map(s => s.quarter))];
   if (!quarters.includes(selectedQuarter)) quarters.push(selectedQuarter);
-  quarters.sort();
+  sortQuarters(quarters);
 
   return (
     <>

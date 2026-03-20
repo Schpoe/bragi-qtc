@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getCurrentQuarter } from "@/lib/quarter-utils";
+import { getCurrentQuarter, sortQuarters } from "@/lib/quarter-utils";
 import PageHeader from "../components/shared/PageHeader";
 import FilterBar from "../components/shared/FilterBar";
 import StatsRow from "../components/dashboard/StatsRow";
@@ -73,7 +73,7 @@ export default function Dashboard() {
 
   const quarters = [...new Set(sprints.map(s => s.quarter))];
   if (!quarters.includes(selectedQuarter)) quarters.push(selectedQuarter);
-  quarters.sort();
+  sortQuarters(quarters);
 
   const filteredWorkAreas = selectedTeamId === "all"
     ? workAreas
