@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function UserFormDialog({ open, onOpenChange, user, teams, onSave, currentUserId }) {
+  const isCreatingNew = !user;
   const [role, setRole] = useState("viewer");
   const [managedTeamIds, setManagedTeamIds] = useState([]);
   const [email, setEmail] = useState("");
@@ -34,25 +35,21 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const data = {
-      email,
-      full_name: `${firstName} ${lastName}`,
-      first_name: firstName,
-      last_name: lastName,
-      position,
-      role,
-      managed_team_ids: role === "team_manager" ? managedTeamIds : []
-    };
     
-    // For editing, only include changed fields
     if (user) {
-      delete data.email; // Can't change email for existing users
-      delete data.full_name; // Can't change full_name for existing users
-      delete data.first_name;
-      delete data.last_name;
+      // Editing existing user - only role, position, and managed teams
+      onSave({
+        position,
+        role,
+        managed_team_ids: role === "team_manager" ? managedTeamIds : []
+      });
+    } else {
+      // Inviting new user - only email and role
+      onSave({
+        email,
+        role
+      });
     }
-    
-    onSave(data);
   };
 
   const toggleTeam = (teamId) => {
@@ -69,7 +66,12 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{user ? "Edit User" : "Add User"}</DialogTitle>
+          <DialogTitle>{user ? "Edit User" : "Invite User"}</DialogTitle>
+          {isCreatingNew && (
+            <p className="text-sm text-muted-foreground mt-2">
+              An invitation email will be sent. Additional details can be added after the user accepts.
+            </p>
+          )}
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {user ? (
@@ -94,38 +96,7 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    placeholder="John"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Doe"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="position">Position</Label>
-                <Input
-                  id="position"
-                  placeholder="e.g., Developer, Manager"
-                  value={position}
-                  onChange={(e) => setPosition(e.target.value)}
-                />
-              </div>
+
             </>
           )}
 
@@ -178,7 +149,7 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
               Cancel
             </Button>
             <Button type="submit">
-              {user ? "Update" : "Add User"}
+              {user ? "Update User" : "Send Invitation"}
             </Button>
           </DialogFooter>
         </form>

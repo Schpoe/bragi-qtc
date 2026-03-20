@@ -36,28 +36,17 @@ export default function UserManagement() {
 
   const createUser = useMutation({
     mutationFn: async (data) => {
-      // Send invitation email
+      // Send invitation email - this is all we can do from the frontend
+      // The user record will be created when they accept the invitation
       await base44.users.inviteUser(data.email, data.role);
-      
-      // Create the User entity record directly with all fields
-      await base44.entities.User.create({
-        email: data.email,
-        full_name: data.full_name,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        position: data.position,
-        role: data.role,
-        managed_team_ids: data.managed_team_ids || []
-      });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
       setEditingUser(null);
       setUserDialogOpen(false);
-      toast.success("User invited successfully");
+      toast.success("Invitation sent! The user will appear here once they accept.");
     },
     onError: (error) => {
-      toast.error("Failed to create user: " + error.message);
+      toast.error("Failed to send invitation: " + error.message);
     }
   });
 
