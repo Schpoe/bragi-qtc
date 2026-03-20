@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { LayoutDashboard, Users, FolderKanban, CalendarRange, BarChart3, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, FolderKanban, CalendarRange, BarChart3, Menu, X, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -11,6 +11,7 @@ const navItems = [
   { name: "Work Item Types", page: "WorkAreaTypes", icon: FolderKanban },
   { name: "Sprint Planning", page: "SprintPlanning", icon: CalendarRange },
   { name: "Team Overview", page: "TeamSprintOverview", icon: BarChart3 },
+  { name: "Cleanup", page: "Cleanup", icon: Trash2 },
 ];
 
 export default function Layout({ children, currentPageName }) {
