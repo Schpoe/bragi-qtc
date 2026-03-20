@@ -3,6 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentQuarter, sortQuarters } from "@/lib/quarter-utils";
 import PageHeader from "../components/shared/PageHeader";
 import FilterBar from "../components/shared/FilterBar";
