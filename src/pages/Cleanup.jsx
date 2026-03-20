@@ -109,11 +109,6 @@ export default function CleanupPage() {
     const sprintIds = new Set(sprints.map(s => s.id));
     const workAreaIds = new Set(workAreas.map(wa => wa.id));
 
-    console.log('Team IDs:', Array.from(teamIds));
-    console.log('Member IDs:', Array.from(memberIds));
-    console.log('Sprint IDs:', Array.from(sprintIds));
-    console.log('Work Area IDs:', Array.from(workAreaIds));
-
     const orphanedMembers = members.filter(m => m.team_id && !teamIds.has(m.team_id));
     const orphanedSprints = sprints.filter(s => !s.is_cross_team && s.team_id && !teamIds.has(s.team_id));
     const orphanedAllocations = allocations.filter(a =>
@@ -130,13 +125,6 @@ export default function CleanupPage() {
       (s.work_area_ids && s.work_area_ids.some(waId => !workAreaIds.has(waId)))
     );
     const orphanedWorkAreas = workAreas.filter(wa => wa.leading_team_id && !teamIds.has(wa.leading_team_id));
-
-    console.log('Orphaned Members:', orphanedMembers);
-    console.log('Orphaned Sprints:', orphanedSprints);
-    console.log('Orphaned Allocations:', orphanedAllocations);
-    console.log('Orphaned Quarterly Allocations:', orphanedQuarterlyAllocations);
-    console.log('Orphaned Work Area Selections:', orphanedWorkAreaSelections);
-    console.log('Orphaned Work Areas:', orphanedWorkAreas);
 
     return {
       members: orphanedMembers,
