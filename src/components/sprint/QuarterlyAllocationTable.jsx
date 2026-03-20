@@ -1,12 +1,12 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { canManageAllocations } from "@/lib/permissions";
 import { useAuth } from "@/lib/AuthContext";
 import EmptyState from "@/components/shared/EmptyState";
 import { Users, Settings2 } from "lucide-react";
 import DisciplineBadge from "../shared/DisciplineBadge.jsx";
+import AllocationCell from "./AllocationCell";
 import QuarterlyAllocationDialog from "./QuarterlyAllocationDialog";
 import { cn } from "@/lib/utils";
 
