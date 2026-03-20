@@ -35,11 +35,31 @@ export default function UserManagement() {
   });
 
   const createUser = useMutation({
-    mutationFn: (data) => base44.entities.User.create(data),
+    mutationFn: async (data) => {
+      // Use Base44's invite system to create the user
+      await base44.users.inviteUser(data.email, data.role);
+      
+      // Then update the user record with additional fields
+      const users = await base44.entities.User.list();
+      const newUser = users.find(u => u.email === data.email);
+      
+      if (newUser) {
+        await base44.entities.User.update(newUser.id, {
+          first_name: data.first_name,
+          last_name: data.last_name,
+          position: data.position,
+          role: data.role,
+          managed_team_ids: data.managed_team_ids
+        });
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      toast.success("User created successfully");
+      toast.success("User invited successfully");
     },
+    onError: (error) => {
+      toast.error("Failed to create user: " + error.message);
+    }
   });
 
   const updateUser = useMutation({
