@@ -11,12 +11,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
+import { useAuth } from "@/lib/AuthContext";
+import { canManageWorkAreaTypes } from "@/lib/permissions";
 
 export default function WorkAreaTypes() {
+  const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({ name: "", description: "" });
   const queryClient = useQueryClient();
+
+  if (!canManageWorkAreaTypes(user)) {
+    return (
+      <div>
+        <PageHeader title="Work Item Types" subtitle="Manage categories for work items" />
+        <EmptyState
+          icon={Tag}
+          title="Access Restricted"
+          description="Only administrators can manage work item types."
+        />
+      </div>
+    );
+  }
 
   const { data: types = [], isLoading } = useQuery({
     queryKey: ["workAreaTypes"],
