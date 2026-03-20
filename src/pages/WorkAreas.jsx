@@ -142,78 +142,77 @@ export default function WorkAreas() {
         </TabsList>
 
         <TabsContent value="items" className="mt-6">
+          <div className="mb-6 space-y-4">
+            {/* Search and Team Filter */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search work items..."
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+                  </button>
+                )}
+              </div>
+              <Select value={filterTeamId} onValueChange={(val) => { setFilterTeamId(val); setRoleTab("all"); }}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filter by team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teams</SelectItem>
+                  {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="mb-6 space-y-4">
-        {/* Search and Team Filter */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-               placeholder="Search work items..."
-               className="pl-9"
-               value={searchQuery}
-               onChange={(e) => setSearchQuery(e.target.value)}
-             />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2"
-              >
-                <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
-              </button>
+            {/* Role Tabs (only visible when team is selected) */}
+            {filterTeamId !== "all" && (
+              <Tabs value={roleTab} onValueChange={setRoleTab} className="w-full">
+                <TabsList className="grid w-fit grid-cols-4">
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="leading">Leading</TabsTrigger>
+                  <TabsTrigger value="supporting">Supporting</TabsTrigger>
+                  <TabsTrigger value="other">Other</TabsTrigger>
+                </TabsList>
+              </Tabs>
             )}
-          </div>
-          <Select value={filterTeamId} onValueChange={(val) => { setFilterTeamId(val); setRoleTab("all"); }}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filter by team" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Teams</SelectItem>
-              {teams.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
 
-        {/* Role Tabs (only visible when team is selected) */}
-        {filterTeamId !== "all" && (
-          <Tabs value={roleTab} onValueChange={setRoleTab} className="w-full">
-            <TabsList className="grid w-fit grid-cols-4">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="leading">Leading</TabsTrigger>
-              <TabsTrigger value="supporting">Supporting</TabsTrigger>
-              <TabsTrigger value="other">Other</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        )}
+            {/* Counters */}
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div>
+                <span className="font-semibold text-foreground">{filteredWorkAreas.length}</span> work item{filteredWorkAreas.length !== 1 ? 's' : ''}
+              </div>
+              <div>
+                <span className="font-semibold text-foreground">{new Set(filteredWorkAreas.map(wa => wa.type)).size}</span> type{new Set(filteredWorkAreas.map(wa => wa.type)).size !== 1 ? 's' : ''}
+              </div>
+            </div>
+            </div>
 
-        {/* Counters */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div>
-            <span className="font-semibold text-foreground">{filteredWorkAreas.length}</span> work item{filteredWorkAreas.length !== 1 ? 's' : ''}
-          </div>
-          <div>
-            <span className="font-semibold text-foreground">{new Set(filteredWorkAreas.map(wa => wa.type)).size}</span> type{new Set(filteredWorkAreas.map(wa => wa.type)).size !== 1 ? 's' : ''}
-          </div>
-        </div>
-      </div>
-
-        {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}
-        </div>
-      ) : filteredWorkAreas.length === 0 ? (
-        <EmptyState icon={FolderKanban} title={filterTeamId === "all" ? "No work items yet" : "No work items for this team"} description={filterTeamId === "all" ? "Define products, features or projects for capacity planning." : "Try selecting a different team or create a new work item."}>
-          {canCreateWorkArea(user) && (
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" /> Create First Work Item
-            </Button>
-          )}
-        </EmptyState>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}
+            </div>
+            ) : filteredWorkAreas.length === 0 ? (
+            <EmptyState icon={FolderKanban} title={filterTeamId === "all" ? "No work items yet" : "No work items for this team"} description={filterTeamId === "all" ? "Define products, features or projects for capacity planning." : "Try selecting a different team or create a new work item."}>
+              {canCreateWorkArea(user) && (
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" /> Create First Work Item
+                </Button>
+              )}
+            </EmptyState>
+            ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredWorkAreas.map(wa => {
             const canManage = canManageWorkAreas(user, wa);
-            
+
             return (
               <Card key={wa.id} className="group border-border/60 hover:shadow-md transition-all">
                 <CardContent className="py-4 px-5">
@@ -296,8 +295,8 @@ export default function WorkAreas() {
               </Card>
             );
           })}
-        </div>
-      )}
+          </div>
+          )}
         </TabsContent>
 
         {canCreateWorkArea(user) && (
