@@ -15,10 +15,8 @@ Deno.serve(async (req) => {
     // Send the invitation
     await base44.users.inviteUser(email, role);
 
-    // If managed_team_ids provided, we need to store them temporarily
-    // and apply them when user accepts (via entity automation or webhook)
-    // For now, store in a temporary entity
-    if (role === 'team_manager' && managed_team_ids && managed_team_ids.length > 0) {
+    // Store pending team assignments for team_manager or viewer roles
+    if ((role === 'team_manager' || role === 'viewer') && managed_team_ids && managed_team_ids.length > 0) {
       await base44.asServiceRole.entities.PendingUserTeams.create({
         email: email.toLowerCase(),
         managed_team_ids,

@@ -236,6 +236,7 @@ export default function UserManagement() {
         teams={teams}
         onSave={handleSaveUser}
         currentUserId={currentUser?.id}
+        isLoading={createUser.isPending || updateUser.isPending}
       />
 
       <ConfirmDeleteDialog
