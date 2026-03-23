@@ -10,13 +10,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const { email, role, managed_team_ids } = await req.json();
+    const { email, role, managed_team_ids = [] } = await req.json();
 
     // Send the invitation
     await base44.users.inviteUser(email, role);
 
-    // Store pending team assignments for team_manager or viewer roles
-    if ((role === 'team_manager' || role === 'viewer') && managed_team_ids && managed_team_ids.length > 0) {
+    // Store pending team assignments if provided
+    if (managed_team_ids.length > 0) {
       await base44.asServiceRole.entities.PendingUserTeams.create({
         email: email.toLowerCase(),
         managed_team_ids,
