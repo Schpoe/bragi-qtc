@@ -44,10 +44,11 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
         managed_team_ids: role === "team_manager" ? managedTeamIds : []
       });
     } else {
-      // Inviting new user - only email and role
+      // Inviting new user - email, role, and managed teams
       onSave({
         email,
-        role
+        role,
+        managed_team_ids: role === "team_manager" ? managedTeamIds : []
       });
     }
   };
