@@ -57,37 +57,27 @@ function TeamOverviewCard({ team, sprints, members, workAreas, allocations }) {
   const teamMembers = members.filter(m => m.team_id === team.id);
   const memberIds = new Set(teamMembers.map(m => m.id));
 
-  // Only show work areas that are leading or supporting for this team AND have at least one allocation in the quarter
-  const sprintIds = new Set(teamSprints.map(s => s.id));
-  const allocatedWorkAreaIds = new Set(
-    allocations
-      .filter(a => sprintIds.has(a.sprint_id) && memberIds.has(a.team_member_id) && a.percent > 0)
-      .map(a => a.work_area_id)
-  );
-  const teamWorkAreas = workAreas.filter(wa =>
-    (wa.leading_team_id === team.id || wa.supporting_team_ids?.includes(team.id)) &&
-    allocatedWorkAreaIds.has(wa.id)
-  );
+  // Collect all unique work area IDs referenced across all team sprints
+  const allRelevantWaIds = [...new Set(teamSprints.flatMap(s => s.relevant_work_area_ids || []))];
+  const teamWorkAreas = allRelevantWaIds.map(id => workAreas.find(wa => wa.id === id)).filter(Boolean);
 
-  const getSprintWorkAreaTotal = (sprintId, workAreaId) => {
-    return allocations
+  // Per-sprint: sum of all member allocations (each member's percent per work area)
+  const getSprintWorkAreaTotal = (sprintId, workAreaId) =>
+    allocations
       .filter(a => a.sprint_id === sprintId && a.work_area_id === workAreaId && memberIds.has(a.team_member_id))
       .reduce((sum, a) => sum + (a.percent || 0), 0);
-  };
 
-  const getSprintTotal = (sprintId) => {
-    return allocations
+  const getSprintTotal = (sprintId) =>
+    allocations
       .filter(a => a.sprint_id === sprintId && memberIds.has(a.team_member_id))
       .reduce((sum, a) => sum + (a.percent || 0), 0);
-  };
 
-  const maxCapacity = teamMembers.reduce((sum, m) => sum + (m.availability_percent || 100), 0);
+  // Max capacity per sprint = sum of each member's availability_percent
+  const maxCapacityPerSprint = teamMembers.reduce((sum, m) => sum + (m.availability_percent || 100), 0);
 
   // Quarterly capacity summary
-  const quarterlyMaxCapacity = maxCapacity * teamSprints.length;
-  const quarterlyTotalAllocated = teamSprints.reduce((sum, s) => sum + allocations
-    .filter(a => a.sprint_id === s.id && memberIds.has(a.team_member_id))
-    .reduce((s2, a) => s2 + (a.percent || 0), 0), 0);
+  const quarterlyMaxCapacity = maxCapacityPerSprint * teamSprints.length;
+  const quarterlyTotalAllocated = teamSprints.reduce((sum, s) => sum + getSprintTotal(s.id), 0);
   const quarterlyPct = quarterlyMaxCapacity > 0 ? Math.round((quarterlyTotalAllocated / quarterlyMaxCapacity) * 100) : 0;
 
   if (teamSprints.length === 0) {
