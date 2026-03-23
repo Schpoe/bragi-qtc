@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
-export default function UserFormDialog({ open, onOpenChange, user, teams, onSave, currentUserId }) {
+export default function UserFormDialog({ open, onOpenChange, user, teams, onSave, currentUserId, isLoading }) {
   const isCreatingNew = !user;
   const [role, setRole] = useState("viewer");
   const [managedTeamIds, setManagedTeamIds] = useState([]);
@@ -145,8 +145,8 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">
-              {user ? "Update User" : "Send Invitation"}
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? "Sending..." : user ? "Update User" : "Send Invitation"}
             </Button>
           </DialogFooter>
         </form>
