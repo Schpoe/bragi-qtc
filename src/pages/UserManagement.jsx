@@ -52,9 +52,13 @@ export default function UserManagement() {
   const createUser = useMutation({
     mutationFn: async (data) => {
       const response = await base44.functions.invoke('inviteUserWithTeams', {
+        email: data.email,
+        role: data.role,
+        managed_team_ids: data.managed_team_ids || []
+      });
+      if (response.data?.error) {
         throw new Error(response.data.error);
       }
-      
       return response.data;
     },
     onSuccess: (data) => {
