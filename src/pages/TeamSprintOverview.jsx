@@ -166,6 +166,7 @@ function TeamCardTitle({ team, memberCount }) {
 
 export default function TeamSprintOverview() {
   const [selectedQuarter, setSelectedQuarter] = useState(() => getCurrentQuarter());
+  const [selectedTeam, setSelectedTeam] = useState("all");
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ["teams"],
@@ -198,6 +199,8 @@ export default function TeamSprintOverview() {
   if (!quarters.includes(selectedQuarter)) quarters.push(selectedQuarter);
   sortQuarters(quarters);
 
+  const filteredTeams = selectedTeam === "all" ? teams : teams.filter(t => t.id === selectedTeam);
+
   return (
     <div>
       <PageHeader title="Team Overview" subtitle="Sprint utilization of all teams at a glance" />
@@ -205,21 +208,22 @@ export default function TeamSprintOverview() {
       <FilterBar
         quarter={selectedQuarter}
         onQuarterChange={setSelectedQuarter}
-        team=""
-        teams={[]}
+        team={selectedTeam}
+        onTeamChange={setSelectedTeam}
+        teams={teams}
         quarters={quarters}
-        showTeamFilter={false}
+        showTeamFilter={true}
       />
 
       {teamsLoading ? (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-64 rounded-xl" />)}
         </div>
       ) : teams.length === 0 ? (
         <EmptyState icon={BarChart3} title="No teams yet" description="First create teams and sprints under 'Teams' and 'Sprint Planning'." />
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {teams.map(team => (
+        <div className="grid grid-cols-1 gap-6">
+          {filteredTeams.map(team => (
             <TeamOverviewCard
               key={team.id}
               team={team}
