@@ -36,6 +36,11 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    // Validation: team managers must have at least one team
+    if (role === "team_manager" && managedTeamIds.length === 0) {
+      return; // Don't submit if no teams selected
+    }
+    
     if (user) {
       // Editing existing user - only role, position, and managed teams
       onSave({
@@ -120,7 +125,7 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
 
           {role === "team_manager" && teams.length > 0 && (
             <div className="space-y-2">
-              <Label>Managed Teams</Label>
+              <Label>Managed Teams *</Label>
               <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
                 {teams.map(team => (
                   <div key={team.id} className="flex items-center gap-2">
@@ -138,6 +143,9 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
                   </div>
                 ))}
               </div>
+              {managedTeamIds.length === 0 && (
+                <p className="text-xs text-destructive">Please select at least one team</p>
+              )}
             </div>
           )}
 
@@ -145,7 +153,10 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              disabled={isLoading || (role === "team_manager" && managedTeamIds.length === 0)}
+            >
               {isLoading ? "Sending..." : user ? "Update User" : "Send Invitation"}
             </Button>
           </DialogFooter>
