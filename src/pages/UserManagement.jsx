@@ -67,11 +67,11 @@ export default function UserManagement() {
       
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setEditingUser(null);
       setUserDialogOpen(false);
-      toast.success("Invitation sent! Teams will be assigned when the user accepts.");
+      toast.success(data?.message || "Invitation sent successfully!");
     },
     onError: (error) => {
       toast.error("Failed to send invitation: " + (error.response?.data?.error || error.message));
