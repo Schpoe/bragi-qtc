@@ -59,15 +59,22 @@ export default function UserManagement() {
         role: data.role,
         managed_team_ids: data.managed_team_ids || []
       });
+      
+      // Check if the response contains an error
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+      
       return response.data;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       setEditingUser(null);
       setUserDialogOpen(false);
       toast.success("Invitation sent! Teams will be assigned when the user accepts.");
     },
     onError: (error) => {
-      toast.error("Failed to send invitation: " + error.message);
+      toast.error("Failed to send invitation: " + (error.response?.data?.error || error.message));
     }
   });
 
