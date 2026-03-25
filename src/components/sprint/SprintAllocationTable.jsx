@@ -55,7 +55,7 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
           <TableHeader>
             {hasGroups && (
               <TableRow className="bg-primary/5 border-b-0">
-                <TableHead className="min-w-[160px] sticky left-0 bg-primary/5 z-10 font-semibold text-primary" rowSpan={2}>Member</TableHead>
+                <TableHead className="min-w-[160px] sticky left-0 bg-white z-10 font-semibold text-primary" rowSpan={2}>Member</TableHead>
                 {leadingWAs.length > 0 && (
                   <TableHead colSpan={leadingWAs.length} className="text-center text-xs font-semibold bg-primary/10 text-primary border-l-2 border-primary/30 py-1">
                     Leading
@@ -75,7 +75,7 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
               </TableRow>
             )}
             <TableRow className="bg-primary/5 border-b-2 border-primary/20">
-              {!hasGroups && <TableHead className="min-w-[160px] sticky left-0 bg-primary/5 z-10 font-semibold text-primary">Member</TableHead>}
+              {!hasGroups && <TableHead className="min-w-[160px] sticky left-0 bg-white z-10 font-semibold text-primary">Member</TableHead>}
               {groupedWAs.map(wa => (
                 <TableHead key={wa.id} className={cn("text-center min-w-[90px]", getGroupBorder(wa))}>
                   <div className="flex items-center justify-center gap-1.5">
@@ -98,7 +98,7 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
                 <TableRow key={member.id} className={cn(
                   isOver ? "bg-red-50/50 hover:bg-red-50" : utilization > 80 ? "bg-amber-50/50 hover:bg-amber-50" : "hover:bg-muted/30"
                 )}>
-                  <TableCell className="sticky left-0 z-10" style={{backgroundColor: isOver ? "rgba(239,68,68,0.05)" : utilization > 80 ? "rgba(217,119,6,0.05)" : "transparent"}}>
+                  <TableCell className={cn("sticky left-0 z-10", isOver ? "bg-red-50" : utilization > 80 ? "bg-amber-50" : "bg-white")}>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold">{member.name}</span>
                       <DisciplineBadge discipline={member.discipline} />

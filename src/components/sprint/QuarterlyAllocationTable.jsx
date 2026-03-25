@@ -145,7 +145,7 @@ export default function QuarterlyAllocationTable({
           <TableHeader className="bg-primary/5 border-b-2 border-primary/20">
             {hasGroups && (
               <TableRow className="border-b-0">
-                <TableHead className="sticky left-0 z-20 bg-primary/5 font-semibold text-primary min-w-[180px]" rowSpan={2}>Team Member</TableHead>
+                <TableHead className="sticky left-0 z-20 bg-white font-semibold text-primary min-w-[180px]" rowSpan={2}>Team Member</TableHead>
                 {leadingWAs.length > 0 && (
                   <TableHead colSpan={leadingWAs.length} className="text-center text-xs font-semibold bg-primary/10 text-primary border-l-2 border-primary/30 py-1">
                     Leading
@@ -165,7 +165,7 @@ export default function QuarterlyAllocationTable({
               </TableRow>
             )}
             <TableRow>
-              {!hasGroups && <TableHead className="sticky left-0 z-20 bg-primary/5 font-semibold text-primary min-w-[180px]">Team Member</TableHead>}
+              {!hasGroups && <TableHead className="sticky left-0 z-20 bg-white font-semibold text-primary min-w-[180px]">Team Member</TableHead>}
               {groupedWAs.map(wa => (
                 <TableHead key={wa.id} className={cn("text-xs text-center font-semibold text-primary min-w-[130px] max-w-[180px]", getGroupBorder(wa))}>
                   <div className="flex items-start justify-center gap-1.5 px-1">
@@ -182,7 +182,7 @@ export default function QuarterlyAllocationTable({
               <TableRow key={member.id} className={cn(
                 isOverAllocated ? "bg-red-50/50 hover:bg-red-50 border-l-4 border-red-500" : totalPercent > 80 ? "bg-amber-50/50 hover:bg-amber-50 border-l-4 border-amber-500" : "hover:bg-muted/30 border-l-4 border-transparent"
               )}>
-                <TableCell className="font-medium sticky left-0 z-10 border-r" style={{backgroundColor: isOverAllocated ? "rgba(239,68,68,0.05)" : totalPercent > 80 ? "rgba(217,119,6,0.05)" : "transparent"}}>
+                <TableCell className={cn("font-medium sticky left-0 z-10 border-r", isOverAllocated ? "bg-red-50" : totalPercent > 80 ? "bg-amber-50" : "bg-white")}>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold">{member.name}</span>
                     <DisciplineBadge discipline={member.discipline} />
