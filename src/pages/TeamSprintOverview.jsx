@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getCurrentQuarter, sortQuarters } from "@/lib/quarter-utils";
+import { getCurrentQuarter } from "@/lib/quarter-utils";
+import { useQuarters } from "@/lib/useQuarters";
 import PageHeader from "../components/shared/PageHeader";
 import FilterBar from "../components/shared/FilterBar";
 import EmptyState from "../components/shared/EmptyState";
@@ -208,9 +209,7 @@ export default function TeamSprintOverview() {
 
   const quarterSprints = sprints.filter(s => s.quarter === selectedQuarter);
 
-  const quarters = [...new Set(sprints.map(s => s.quarter))];
-  if (!quarters.includes(selectedQuarter)) quarters.push(selectedQuarter);
-  sortQuarters(quarters);
+  const quarters = useQuarters(sprints);
 
   const filteredTeams = selectedTeam === "all" ? teams : teams.filter(t => t.id === selectedTeam);
 

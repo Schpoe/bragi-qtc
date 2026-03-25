@@ -90,9 +90,15 @@ export default function QuarterlyAllocationDialog({ open, onOpenChange, quarter,
           ) : (
             <Tabs defaultValue={initialTab} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="leading" disabled={leadingWAs.length === 0}>Leading ({filteredLeading.length})</TabsTrigger>
-                <TabsTrigger value="supporting" disabled={supportingWAs.length === 0}>Supporting ({filteredSupporting.length})</TabsTrigger>
-                <TabsTrigger value="other" disabled={otherWAs.length === 0}>Other ({filteredOther.length})</TabsTrigger>
+                <TabsTrigger value="leading" disabled={leadingWAs.length === 0}>
+                  Leading ({leadingWAs.length}{filteredLeading.length !== leadingWAs.length ? ` → ${filteredLeading.length}` : ""})
+                </TabsTrigger>
+                <TabsTrigger value="supporting" disabled={supportingWAs.length === 0}>
+                  Supporting ({supportingWAs.length}{filteredSupporting.length !== supportingWAs.length ? ` → ${filteredSupporting.length}` : ""})
+                </TabsTrigger>
+                <TabsTrigger value="other" disabled={otherWAs.length === 0}>
+                  Other ({otherWAs.length}{filteredOther.length !== otherWAs.length ? ` → ${filteredOther.length}` : ""})
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="leading" className="border rounded-md p-3 max-h-56 overflow-y-auto">
                 {filteredLeading.length === 0 ? (

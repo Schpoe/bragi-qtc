@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { getCurrentQuarter, sortQuarters } from "@/lib/quarter-utils";
+import { getCurrentQuarter } from "@/lib/quarter-utils";
+import { useQuarters } from "@/lib/useQuarters";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import FilterBar from "../components/shared/FilterBar";
@@ -37,7 +38,6 @@ export default function SprintPlanning() {
    const [isCopyOperation, setIsCopyOperation] = useState(false);
    const [copiedToTeamName, setCopiedToTeamName] = useState("");
    const [deleteSprintId, setDeleteSprintId] = useState(null);
-   const [deleteAllocationId, setDeleteAllocationId] = useState(null);
    const queryClient = useQueryClient();
 
   const { data: sprints = [], isLoading: sprintsLoading } = useQuery({
@@ -219,7 +219,7 @@ export default function SprintPlanning() {
       );
       if (existing) {
         if (value === 0) {
-          setDeleteAllocationId(existing.id);
+          deleteAllocation.mutate(existing.id);
         } else {
           updateAllocation.mutate({ id: existing.id, data: { percent: value } });
         }
@@ -356,37 +356,7 @@ export default function SprintPlanning() {
      sprintRelevantIds.has(wa.id)
    ) : [];
 
-  const generateQuarters = () => {
-    const currentQuarter = getCurrentQuarter();
-    const quarters = new Set([currentQuarter]);
-    
-    // Add quarters from existing sprints
-    sprints.forEach(s => quarters.add(s.quarter));
-    
-    // Add next 8 quarters and previous 4 quarters
-    const [currQ, currYear] = currentQuarter.match(/Q(\d) (\d{4})/).slice(1);
-    const currYearNum = parseInt(currYear);
-    const currQNum = parseInt(currQ);
-    
-    for (let i = -4; i <= 8; i++) {
-      let q = currQNum + i;
-      let y = currYearNum;
-      while (q > 4) {
-        q -= 4;
-        y += 1;
-      }
-      while (q < 1) {
-        q += 4;
-        y -= 1;
-      }
-      quarters.add(`Q${q} ${y}`);
-    }
-    
-    return Array.from(quarters).filter(quarter => !quarter.includes('2025'));
-  };
-  
-  const quarters = generateQuarters();
-  sortQuarters(quarters);
+  const quarters = useQuarters(sprints, { includeRange: true });
 
   return (
     <>
@@ -416,14 +386,14 @@ export default function SprintPlanning() {
         </TabsList>
 
         <TabsContent value="quarterly">
-          {teamsLoading || sprintsLoading ? (
+          {!effectiveTeamId ? (
+            <EmptyState icon={CalendarRange} title="Select a team" description="Choose a team from the filter to view the quarterly plan." />
+          ) : teamsLoading || sprintsLoading ? (
             <div className="space-y-4">
               <Skeleton className="h-64 rounded-xl" />
             </div>
           ) : teams.length === 0 ? (
             <EmptyState icon={CalendarRange} title="No teams yet" description="First create a team under 'Teams'." />
-          ) : !effectiveTeamId ? (
-            <EmptyState icon={CalendarRange} title="Select a team" description="Choose a team from the filter to view the quarterly plan." />
           ) : (
             <Card className="border-primary/20">
               <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
@@ -636,18 +606,6 @@ export default function SprintPlanning() {
         }}
         onCancel={() => setDeleteSprintId(null)}
         isLoading={deleteSprint.isPending}
-      />
-
-      <ConfirmDeleteDialog
-        open={deleteAllocationId !== null}
-        title="Delete Allocation?"
-        description="Are you sure you want to delete this allocation? This action cannot be undone."
-        onConfirm={() => {
-          deleteAllocation.mutate(deleteAllocationId);
-          setDeleteAllocationId(null);
-        }}
-        onCancel={() => setDeleteAllocationId(null)}
-        isLoading={deleteAllocation.isPending}
       />
 
       </div>

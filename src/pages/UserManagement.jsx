@@ -17,7 +17,7 @@ import PasswordResetInfo from "../components/auth/PasswordResetInfo";
 import { isAdmin } from "@/lib/permissions";
 
 export default function UserManagement() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, checkAppState } = useAuth();
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [deleteUserId, setDeleteUserId] = useState(null);
@@ -80,7 +80,7 @@ export default function UserManagement() {
       setUserDialogOpen(false);
       // If updating the current user, refresh auth context to sync managed_team_ids
       if (currentUser?.id === editingUser?.id) {
-        window.location.reload();
+        checkAppState();
       }
       toast.success("User updated successfully");
     },
