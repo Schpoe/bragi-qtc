@@ -99,13 +99,6 @@ export default function ExecutiveSummary({ teams, sprints, members, allocations,
       });
 
       // Work area demand (top across all sprints)
-      const workAreaTotals = {};
-      sprintStats.forEach((ss) =>
-      ss.topWorkAreas.forEach((wa) => {
-        workAreaTotals[wa.name] = (workAreaTotals[wa.name] || 0) + wa.pct;
-      })
-      );
-      // Re-aggregate directly from allocations for accuracy
       const workAreaAllocMap = {};
       teamSprints.forEach((sprint) => {
         allocations.

@@ -109,9 +109,11 @@ export default function ExportButtons({ data, selectedQuarter }) {
     const csv = rows.map(row => row.map(cell => `"${cell}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    link.href = url;
     link.download = `Executive_Summary_${selectedQuarter.replace(/ /g, "_")}.csv`;
     link.click();
+    URL.revokeObjectURL(url);
   };
 
   const exportToJSON = () => {
@@ -140,9 +142,11 @@ export default function ExportButtons({ data, selectedQuarter }) {
 
     const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: "application/json" });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    link.href = url;
     link.download = `Executive_Summary_${selectedQuarter.replace(/ /g, "_")}.json`;
     link.click();
+    URL.revokeObjectURL(url);
   };
 
   const exportToPDF = async () => {

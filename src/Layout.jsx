@@ -129,7 +129,7 @@ export default function Layout({ children, currentPageName }) {
           <Menu className="w-5 h-5" />
         </button>
         <h1 className="text-sm font-bold ml-2">
-          Kapazitäts<span className="text-primary">planung</span>
+          Capacity<span className="text-primary">Planning</span>
         </h1>
       </div>
 
