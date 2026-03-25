@@ -40,7 +40,7 @@ export default function QuarterlyAllocationTable({
     ? workAreas
     : workAreas.filter(wa => wa.is_cross_team || wa.leading_team_id === selectedTeamId || wa.supporting_team_ids.includes(selectedTeamId));
 
-  const relevantWorkAreas = allRelevantWorkAreas.filter(wa => selectedWorkAreaIds.has(wa.id));
+  const relevantWorkAreas = workAreas.filter(wa => selectedWorkAreaIds.has(wa.id));
 
   const teamId = relevantTeamId;
   const leadingWAs = relevantWorkAreas.filter(wa => wa.leading_team_id === teamId);

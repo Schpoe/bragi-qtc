@@ -341,12 +341,19 @@ export default function SprintPlanning() {
    const currentSelection = workAreaSelections.find(s => s.team_id === effectiveTeamId && s.quarter === selectedQuarter);
    const manuallySelectedIds = new Set(currentSelection?.work_area_ids || []);
 
-   const filteredWorkAreas = effectiveTeamId ? workAreas.filter(wa => 
-     wa.is_cross_team || 
-     wa.leading_team_id === effectiveTeamId || 
+   const sprintRelevantIds = new Set(
+     sprints
+       .filter(s => s.team_id === effectiveTeamId)
+       .flatMap(s => s.relevant_work_area_ids || [])
+   );
+
+   const filteredWorkAreas = effectiveTeamId ? workAreas.filter(wa =>
+     wa.is_cross_team ||
+     wa.leading_team_id === effectiveTeamId ||
      wa.supporting_team_ids.includes(effectiveTeamId) ||
      workAreasWithAllocations.has(wa.id) ||
-     manuallySelectedIds.has(wa.id)
+     manuallySelectedIds.has(wa.id) ||
+     sprintRelevantIds.has(wa.id)
    ) : [];
 
   const generateQuarters = () => {
