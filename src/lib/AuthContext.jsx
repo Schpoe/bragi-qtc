@@ -163,6 +163,11 @@ export const AuthProvider = ({ children }) => {
     base44.auth.redirectToLogin(window.location.href);
   };
 
+  const navigateToSignup = () => {
+    const fromUrl = encodeURIComponent(window.location.origin);
+    window.location.href = `${appParams.appBaseUrl}/signup?from_url=${fromUrl}`;
+  };
+
   const impersonateUser = async (targetUserEmail) => {
     if (user?.role !== 'admin') {
       return false;
@@ -212,6 +217,7 @@ export const AuthProvider = ({ children }) => {
       appPublicSettings,
       logout,
       navigateToLogin,
+      navigateToSignup,
       checkAppState,
       impersonateUser,
       stopImpersonation

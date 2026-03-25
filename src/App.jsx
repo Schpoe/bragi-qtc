@@ -9,6 +9,18 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Cleanup from './pages/Cleanup';
 import UserManagement from './pages/UserManagement';
 import UserProfile from './pages/UserProfile';
+import { appParams } from '@/lib/app-params';
+
+const SignupRedirect = () => {
+  React.useEffect(() => {
+    window.location.href = `${appParams.appBaseUrl}/signup?from_url=${encodeURIComponent(window.location.origin)}`;
+  }, []);
+  return (
+    <div className="fixed inset-0 flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
+    </div>
+  );
+};
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -121,12 +133,14 @@ const AuthenticatedApp = () => {
 
 
 function App() {
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
-          <AuthenticatedApp />
+          <Routes>
+            <Route path="/signup" element={<SignupRedirect />} />
+            <Route path="*" element={<AuthenticatedApp />} />
+          </Routes>
         </Router>
         <Toaster />
       </QueryClientProvider>
