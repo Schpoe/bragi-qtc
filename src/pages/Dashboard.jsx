@@ -110,7 +110,7 @@ export default function Dashboard() {
         teams={teams}
         quarters={quarters}
         showTeamFilter={true} />
-      
+
 
       {isLoading ?
       <div className="space-y-4">
@@ -128,7 +128,7 @@ export default function Dashboard() {
           sprints={quarterSprints}
           allocations={allocations}
           selectedTeamId={selectedTeamId} />
-        
+
 
           <div className="space-y-6">
            <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
@@ -145,7 +145,7 @@ export default function Dashboard() {
                 allocations={allocations}
                 workAreas={workAreas}
                 selectedQuarter={selectedQuarter} />
-              
+
               </CardContent>
             </Card>
             <TeamCapacityChart
@@ -155,7 +155,7 @@ export default function Dashboard() {
             allocations={allocations}
             selectedTeamId={selectedTeamId}
             selectedQuarter={selectedQuarter} />
-          
+
             <AllocationHeatMap
             teams={teams}
             members={members}
@@ -164,23 +164,7 @@ export default function Dashboard() {
             workAreas={workAreas}
             selectedQuarter={selectedQuarter}
             selectedTeamId={selectedTeamId} />
-          
-            <Card>
-              
 
-
-
-            
-              
-
-
-
-
-
-
-
-            
-            </Card>
             <Card>
               <CardHeader className="pb-3 border-b">
                 <CardTitle className="text-base font-bold">
@@ -195,7 +179,7 @@ export default function Dashboard() {
                 allocations={allocations}
                 selectedTeamId={selectedTeamId}
                 workAreas={filteredWorkAreas} />
-              
+
               </CardContent>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -204,7 +188,7 @@ export default function Dashboard() {
               members={members}
               allocations={allocations}
               selectedTeamId={selectedTeamId} />
-            
+
               <Card>
                 <CardHeader className="pb-3 border-b">
                   <CardTitle className="text-base font-bold">
@@ -218,7 +202,7 @@ export default function Dashboard() {
                   members={members}
                   sprints={quarterSprints}
                   selectedTeamId={selectedTeamId} />
-                
+
                 </CardContent>
               </Card>
             </div>
