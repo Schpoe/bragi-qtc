@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, TrendingUp, TrendingDown, Minus, Users } from "lucide-react";
+import { AlertTriangle, Users } from "lucide-react";
 import { cn, teamColorHex } from "@/lib/utils";
 import ExportButtons from "./ExportButtons";
 

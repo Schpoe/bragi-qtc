@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
-import { canManageSprints, canManageAllocations, getManageableTeams, canCreateSprint, isViewer } from "@/lib/permissions";
+import { canManageSprints, canManageAllocations, canCreateSprint } from "@/lib/permissions";
 import { Plus, CalendarRange, Pencil, Trash2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

@@ -1,6 +1,6 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, FolderKanban, CalendarRange, TrendingUp } from "lucide-react";
+import { Users, FolderKanban, TrendingUp } from "lucide-react";
 
 export default function StatsRow({ teams, members, workAreas, sprints, allocations, selectedTeamId }) {
   const filteredMembers = selectedTeamId === "all" ? members : members.filter(m => m.team_id === selectedTeamId);

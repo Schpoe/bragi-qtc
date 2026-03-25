@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, FolderKanban, Pencil, Trash2, Globe, Users, Upload, Filter, Search, X, Link as LinkIcon, History } from "lucide-react";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { Plus, FolderKanban, Pencil, Trash2, Users, Upload, Search, X, Link as LinkIcon, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

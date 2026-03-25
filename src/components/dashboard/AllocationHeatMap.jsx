@@ -134,7 +134,7 @@ export default function AllocationHeatMap({ teams, members, sprints, allocations
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-4 h-4 rounded bg-destructive/90" />
-                <span className="text-muted-foreground">Over (>100%)</span>
+                <span className="text-muted-foreground">Over (&gt;100%)</span>
               </div>
             </div>
 
