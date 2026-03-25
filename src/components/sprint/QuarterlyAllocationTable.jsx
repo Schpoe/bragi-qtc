@@ -132,10 +132,10 @@ export default function QuarterlyAllocationTable({
             <TableRow>
               <TableHead className="sticky left-0 z-20 bg-primary/5 font-semibold text-primary min-w-[180px]">Team Member</TableHead>
               {relevantWorkAreas.map(wa => (
-                <TableHead key={wa.id} className="text-xs text-center font-semibold text-primary min-w-[100px]">
-                  <div className="flex items-center justify-center gap-1">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: wa.color || "#3b82f6" }} />
-                    <span>{wa.name.length > 10 ? wa.name.substring(0, 10) + '...' : wa.name}</span>
+                <TableHead key={wa.id} className="text-xs text-center font-semibold text-primary min-w-[130px] max-w-[180px]">
+                  <div className="flex items-start justify-center gap-1.5 px-1">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: wa.color || "#3b82f6" }} />
+                    <span className="line-clamp-2 text-left leading-tight" title={wa.name}>{wa.name}</span>
                   </div>
                 </TableHead>
               ))}
