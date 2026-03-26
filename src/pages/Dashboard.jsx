@@ -20,6 +20,7 @@ import AllocationHeatMap from "../components/dashboard/AllocationHeatMap";
 import QuarterlyAllocationReport from "../components/dashboard/QuarterlyAllocationReport";
 import QuarterlyTeamsSummary from "../components/dashboard/QuarterlyTeamsSummary";
 import QuarterlyExportButtons from "../components/dashboard/QuarterlyExportButtons";
+import QuarterlyWorkItemSummary from "../components/dashboard/QuarterlyWorkItemSummary";
 
 export default function Dashboard() {
   const [selectedQuarter, setSelectedQuarter] = useState(() => getCurrentQuarter());
@@ -195,6 +196,12 @@ export default function Dashboard() {
                     </CardContent>
                   </Card>
                 )}
+                <QuarterlyWorkItemSummary
+                  members={selectedTeamId === "all" ? members : quarterlyTabMembers}
+                  workAreas={workAreas}
+                  quarterlyAllocations={quarterlyAllocations}
+                  selectedQuarter={selectedQuarter}
+                />
               </div>
             </TabsContent>
 
