@@ -69,10 +69,26 @@ export default function WorkAreas() {
 
   const teamMap = Object.fromEntries(teams.map(t => [t.id, t.name]));
 
-  // Filter by team
+  // Filter by team — include cross-team items so the "Other" tab has data
   let filteredByTeam = filterTeamId === "all"
     ? workAreas
-    : workAreas.filter(wa => wa.leading_team_id === filterTeamId || (wa.supporting_team_ids || []).includes(filterTeamId));
+    : workAreas.filter(wa =>
+        wa.leading_team_id === filterTeamId ||
+        (wa.supporting_team_ids || []).includes(filterTeamId) ||
+        wa.is_cross_team
+      );
+
+  // Tab counts (pre-search, so the badges always show the full category size)
+  const tabCounts = filterTeamId === "all" ? null : {
+    all: filteredByTeam.length,
+    leading: filteredByTeam.filter(wa => wa.leading_team_id === filterTeamId).length,
+    supporting: filteredByTeam.filter(wa => (wa.supporting_team_ids || []).includes(filterTeamId)).length,
+    other: filteredByTeam.filter(wa =>
+      wa.is_cross_team &&
+      wa.leading_team_id !== filterTeamId &&
+      !(wa.supporting_team_ids || []).includes(filterTeamId)
+    ).length,
+  };
 
   // Filter by role (All, Leading, Supporting, Other)
   let filteredByRole = filteredByTeam;
@@ -82,8 +98,10 @@ export default function WorkAreas() {
     } else if (roleTab === "supporting") {
       filteredByRole = filteredByTeam.filter(wa => (wa.supporting_team_ids || []).includes(filterTeamId));
     } else if (roleTab === "other") {
-      filteredByRole = filteredByTeam.filter(wa => 
-        wa.leading_team_id !== filterTeamId && !(wa.supporting_team_ids || []).includes(filterTeamId)
+      filteredByRole = filteredByTeam.filter(wa =>
+        wa.is_cross_team &&
+        wa.leading_team_id !== filterTeamId &&
+        !(wa.supporting_team_ids || []).includes(filterTeamId)
       );
     }
   }
@@ -175,10 +193,10 @@ export default function WorkAreas() {
             {filterTeamId !== "all" && (
               <Tabs value={roleTab} onValueChange={setRoleTab} className="w-full">
                 <TabsList className="grid w-fit grid-cols-4">
-                  <TabsTrigger value="all">All</TabsTrigger>
-                  <TabsTrigger value="leading">Leading</TabsTrigger>
-                  <TabsTrigger value="supporting">Supporting</TabsTrigger>
-                  <TabsTrigger value="other">Other</TabsTrigger>
+                  <TabsTrigger value="all">All {tabCounts && <span className="ml-1 text-xs opacity-70">({tabCounts.all})</span>}</TabsTrigger>
+                  <TabsTrigger value="leading">Leading {tabCounts && <span className="ml-1 text-xs opacity-70">({tabCounts.leading})</span>}</TabsTrigger>
+                  <TabsTrigger value="supporting">Supporting {tabCounts && <span className="ml-1 text-xs opacity-70">({tabCounts.supporting})</span>}</TabsTrigger>
+                  <TabsTrigger value="other">Other {tabCounts && <span className="ml-1 text-xs opacity-70">({tabCounts.other})</span>}</TabsTrigger>
                 </TabsList>
               </Tabs>
             )}
