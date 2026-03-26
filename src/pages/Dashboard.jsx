@@ -19,6 +19,7 @@ import ExecutiveSummary from "../components/dashboard/ExecutiveSummary";
 import AllocationHeatMap from "../components/dashboard/AllocationHeatMap";
 import QuarterlyAllocationReport from "../components/dashboard/QuarterlyAllocationReport";
 import QuarterlyTeamsSummary from "../components/dashboard/QuarterlyTeamsSummary";
+import QuarterlyExportButtons from "../components/dashboard/QuarterlyExportButtons";
 
 export default function Dashboard() {
   const [selectedQuarter, setSelectedQuarter] = useState(() => getCurrentQuarter());
@@ -156,33 +157,45 @@ export default function Dashboard() {
 
             {/* ── Quarterly Plan tab ──────────────────────────────────────── */}
             <TabsContent value="quarterly">
-              {selectedTeamId === "all" ? (
-                <QuarterlyTeamsSummary
+              <div className="flex justify-end mb-4">
+                <QuarterlyExportButtons
                   teams={teams}
                   members={members}
                   workAreas={workAreas}
                   quarterlyAllocations={quarterlyAllocations}
-                  workAreaSelections={workAreaSelections}
                   selectedQuarter={selectedQuarter}
+                  selectedTeamId={selectedTeamId}
                 />
-              ) : (
-                <Card className="border-primary/20">
-                  <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
-                    <CardTitle className="text-base font-bold text-foreground">
-                      Quarterly Plan — {selectedQuarter}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <QuarterlyAllocationReport
-                      members={quarterlyTabMembers}
-                      workAreas={quarterlyTabWorkAreas}
-                      quarterlyAllocations={quarterlyAllocations}
-                      selectedQuarter={selectedQuarter}
-                      selectedTeamId={selectedTeamId}
-                    />
-                  </CardContent>
-                </Card>
-              )}
+              </div>
+              <div id="quarterly-plan-content">
+                {selectedTeamId === "all" ? (
+                  <QuarterlyTeamsSummary
+                    teams={teams}
+                    members={members}
+                    workAreas={workAreas}
+                    quarterlyAllocations={quarterlyAllocations}
+                    workAreaSelections={workAreaSelections}
+                    selectedQuarter={selectedQuarter}
+                  />
+                ) : (
+                  <Card className="border-primary/20">
+                    <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
+                      <CardTitle className="text-base font-bold text-foreground">
+                        Quarterly Plan — {selectedQuarter}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <QuarterlyAllocationReport
+                        members={quarterlyTabMembers}
+                        workAreas={quarterlyTabWorkAreas}
+                        quarterlyAllocations={quarterlyAllocations}
+                        selectedQuarter={selectedQuarter}
+                        selectedTeamId={selectedTeamId}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </TabsContent>
 
             {/* ── Sprint Planning tab ─────────────────────────────────────── */}
