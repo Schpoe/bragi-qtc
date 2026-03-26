@@ -110,7 +110,6 @@ export default function QuarterlyTeamsSummary({
         team,
         memberCount: teamMembers.length,
         overallUtil,
-        totalCapacity,
         disciplineBreakdown,
         topWorkItems,
       };
