@@ -356,7 +356,7 @@ export default function SprintPlanning() {
      sprintRelevantIds.has(wa.id)
    ) : [];
 
-  const quarters = useQuarters(sprints, { includeRange: true });
+  const quarters = useQuarters(sprints, { includeRange: true }).filter(q => !q.includes('2025'));
 
   return (
     <>

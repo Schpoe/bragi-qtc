@@ -92,7 +92,7 @@ export default function Dashboard() {
     })
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  const quarters = useQuarters(sprints);
+  const quarters = useQuarters(sprints).filter(q => !q.includes('2025'));
 
   const filteredWorkAreas = selectedTeamId === "all"
     ? workAreas
