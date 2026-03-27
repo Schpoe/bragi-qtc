@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Tag, Pencil, Trash2, GripVertical } from "lucide-react";
+import { Plus, Tag, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,12 +13,68 @@ import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import { useAuth } from "@/lib/AuthContext";
 import { canManageWorkAreaTypes, isViewer } from "@/lib/permissions";
+import { getWorkAreaTypeColor } from "@/lib/utils";
+
+const PRESET_COLORS = [
+  "#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444",
+  "#06b6d4", "#ec4899", "#6366f1", "#84cc16", "#f97316",
+  "#14b8a6", "#a855f7", "#f43f5e", "#0ea5e9", "#64748b",
+];
+
+function ColorPicker({ value, onChange }) {
+  const activeColor = value || "";
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2">
+        {PRESET_COLORS.map(c => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onChange(c)}
+            className="w-7 h-7 rounded-full border-2 transition-all"
+            style={{
+              backgroundColor: c,
+              borderColor: activeColor === c ? "#000" : "transparent",
+              boxShadow: activeColor === c ? "0 0 0 1px #fff inset" : "none",
+            }}
+            title={c}
+          />
+        ))}
+        {/* Custom color via native picker */}
+        <label className="w-7 h-7 rounded-full border-2 border-dashed border-muted-foreground/40 flex items-center justify-center cursor-pointer hover:border-muted-foreground transition-colors overflow-hidden relative" title="Custom color">
+          <span className="text-xs text-muted-foreground leading-none select-none">+</span>
+          <input
+            type="color"
+            value={activeColor || "#6b7280"}
+            onChange={e => onChange(e.target.value)}
+            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+          />
+        </label>
+        {activeColor && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="text-xs text-muted-foreground hover:text-foreground px-2 h-7 rounded border border-dashed border-muted-foreground/40"
+          >
+            Auto
+          </button>
+        )}
+      </div>
+      {activeColor && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: activeColor }} />
+          {activeColor}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function WorkAreaTypes() {
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [formData, setFormData] = useState({ name: "", description: "" });
+  const [formData, setFormData] = useState({ name: "", description: "", color: "" });
   const queryClient = useQueryClient();
 
   const { data: types = [], isLoading } = useQuery({
@@ -31,7 +87,7 @@ export default function WorkAreaTypes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workAreaTypes"] });
       setDialogOpen(false);
-      setFormData({ name: "", description: "" });
+      setFormData({ name: "", description: "", color: "" });
     },
   });
 
@@ -40,7 +96,7 @@ export default function WorkAreaTypes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workAreaTypes"] });
       setDialogOpen(false);
-      setFormData({ name: "", description: "" });
+      setFormData({ name: "", description: "", color: "" });
       setEditing(null);
     },
   });
@@ -54,9 +110,9 @@ export default function WorkAreaTypes() {
     const data = {
       name: formData.name.trim(),
       description: formData.description.trim(),
+      color: formData.color || null,
       order: editing ? editing.order : types.length,
     };
-
     if (editing) {
       updateType.mutate({ id: editing.id, data });
     } else {
@@ -66,17 +122,16 @@ export default function WorkAreaTypes() {
 
   const handleEdit = (type) => {
     setEditing(type);
-    setFormData({ name: type.name, description: type.description || "" });
+    setFormData({ name: type.name, description: type.description || "", color: type.color || "" });
     setDialogOpen(true);
   };
 
   const handleNew = () => {
     setEditing(null);
-    setFormData({ name: "", description: "" });
+    setFormData({ name: "", description: "", color: "" });
     setDialogOpen(true);
   };
 
-  // Guards placed after all hooks to comply with React Rules of Hooks
   if (isViewer(user)) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
@@ -121,29 +176,35 @@ export default function WorkAreaTypes() {
         </EmptyState>
       ) : (
         <div className="space-y-3 max-w-2xl">
-          {types.map(type => (
-            <Card key={type.id} className="group hover:shadow-md transition-all">
-              <CardContent className="py-4 px-5">
-                <div className="flex items-center gap-3">
-                  <GripVertical className="w-4 h-4 text-muted-foreground" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{type.name}</p>
-                    {type.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
-                    )}
+          {types.map(type => {
+            const color = type.color || getWorkAreaTypeColor(type.name);
+            return (
+              <Card key={type.id} className="group hover:shadow-md transition-all">
+                <CardContent className="py-4 px-5">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-4 h-4 rounded-full shrink-0 border border-black/10"
+                      style={{ backgroundColor: color }}
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{type.name}</p>
+                      {type.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{type.description}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(type)}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteType.mutate(type.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(type)}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteType.mutate(type.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -160,6 +221,16 @@ export default function WorkAreaTypes() {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g. Product, Feature, Project"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <ColorPicker
+                value={formData.color}
+                onChange={(c) => setFormData({ ...formData, color: c })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave on Auto to use the default assigned color.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Description</Label>

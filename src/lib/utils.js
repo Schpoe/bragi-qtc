@@ -72,11 +72,19 @@ export function getWorkAreaTypeColor(typeName) {
   return TYPE_COLOR_PALETTE[hash % TYPE_COLOR_PALETTE.length];
 }
 
+// Returns the color for a type name: prefers the stored color on the type record,
+// falls back to hash-based assignment. Pass the workAreaTypes array when available.
+export function resolveTypeColor(typeName, types = []) {
+  const found = types.find(t => t.name === typeName);
+  if (found?.color) return found.color;
+  return getWorkAreaTypeColor(typeName);
+}
+
 // Returns the display color for a work area: uses its stored color if set,
 // otherwise falls back to its type color.
-export function getWorkAreaColor(wa) {
+export function getWorkAreaColor(wa, types = []) {
   if (wa?.color) return wa.color;
-  return getWorkAreaTypeColor(wa?.type);
+  return resolveTypeColor(wa?.type, types);
 }
 
 export const isIframe = window.self !== window.top;
