@@ -167,37 +167,44 @@ export default function ExecutiveSummary({ teams, sprints, members, allocations,
       </div>
 
 
-      {/* Alert banner — grouped by team → discipline */}
+      {/* Alert banner — one card per team */}
       {totalAlertSprints > 0 && (
-        <Card className="border-destructive/40 bg-destructive/5">
-          <CardHeader className="pb-2 pt-4">
-            <CardTitle className="text-sm flex items-center gap-2 text-destructive">
-              <AlertTriangle className="w-4 h-4" />
-              Over-allocation Alerts ({totalAlertSprints} sprint{totalAlertSprints !== 1 ? "s" : ""})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4 space-y-3">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
+            <AlertTriangle className="w-4 h-4" />
+            Over-allocation Alerts ({totalAlertSprints} sprint{totalAlertSprints !== 1 ? "s" : ""})
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {Object.entries(alertsByTeam).map(([teamName, sprints]) => (
-              <div key={teamName}>
-                <p className="text-xs font-semibold text-muted-foreground mb-1.5">{teamName}</p>
-                <div className="flex flex-wrap gap-2">
+              <Card key={teamName} className="border-destructive/40 bg-destructive/5">
+                <CardHeader className="pb-2 pt-3 px-4">
+                  <CardTitle className="text-xs font-bold text-destructive">{teamName}</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-3 space-y-2">
                   {sprints.map(({ sprintName, utilPct, byDisc }) => (
-                    <div key={sprintName} className="flex items-center gap-1.5 bg-background border border-destructive/30 rounded-md px-2 py-1 text-xs">
-                      <span className="font-semibold text-destructive">{utilPct}%</span>
-                      <span className="text-muted-foreground">—</span>
-                      <span className="font-medium">{sprintName}</span>
+                    <div key={sprintName}>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="font-semibold text-destructive text-xs">{utilPct}%</span>
+                        <span className="text-muted-foreground text-xs">·</span>
+                        <span className="text-xs font-medium">{sprintName}</span>
+                      </div>
                       {Object.keys(byDisc).length > 0 && (
-                        <span className="text-destructive/70 ml-1">
-                          ({Object.entries(byDisc).map(([d, n]) => `${d}: ${n}`).join(", ")})
-                        </span>
+                        <div className="flex flex-wrap gap-1.5 ml-1">
+                          {Object.entries(byDisc).map(([disc, count]) => (
+                            <div key={disc} className="flex items-center gap-1 bg-background border border-destructive/30 rounded px-1.5 py-0.5 text-xs">
+                              <span className="text-muted-foreground">{disc}</span>
+                              <span className="font-semibold text-destructive">{count}</span>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
                   ))}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Cross-team summary tables - 2 columns */}

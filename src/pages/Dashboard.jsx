@@ -198,39 +198,39 @@ export default function Dashboard() {
                   selectedTeamId={selectedTeamId}
                 />
               </div>
-              {/* Over-allocation alerts — grouped by team → discipline */}
+              {/* Over-allocation alerts — one card per team */}
               {quarterlyAlerts.length > 0 && (
-                <Card className="border-destructive/40 bg-destructive/5 mb-4">
-                  <CardHeader className="pb-2 pt-4">
-                    <CardTitle className="text-sm flex items-center gap-2 text-destructive">
-                      <AlertTriangle className="w-4 h-4" />
-                      Over-allocation Alerts — {quarterlyAlerts.length} member{quarterlyAlerts.length !== 1 ? "s" : ""} exceed 100%
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-4 space-y-3">
+                <div className="mb-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                    <AlertTriangle className="w-4 h-4" />
+                    Over-allocation Alerts — {quarterlyAlerts.length} member{quarterlyAlerts.length !== 1 ? "s" : ""} exceed 100%
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {Object.entries(quarterlyAlertsByTeam).map(([teamName, byDisc]) => (
-                      <div key={teamName}>
-                        {selectedTeamId === "all" && (
-                          <p className="text-xs font-semibold text-muted-foreground mb-1.5">{teamName}</p>
-                        )}
-                        {Object.entries(byDisc).map(([disc, members]) => (
-                          <div key={disc} className="mb-1.5">
-                            <p className="text-xs text-muted-foreground mb-1">{disc}</p>
-                            <div className="flex flex-wrap gap-2">
-                              {members.map(({ name, total }) => (
-                                <div key={name} className="flex items-center gap-1.5 bg-background border border-destructive/30 rounded-md px-2 py-1 text-xs">
-                                  <span className="font-semibold text-destructive">{total}%</span>
-                                  <span className="text-muted-foreground">—</span>
-                                  <span>{name}</span>
-                                </div>
-                              ))}
+                      <Card key={teamName} className="border-destructive/40 bg-destructive/5">
+                        <CardHeader className="pb-2 pt-3 px-4">
+                          <CardTitle className="text-xs font-bold text-destructive">{teamName}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="px-4 pb-3 space-y-2">
+                          {Object.entries(byDisc).map(([disc, members]) => (
+                            <div key={disc}>
+                              <p className="text-xs font-medium text-muted-foreground mb-1">{disc}</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {members.map(({ name, total }) => (
+                                  <div key={name} className="flex items-center gap-1 bg-background border border-destructive/30 rounded px-1.5 py-0.5 text-xs">
+                                    <span className="font-semibold text-destructive">{total}%</span>
+                                    <span className="text-muted-foreground">·</span>
+                                    <span>{name}</span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </CardContent>
+                      </Card>
                     ))}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               )}
 
               <div id="quarterly-plan-content" className="space-y-6">
