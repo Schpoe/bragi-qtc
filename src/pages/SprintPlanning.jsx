@@ -20,6 +20,7 @@ import FilterBar from "../components/shared/FilterBar";
 import SprintFormDialog from "../components/sprint/SprintFormDialog";
 import SprintAllocationTable from "../components/sprint/SprintAllocationTable";
 import QuarterlyAllocationTable from "../components/sprint/QuarterlyAllocationTable";
+import QuarterlyPlanHistoryPanel from "../components/sprint/QuarterlyPlanHistoryPanel";
 import ConfirmDeleteDialog from "../components/shared/ConfirmDeleteDialog";
 
 export default function SprintPlanning() {
@@ -139,6 +140,11 @@ export default function SprintPlanning() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] }),
   });
 
+  // Fire-and-forget history log — failures are silent so they never block the user
+  const logQuarterlyHistory = (entry) => {
+    base44.entities.QuarterlyPlanHistory.create(entry).catch(() => {});
+  };
+
   const updateWorkAreaSelection = useMutation({
     mutationFn: async ({ teamId, quarter, workAreaIds }) => {
       const existing = workAreaSelections.find(s => s.team_id === teamId && s.quarter === quarter);
@@ -150,14 +156,32 @@ export default function SprintPlanning() {
       
       // Delete allocations for removed work items
       if (removedIds.length > 0) {
-        const allocationsToDelete = quarterlyAllocations.filter(a => 
-          a.quarter === quarter && 
+        const allocationsToDelete = quarterlyAllocations.filter(a =>
+          a.quarter === quarter &&
           removedIds.includes(a.work_area_id) &&
           members.some(m => m.id === a.team_member_id && m.team_id === teamId)
         );
-        
+
+        const team = teams.find(t => t.id === teamId);
         for (const alloc of allocationsToDelete) {
           await base44.entities.QuarterlyAllocation.delete(alloc.id);
+          const m  = members.find(x => x.id === alloc.team_member_id);
+          const wa = workAreas.find(x => x.id === alloc.work_area_id);
+          logQuarterlyHistory({
+            quarter,
+            team_id:           teamId,
+            team_name:         team?.name,
+            team_member_id:    alloc.team_member_id,
+            member_name:       m?.name,
+            member_discipline: m?.discipline,
+            work_area_id:      alloc.work_area_id,
+            work_area_name:    wa?.name,
+            work_area_type:    wa?.type,
+            action:            "removed",
+            old_percent:       alloc.percent,
+            new_percent:       null,
+            changed_at:        new Date().toISOString(),
+          });
         }
       }
       
@@ -245,17 +269,36 @@ export default function SprintPlanning() {
 
     quarterlyAllocationTimeoutRef.current[key] = setTimeout(() => {
       // Use the provided allocationId if available, otherwise search for it
-      const existing = data.allocationId 
+      const existing = data.allocationId
         ? quarterlyAllocations.find(a => a.id === data.allocationId)
         : quarterlyAllocations.find(
             a => a.team_member_id === data.team_member_id && a.quarter === data.quarter && a.work_area_id === data.work_area_id
           );
 
+      // Build history context (denormalize names so the log is readable even if records are later deleted)
+      const histMember  = members.find(m => m.id === data.team_member_id);
+      const histWA      = workAreas.find(w => w.id === data.work_area_id);
+      const histTeam    = teams.find(t => t.id === histMember?.team_id);
+      const histBase    = {
+        quarter:           data.quarter,
+        team_id:           histMember?.team_id,
+        team_name:         histTeam?.name,
+        team_member_id:    data.team_member_id,
+        member_name:       histMember?.name,
+        member_discipline: histMember?.discipline,
+        work_area_id:      data.work_area_id,
+        work_area_name:    histWA?.name,
+        work_area_type:    histWA?.type,
+        changed_at:        new Date().toISOString(),
+      };
+
       if (existing) {
         if (data.percent === 0) {
           deleteQuarterlyAllocation.mutate(existing.id);
-        } else {
+          logQuarterlyHistory({ ...histBase, action: "removed", old_percent: existing.percent, new_percent: null });
+        } else if (existing.percent !== data.percent) {
           updateQuarterlyAllocation.mutate({ id: existing.id, data: { percent: data.percent } });
+          logQuarterlyHistory({ ...histBase, action: "updated", old_percent: existing.percent, new_percent: data.percent });
         }
       } else if (data.percent > 0) {
         createQuarterlyAllocation.mutate({
@@ -264,6 +307,7 @@ export default function SprintPlanning() {
           work_area_id: data.work_area_id,
           percent: data.percent
         });
+        logQuarterlyHistory({ ...histBase, action: "set", old_percent: null, new_percent: data.percent });
       }
       delete quarterlyAllocationTimeoutRef.current[key];
     }, 300);
@@ -406,6 +450,12 @@ export default function SprintPlanning() {
                 />
               </CardContent>
             </Card>
+            <QuarterlyPlanHistoryPanel
+              quarter={selectedQuarter}
+              teamId={effectiveTeamId}
+              members={teamMembers}
+              workAreas={filteredWorkAreas}
+            />
           )}
         </TabsContent>
 
