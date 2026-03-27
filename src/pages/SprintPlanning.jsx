@@ -590,6 +590,7 @@ export default function SprintPlanning() {
                     members={teamMembers}
                     workAreas={sprintWorkAreas}
                     allocations={allocations}
+                    teams={teams}
                     onAllocationChange={handleAllocationChange}
                   />
                 )}

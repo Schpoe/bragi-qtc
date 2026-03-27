@@ -2,11 +2,11 @@ import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import DisciplineBadge from "../shared/DisciplineBadge";
 import AllocationCell from "./AllocationCell";
-import { cn } from "@/lib/utils";
+import { cn, getTeamColor } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
 import { canManageAllocations } from "@/lib/permissions";
 
-export default function SprintAllocationTable({ sprint, members, workAreas, allocations, onAllocationChange }) {
+export default function SprintAllocationTable({ sprint, members, workAreas, allocations, teams = [], onAllocationChange }) {
   const { user } = useAuth();
   const canEdit = canManageAllocations(user, sprint.team_id);
   
@@ -80,7 +80,7 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
               {groupedWAs.map(wa => (
                 <TableHead key={wa.id} className={cn("text-center min-w-[90px]", getGroupBorder(wa))}>
                   <div className="flex items-center justify-center gap-1.5">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: wa.color || "#3b82f6" }} />
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getTeamColor(teams.find(t => t.id === wa.leading_team_id)) }} />
                     <span className="text-xs font-semibold">{wa.name}</span>
                   </div>
                 </TableHead>
@@ -193,7 +193,7 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
                       {group.items.map(wa => (
                         <div key={wa.id} className="text-xs">
                           <div className="font-medium text-muted-foreground mb-1 flex items-center gap-1">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: wa.color || "#3b82f6" }} />
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getTeamColor(teams.find(t => t.id === wa.leading_team_id)) }} />
                             {wa.name}
                           </div>
                           {canEdit ? (

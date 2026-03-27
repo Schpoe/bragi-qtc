@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, getTeamColor } from "@/lib/utils";
 
 const disciplineColors = {
   iOS: "#3b82f6",
@@ -9,29 +9,6 @@ const disciplineColors = {
   QA: "#f59e0b",
   Embedded: "#ef4444",
 };
-
-const teamColorToHex = {
-  blue: "#3b82f6",
-  green: "#10b981",
-  purple: "#8b5cf6",
-  amber: "#f59e0b",
-  red: "#ef4444",
-  orange: "#f97316",
-  pink: "#ec4899",
-  teal: "#14b8a6",
-  indigo: "#6366f1",
-  cyan: "#06b6d4",
-  lime: "#84cc16",
-  rose: "#f43f5e",
-  violet: "#7c3aed",
-  yellow: "#eab308",
-  sky: "#0ea5e9",
-};
-
-function getTeamColor(team) {
-  if (!team?.color) return "#6b7280";
-  return teamColorToHex[team.color] || "#6b7280";
-}
 
 function UtilBar({ value, color }) {
   const capped = Math.min(value, 100);

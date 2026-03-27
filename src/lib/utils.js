@@ -30,4 +30,11 @@ export const teamColorHex = {
   stone: "#78716c",
 };
 
+// Returns the hex color for a team object. Use this everywhere instead of
+// local color maps so all pages stay in sync.
+export function getTeamColor(team) {
+  if (!team?.color) return "#6b7280";
+  return teamColorHex[team.color] ?? "#6b7280";
+}
+
 export const isIframe = window.self !== window.top;
