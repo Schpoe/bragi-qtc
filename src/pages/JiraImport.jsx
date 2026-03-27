@@ -51,12 +51,8 @@ export default function JiraImport() {
     setResult(null);
 
     try {
-      // Upload file
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-
-      // Fetch and parse CSV directly
-      const response = await fetch(file_url);
-      const text = await response.text();
+      // Read file content directly in the browser
+      const text = await file.text();
       
       // Simple CSV parser
       const lines = text.trim().split('\n');
