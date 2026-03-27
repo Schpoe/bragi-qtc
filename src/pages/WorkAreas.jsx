@@ -74,15 +74,15 @@ function TypeDistributionPanel({ workAreas, workAreaTypes, filterTypeId, onTypeF
       <CardContent className="p-0">
         <div className="flex flex-col sm:flex-row items-center">
           {/* Pie */}
-          <div className="w-full sm:w-48 h-44 shrink-0">
+          <div className="w-full sm:w-1/2 h-56 shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={42}
-                  outerRadius={68}
+                  innerRadius={60}
+                  outerRadius={95}
                   paddingAngle={2}
                   dataKey="value"
                   onClick={(d) => onTypeFilter(filterTypeId === d.name ? "all" : d.name)}
