@@ -231,7 +231,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
         <div className="text-center py-8 text-sm text-muted-foreground">
           <BookMarked className="w-8 h-8 mx-auto mb-2 opacity-30" />
           No saved versions yet for {quarter}.<br />
-          {canManage && "Use "Save Current Version" to capture the current state."}
+          {canManage && "Use \u201cSave Current Version\u201d to capture the current state."}
         </div>
       ) : (
         <div className="space-y-2">
