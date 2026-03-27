@@ -103,15 +103,17 @@ router.post('/cleanupAllOrphans', requireAdmin, async (_req, res) => {
   }
 });
 
-// Test Jira connectivity (credentials + reachability)
+// Test Jira connectivity (credentials + reachability) and return custom field names
 router.post('/testJiraConnection', requireAdmin, async (_req, res) => {
   if (!jira.isConfigured()) {
     return res.json({ data: { ok: false, error: 'Jira credentials not configured (JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN)' } });
   }
   try {
     const fieldMap = await jira.fetchFieldMap();
-    const fieldCount = Object.keys(fieldMap).length;
-    return res.json({ data: { ok: true, fieldCount, baseUrl: process.env.JIRA_BASE_URL } });
+    const customFieldNames = Object.keys(fieldMap)
+      .filter(name => fieldMap[name].startsWith('customfield_'))
+      .sort();
+    return res.json({ data: { ok: true, fieldCount: Object.keys(fieldMap).length, baseUrl: process.env.JIRA_BASE_URL, customFieldNames } });
   } catch (err) {
     return res.json({ data: { ok: false, error: err.message } });
   }
@@ -123,14 +125,14 @@ router.post('/jiraSync', requireAdmin, async (req, res) => {
     if (!jira.isConfigured()) {
       return res.status(400).json({ error: 'Jira credentials not configured (set JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN in .env)' });
     }
-    const { jql } = req.body;
+    const { jql, leadingTeamFieldName, contributingTeamsFieldName } = req.body;
     if (!jql) return res.status(400).json({ error: 'jql is required' });
 
     const logs = [];
 
     const fieldMap = await jira.fetchFieldMap();
-    const leadingTeamField = fieldMap['Leading Team'];
-    const contributingTeamsField = fieldMap['Contributing Teams'];
+    const leadingTeamField = fieldMap[leadingTeamFieldName || 'Leading Team'];
+    const contributingTeamsField = fieldMap[contributingTeamsFieldName || 'Contributing Teams'];
     const typeField = fieldMap['Type'];
 
     logs.push(`Connected to ${process.env.JIRA_BASE_URL} — fetched ${Object.keys(fieldMap).length} fields`);
