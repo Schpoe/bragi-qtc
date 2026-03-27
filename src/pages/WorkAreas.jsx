@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { getWorkAreaColor } from "@/lib/utils";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, FolderKanban, Pencil, Trash2, Users, Upload, Search, X, Link as LinkIcon, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,26 +35,26 @@ export default function WorkAreas() {
 
   const { data: workAreas = [], isLoading } = useQuery({
     queryKey: ["workAreas"],
-    queryFn: () => base44.entities.WorkArea.list(),
+    queryFn: () => bragiQTC.entities.WorkArea.list(),
   });
 
   const { data: teams = [] } = useQuery({
     queryKey: ["teams"],
-    queryFn: () => base44.entities.Team.list(),
+    queryFn: () => bragiQTC.entities.Team.list(),
   });
 
   const createWA = useMutation({
-    mutationFn: (data) => base44.entities.WorkArea.create(data),
+    mutationFn: (data) => bragiQTC.entities.WorkArea.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workAreas"] }),
   });
 
   const updateWA = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.WorkArea.update(id, data),
+    mutationFn: ({ id, data }) => bragiQTC.entities.WorkArea.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workAreas"] }),
   });
 
   const deleteWA = useMutation({
-    mutationFn: (id) => base44.entities.WorkArea.delete(id),
+    mutationFn: (id) => bragiQTC.entities.WorkArea.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workAreas"] }),
   });
 

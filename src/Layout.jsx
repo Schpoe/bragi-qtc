@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
 import { isAdmin } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import ImpersonationBanner from "@/components/admin/ImpersonationBanner";
 import ImpersonateUserDialog from "@/components/admin/ImpersonateUserDialog";
 

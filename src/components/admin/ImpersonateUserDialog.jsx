@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ export default function ImpersonateUserDialog({ open, onOpenChange }) {
 
   const { data: users = [] } = useQuery({
     queryKey: ["users"],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => bragiQTC.entities.User.list(),
     enabled: open && isAdmin(user)
   });
 

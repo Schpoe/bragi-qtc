@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { X, Link as LinkIcon } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { toast } from "sonner";
 
 export default function EpicLinkDialog({ open, onOpenChange, workArea, onLinked }) {
@@ -17,7 +17,7 @@ export default function EpicLinkDialog({ open, onOpenChange, workArea, onLinked 
 
     setLinking(true);
     try {
-      const response = await base44.functions.invoke('linkJiraEpic', {
+      const response = await bragiQTC.functions.invoke('linkJiraEpic', {
         workAreaId: workArea.id,
         epicKey: epicKey.trim().toUpperCase()
       });
@@ -41,7 +41,7 @@ export default function EpicLinkDialog({ open, onOpenChange, workArea, onLinked 
     const linkedEpics = (workArea.linked_epic_keys || []).filter(k => k !== key);
     
     try {
-      await base44.entities.WorkArea.update(workArea.id, {
+      await bragiQTC.entities.WorkArea.update(workArea.id, {
         linked_epic_keys: linkedEpics
       });
       toast.success(`Unlinked epic ${key}`);

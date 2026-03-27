@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,37 +29,37 @@ export default function Dashboard() {
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ["teams"],
-    queryFn: () => base44.entities.Team.list()
+    queryFn: () => bragiQTC.entities.Team.list()
   });
 
   const { data: members = [] } = useQuery({
     queryKey: ["teamMembers"],
-    queryFn: () => base44.entities.TeamMember.list()
+    queryFn: () => bragiQTC.entities.TeamMember.list()
   });
 
   const { data: workAreas = [] } = useQuery({
     queryKey: ["workAreas"],
-    queryFn: () => base44.entities.WorkArea.list()
+    queryFn: () => bragiQTC.entities.WorkArea.list()
   });
 
   const { data: sprints = [] } = useQuery({
     queryKey: ["sprints"],
-    queryFn: () => base44.entities.Sprint.list()
+    queryFn: () => bragiQTC.entities.Sprint.list()
   });
 
   const { data: allocations = [] } = useQuery({
     queryKey: ["allocations"],
-    queryFn: () => base44.entities.Allocation.list()
+    queryFn: () => bragiQTC.entities.Allocation.list()
   });
 
   const { data: quarterlyAllocations = [] } = useQuery({
     queryKey: ["quarterlyAllocations"],
-    queryFn: () => base44.entities.QuarterlyAllocation.list()
+    queryFn: () => bragiQTC.entities.QuarterlyAllocation.list()
   });
 
   const { data: workAreaSelections = [] } = useQuery({
     queryKey: ["workAreaSelections"],
-    queryFn: () => base44.entities.QuarterlyWorkAreaSelection.list()
+    queryFn: () => bragiQTC.entities.QuarterlyWorkAreaSelection.list()
   });
 
   // Cleanup template sprint allocations on mount
@@ -71,7 +71,7 @@ export default function Dashboard() {
       if (orphanedAllocations.length > 0) {
         console.log(`Cleaning up ${orphanedAllocations.length} template sprint allocations...`);
         for (const alloc of orphanedAllocations) {
-          await base44.entities.Allocation.delete(alloc.id);
+          await bragiQTC.entities.Allocation.delete(alloc.id);
         }
       }
     };

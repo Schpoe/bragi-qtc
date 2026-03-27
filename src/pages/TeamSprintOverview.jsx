@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -184,27 +184,27 @@ export default function TeamSprintOverview() {
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ["teams"],
-    queryFn: () => base44.entities.Team.list(),
+    queryFn: () => bragiQTC.entities.Team.list(),
   });
 
   const { data: sprints = [] } = useQuery({
     queryKey: ["sprints"],
-    queryFn: () => base44.entities.Sprint.list(),
+    queryFn: () => bragiQTC.entities.Sprint.list(),
   });
 
   const { data: members = [] } = useQuery({
     queryKey: ["teamMembers"],
-    queryFn: () => base44.entities.TeamMember.list(),
+    queryFn: () => bragiQTC.entities.TeamMember.list(),
   });
 
   const { data: workAreas = [] } = useQuery({
     queryKey: ["workAreas"],
-    queryFn: () => base44.entities.WorkArea.list(),
+    queryFn: () => bragiQTC.entities.WorkArea.list(),
   });
 
   const { data: allocations = [] } = useQuery({
     queryKey: ["allocations"],
-    queryFn: () => base44.entities.Allocation.list(),
+    queryFn: () => bragiQTC.entities.Allocation.list(),
   });
 
   const quarterSprints = sprints.filter(s => s.quarter === selectedQuarter);

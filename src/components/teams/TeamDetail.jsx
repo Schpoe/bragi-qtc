@@ -5,7 +5,7 @@ import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import DisciplineBadge from "../shared/DisciplineBadge";
 import EmptyState from "../shared/EmptyState";
 import MemberFormDialog from "./MemberFormDialog";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { canManageTeamMembers } from "@/lib/permissions";
@@ -19,17 +19,17 @@ export default function TeamDetail({ team, members, onBack }) {
   const canManage = canManageTeamMembers(user, team.id);
 
   const createMember = useMutation({
-    mutationFn: (data) => base44.entities.TeamMember.create(data),
+    mutationFn: (data) => bragiQTC.entities.TeamMember.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teamMembers"] }),
   });
 
   const updateMember = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.TeamMember.update(id, data),
+    mutationFn: ({ id, data }) => bragiQTC.entities.TeamMember.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teamMembers"] }),
   });
 
   const deleteMember = useMutation({
-    mutationFn: (id) => base44.entities.TeamMember.delete(id),
+    mutationFn: (id) => bragiQTC.entities.TeamMember.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teamMembers"] }),
   });
 

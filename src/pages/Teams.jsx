@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { Plus, Users } from "lucide-react";
@@ -21,26 +21,26 @@ export default function Teams() {
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ["teams"],
-    queryFn: () => base44.entities.Team.list(),
+    queryFn: () => bragiQTC.entities.Team.list(),
   });
 
   const { data: members = [] } = useQuery({
     queryKey: ["teamMembers"],
-    queryFn: () => base44.entities.TeamMember.list(),
+    queryFn: () => bragiQTC.entities.TeamMember.list(),
   });
 
   const createTeam = useMutation({
-    mutationFn: (data) => base44.entities.Team.create(data),
+    mutationFn: (data) => bragiQTC.entities.Team.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teams"] }),
   });
 
   const updateTeam = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Team.update(id, data),
+    mutationFn: ({ id, data }) => bragiQTC.entities.Team.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teams"] }),
   });
 
   const deleteTeam = useMutation({
-    mutationFn: (id) => base44.entities.Team.delete(id),
+    mutationFn: (id) => bragiQTC.entities.Team.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teams"] }),
   });
 

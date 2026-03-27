@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { toast } from "sonner";
 
 export default function JiraSyncButton() {
@@ -10,7 +10,7 @@ export default function JiraSyncButton() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const response = await base44.functions.invoke('syncJiraIssues', {});
+      const response = await bragiQTC.functions.invoke('syncJiraIssues', {});
       
       if (response.data.success) {
         toast.success(`Synced ${response.data.updated} work items from Jira`);

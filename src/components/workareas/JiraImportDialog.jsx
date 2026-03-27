@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,26 +43,26 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
 
   const { data: existingWorkAreas = [] } = useQuery({
     queryKey: ['workAreas'],
-    queryFn: () => base44.entities.WorkArea.list(),
+    queryFn: () => bragiQTC.entities.WorkArea.list(),
   });
 
   const { data: existingWorkAreaTypes = [] } = useQuery({
     queryKey: ['workAreaTypes'],
-    queryFn: () => base44.entities.WorkAreaType.list(),
+    queryFn: () => bragiQTC.entities.WorkAreaType.list(),
   });
 
   const createWorkAreaType = useMutation({
-    mutationFn: (typeData) => base44.entities.WorkAreaType.create(typeData),
+    mutationFn: (typeData) => bragiQTC.entities.WorkAreaType.create(typeData),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workAreaTypes'] }),
   });
 
   const createWorkArea = useMutation({
-    mutationFn: (workAreaData) => base44.entities.WorkArea.create(workAreaData),
+    mutationFn: (workAreaData) => bragiQTC.entities.WorkArea.create(workAreaData),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workAreas'] }),
   });
 
   const updateWorkArea = useMutation({
-    mutationFn: ({ id, workAreaData }) => base44.entities.WorkArea.update(id, workAreaData),
+    mutationFn: ({ id, workAreaData }) => bragiQTC.entities.WorkArea.update(id, workAreaData),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['workAreas'] }),
   });
 
@@ -72,7 +72,7 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
     setError(null);
     addLog('Testing Jira connection...');
     try {
-      const response = await base44.functions.invoke('testJiraConnection', {});
+      const response = await bragiQTC.functions.invoke('testJiraConnection', {});
       const d = response.data;
       if (d.ok) {
         addLog(`Connected to ${d.baseUrl}`, 'success');
@@ -98,7 +98,7 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
     addLog('Connecting to Jira...');
     try {
       addLog(`Executing JQL: ${jql.trim()}`);
-      const response = await base44.functions.invoke('jiraSync', {
+      const response = await bragiQTC.functions.invoke('jiraSync', {
         jql: jql.trim()
       });
 

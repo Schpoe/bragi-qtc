@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 
@@ -15,7 +15,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, teamId, o
 
   const { data: members = [] } = useQuery({
     queryKey: ["teamMembers"],
-    queryFn: () => base44.entities.TeamMember.list(),
+    queryFn: () => bragiQTC.entities.TeamMember.list(),
   });
 
   const existingDisciplines = [...new Set(members.map(m => m.discipline).filter(Boolean))].sort();

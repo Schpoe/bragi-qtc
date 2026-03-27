@@ -39,7 +39,7 @@ function makeEntityClient(basePath) {
   };
 }
 
-export const base44 = {
+export const bragiQTC = {
   auth: {
     login: async (email, password) => {
       const data = await apiFetch('/api/auth/login', {

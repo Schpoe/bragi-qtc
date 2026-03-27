@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -127,13 +127,13 @@ export default function CleanupPage() {
   const [deleteProgress, setDeleteProgress] = useState(null); // { done, total } | null
   const queryClient = useQueryClient();
 
-  const { data: teams = [], isLoading: teamsLoading, refetch: refetchTeams } = useQuery({ queryKey: ["teams"], queryFn: () => base44.entities.Team.list() });
-  const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useQuery({ queryKey: ["teamMembers"], queryFn: () => base44.entities.TeamMember.list() });
-  const { data: sprints = [], isLoading: sprintsLoading, refetch: refetchSprints } = useQuery({ queryKey: ["sprints"], queryFn: () => base44.entities.Sprint.list() });
-  const { data: allocations = [], isLoading: allocationsLoading, refetch: refetchAllocations } = useQuery({ queryKey: ["allocations"], queryFn: () => base44.entities.Allocation.list() });
-  const { data: workAreas = [], isLoading: workAreasLoading, refetch: refetchWorkAreas } = useQuery({ queryKey: ["workAreas"], queryFn: () => base44.entities.WorkArea.list() });
-  const { data: quarterlyAllocations = [], isLoading: qaLoading, refetch: refetchQA } = useQuery({ queryKey: ["quarterlyAllocations"], queryFn: () => base44.entities.QuarterlyAllocation.list() });
-  const { data: workAreaSelections = [], isLoading: wasLoading, refetch: refetchWAS } = useQuery({ queryKey: ["workAreaSelections"], queryFn: () => base44.entities.QuarterlyWorkAreaSelection.list() });
+  const { data: teams = [], isLoading: teamsLoading, refetch: refetchTeams } = useQuery({ queryKey: ["teams"], queryFn: () => bragiQTC.entities.Team.list() });
+  const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useQuery({ queryKey: ["teamMembers"], queryFn: () => bragiQTC.entities.TeamMember.list() });
+  const { data: sprints = [], isLoading: sprintsLoading, refetch: refetchSprints } = useQuery({ queryKey: ["sprints"], queryFn: () => bragiQTC.entities.Sprint.list() });
+  const { data: allocations = [], isLoading: allocationsLoading, refetch: refetchAllocations } = useQuery({ queryKey: ["allocations"], queryFn: () => bragiQTC.entities.Allocation.list() });
+  const { data: workAreas = [], isLoading: workAreasLoading, refetch: refetchWorkAreas } = useQuery({ queryKey: ["workAreas"], queryFn: () => bragiQTC.entities.WorkArea.list() });
+  const { data: quarterlyAllocations = [], isLoading: qaLoading, refetch: refetchQA } = useQuery({ queryKey: ["quarterlyAllocations"], queryFn: () => bragiQTC.entities.QuarterlyAllocation.list() });
+  const { data: workAreaSelections = [], isLoading: wasLoading, refetch: refetchWAS } = useQuery({ queryKey: ["workAreaSelections"], queryFn: () => bragiQTC.entities.QuarterlyWorkAreaSelection.list() });
 
   const isLoading = teamsLoading || membersLoading || sprintsLoading || allocationsLoading || workAreasLoading || qaLoading || wasLoading;
 
@@ -245,13 +245,13 @@ export default function CleanupPage() {
 
   const handleDelete = async () => {
     const ops = [
-      ...[...selected.members].map(id              => () => base44.entities.TeamMember.delete(id)),
-      ...[...selected.sprints].map(id              => () => base44.entities.Sprint.delete(id)),
-      ...[...selected.allocations].map(id          => () => base44.entities.Allocation.delete(id)),
-      ...[...selected.templateAllocations].map(id  => () => base44.entities.Allocation.delete(id)),
-      ...[...selected.quarterlyAllocations].map(id => () => base44.entities.QuarterlyAllocation.delete(id)),
-      ...[...selected.workAreaSelections].map(id   => () => base44.entities.QuarterlyWorkAreaSelection.delete(id)),
-      ...[...selected.workAreas].map(id            => () => base44.entities.WorkArea.delete(id)),
+      ...[...selected.members].map(id              => () => bragiQTC.entities.TeamMember.delete(id)),
+      ...[...selected.sprints].map(id              => () => bragiQTC.entities.Sprint.delete(id)),
+      ...[...selected.allocations].map(id          => () => bragiQTC.entities.Allocation.delete(id)),
+      ...[...selected.templateAllocations].map(id  => () => bragiQTC.entities.Allocation.delete(id)),
+      ...[...selected.quarterlyAllocations].map(id => () => bragiQTC.entities.QuarterlyAllocation.delete(id)),
+      ...[...selected.workAreaSelections].map(id   => () => bragiQTC.entities.QuarterlyWorkAreaSelection.delete(id)),
+      ...[...selected.workAreas].map(id            => () => bragiQTC.entities.WorkArea.delete(id)),
     ];
 
     setDeleteProgress({ done: 0, total: ops.length });

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { canManageSprints, canManageAllocations, canCreateSprint, isTeamManager } from "@/lib/permissions";
@@ -43,37 +43,37 @@ export default function SprintPlanning() {
 
   const { data: sprints = [], isLoading: sprintsLoading } = useQuery({
     queryKey: ["sprints"],
-    queryFn: () => base44.entities.Sprint.list(),
+    queryFn: () => bragiQTC.entities.Sprint.list(),
   });
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ["teams"],
-    queryFn: () => base44.entities.Team.list(),
+    queryFn: () => bragiQTC.entities.Team.list(),
   });
 
   const { data: members = [] } = useQuery({
     queryKey: ["teamMembers"],
-    queryFn: () => base44.entities.TeamMember.list(),
+    queryFn: () => bragiQTC.entities.TeamMember.list(),
   });
 
   const { data: workAreas = [] } = useQuery({
     queryKey: ["workAreas"],
-    queryFn: () => base44.entities.WorkArea.list(),
+    queryFn: () => bragiQTC.entities.WorkArea.list(),
   });
 
   const { data: allocations = [] } = useQuery({
     queryKey: ["allocations"],
-    queryFn: () => base44.entities.Allocation.list(),
+    queryFn: () => bragiQTC.entities.Allocation.list(),
   });
 
   const { data: quarterlyAllocations = [] } = useQuery({
      queryKey: ["quarterlyAllocations"],
-     queryFn: () => base44.entities.QuarterlyAllocation.list(),
+     queryFn: () => bragiQTC.entities.QuarterlyAllocation.list(),
    });
 
    const { data: workAreaSelections = [] } = useQuery({
      queryKey: ["workAreaSelections"],
-     queryFn: () => base44.entities.QuarterlyWorkAreaSelection.list(),
+     queryFn: () => bragiQTC.entities.QuarterlyWorkAreaSelection.list(),
    });
 
   // For quarterly plan, require explicit team selection - don't auto-select
@@ -84,7 +84,7 @@ export default function SprintPlanning() {
   const sprintPlanningTeamId = selectedTeamId && selectedTeamId !== "all" ? selectedTeamId : (teams.length > 0 && isViewingAllTeams ? teams[0].id : "");
 
   const createSprint = useMutation({
-    mutationFn: (data) => base44.entities.Sprint.create(data),
+    mutationFn: (data) => bragiQTC.entities.Sprint.create(data),
     onSuccess: (newSprint) => {
       queryClient.invalidateQueries({ queryKey: ["sprints"] });
       // If this was a copied sprint, show success and navigate to that team
@@ -101,49 +101,49 @@ export default function SprintPlanning() {
   });
 
   const updateSprint = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Sprint.update(id, data),
+    mutationFn: ({ id, data }) => bragiQTC.entities.Sprint.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sprints"] }),
   });
 
   const deleteSprint = useMutation({
-    mutationFn: (id) => base44.entities.Sprint.delete(id),
+    mutationFn: (id) => bragiQTC.entities.Sprint.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sprints"] }),
   });
 
   const createAllocation = useMutation({
-    mutationFn: (data) => base44.entities.Allocation.create(data),
+    mutationFn: (data) => bragiQTC.entities.Allocation.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allocations"] }),
   });
 
   const updateAllocation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Allocation.update(id, data),
+    mutationFn: ({ id, data }) => bragiQTC.entities.Allocation.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allocations"] }),
   });
 
   const deleteAllocation = useMutation({
-    mutationFn: (id) => base44.entities.Allocation.delete(id),
+    mutationFn: (id) => bragiQTC.entities.Allocation.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allocations"] }),
   });
 
   const createQuarterlyAllocation = useMutation({
-    mutationFn: (data) => base44.entities.QuarterlyAllocation.create(data),
+    mutationFn: (data) => bragiQTC.entities.QuarterlyAllocation.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] }),
   });
 
   const updateQuarterlyAllocation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.QuarterlyAllocation.update(id, data),
+    mutationFn: ({ id, data }) => bragiQTC.entities.QuarterlyAllocation.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] }),
   });
 
   const deleteQuarterlyAllocation = useMutation({
-    mutationFn: (id) => base44.entities.QuarterlyAllocation.delete(id),
+    mutationFn: (id) => bragiQTC.entities.QuarterlyAllocation.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] }),
   });
 
   // Fire-and-forget history log — silently no-ops if the entity doesn't exist yet
   const logQuarterlyHistory = (entry) => {
     try {
-      base44.entities.QuarterlyPlanHistory?.create(entry)?.catch(() => {});
+      bragiQTC.entities.QuarterlyPlanHistory?.create(entry)?.catch(() => {});
     } catch {
       // Entity not yet created in base44 — ignore
     }
@@ -168,7 +168,7 @@ export default function SprintPlanning() {
 
         const team = teams.find(t => t.id === teamId);
         for (const alloc of allocationsToDelete) {
-          await base44.entities.QuarterlyAllocation.delete(alloc.id);
+          await bragiQTC.entities.QuarterlyAllocation.delete(alloc.id);
           const m  = members.find(x => x.id === alloc.team_member_id);
           const wa = workAreas.find(x => x.id === alloc.work_area_id);
           logQuarterlyHistory({
@@ -191,9 +191,9 @@ export default function SprintPlanning() {
       
       // Update selection
       if (existing) {
-        return base44.entities.QuarterlyWorkAreaSelection.update(existing.id, { work_area_ids: workAreaIds });
+        return bragiQTC.entities.QuarterlyWorkAreaSelection.update(existing.id, { work_area_ids: workAreaIds });
       } else {
-        return base44.entities.QuarterlyWorkAreaSelection.create({ team_id: teamId, quarter, work_area_ids: workAreaIds });
+        return bragiQTC.entities.QuarterlyWorkAreaSelection.create({ team_id: teamId, quarter, work_area_ids: workAreaIds });
       }
     },
     onSuccess: () => {
@@ -216,7 +216,7 @@ export default function SprintPlanning() {
             a => a.sprint_id === editingSprint.id && a.work_area_id === waId
           );
           for (const alloc of allocationsToDelete) {
-            await base44.entities.Allocation.delete(alloc.id);
+            await bragiQTC.entities.Allocation.delete(alloc.id);
           }
         }
       }

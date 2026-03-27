@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
@@ -25,17 +25,17 @@ export default function UserManagement() {
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["users"],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => bragiQTC.entities.User.list(),
   });
 
   const { data: teams = [] } = useQuery({
     queryKey: ["teams"],
-    queryFn: () => base44.entities.Team.list(),
+    queryFn: () => bragiQTC.entities.Team.list(),
   });
 
   const createUser = useMutation({
     mutationFn: async (data) => {
-      const response = await base44.functions.invoke('inviteUserWithTeams', {
+      const response = await bragiQTC.functions.invoke('inviteUserWithTeams', {
         email: data.email,
         role: data.role,
         managed_team_ids: data.managed_team_ids || [],
@@ -58,7 +58,7 @@ export default function UserManagement() {
   });
 
   const updateUser = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
+    mutationFn: ({ id, data }) => bragiQTC.entities.User.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setEditingUser(null);
@@ -75,7 +75,7 @@ export default function UserManagement() {
   });
 
   const deleteUser = useMutation({
-    mutationFn: (id) => base44.entities.User.delete(id),
+    mutationFn: (id) => bragiQTC.entities.User.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       toast.success("User deleted successfully");

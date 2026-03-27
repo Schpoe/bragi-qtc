@@ -1,6 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +11,7 @@ import EmptyState from "../shared/EmptyState";
 export default function JiraSyncHistoryTab() {
   const { data: history = [], isLoading } = useQuery({
     queryKey: ["jiraSyncHistory"],
-    queryFn: () => base44.entities.JiraSyncHistory.list(),
+    queryFn: () => bragiQTC.entities.JiraSyncHistory.list(),
   });
 
   const getStatusIcon = (status) => {

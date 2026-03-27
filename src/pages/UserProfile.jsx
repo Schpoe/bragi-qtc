@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { User, Save } from "lucide-react";
@@ -29,7 +29,7 @@ export default function UserProfile() {
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['userProfile', userId],
-    queryFn: () => base44.entities.User.get(userId),
+    queryFn: () => bragiQTC.entities.User.get(userId),
     enabled: !!userId,
     // Team Managers lack direct read access to the User entity via RLS.
     // When viewing their own profile, seed from the auth context user (already fetched via service role at login).
@@ -47,7 +47,7 @@ export default function UserProfile() {
   }, [user]);
 
   const updateUser = useMutation({
-    mutationFn: (data) => base44.entities.User.update(userId, data),
+    mutationFn: (data) => bragiQTC.entities.User.update(userId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userProfile', userId] });
       queryClient.invalidateQueries({ queryKey: ['users'] });

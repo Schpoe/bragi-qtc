@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,7 +83,7 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, members, wo
 
   const { data: allHistory = [], isLoading } = useQuery({
     queryKey: ["quarterlyPlanHistory"],
-    queryFn: () => base44.entities.QuarterlyPlanHistory.list(),
+    queryFn: () => bragiQTC.entities.QuarterlyPlanHistory.list(),
     enabled: open,
   });
 

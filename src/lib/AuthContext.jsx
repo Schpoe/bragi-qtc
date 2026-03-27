@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { bragiQTC } from '@/api/bragiQTCClient';
 
 const AuthContext = createContext();
 
@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
     setIsLoadingAuth(true);
     setAuthError(null);
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await bragiQTC.auth.me();
       setUser(currentUser);
       setIsAuthenticated(true);
     } catch (err) {
@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    const data = await base44.auth.login(email, password);
+    const data = await bragiQTC.auth.login(email, password);
     setUser(data.user);
     setIsAuthenticated(true);
     setAuthError(null);
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    base44.auth.logout();
+    bragiQTC.auth.logout();
     setUser(null);
     setActualUser(null);
     setIsAuthenticated(false);
@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }) => {
   const impersonateUser = async (targetUserEmail) => {
     if (user?.role !== 'admin') return false;
     try {
-      const users = await base44.entities.User.list();
+      const users = await bragiQTC.entities.User.list();
       const targetUser = users.find(u => u.email === targetUserEmail);
       if (!targetUser) return false;
       setActualUser(user);

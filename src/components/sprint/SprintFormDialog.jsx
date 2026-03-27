@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -24,12 +24,12 @@ export default function SprintFormDialog({ open, onOpenChange, sprint, existingS
 
   const { data: workAreas = [] } = useQuery({
     queryKey: ["workAreas"],
-    queryFn: () => base44.entities.WorkArea.list(),
+    queryFn: () => bragiQTC.entities.WorkArea.list(),
   });
 
   const { data: sprints = [] } = useQuery({
     queryKey: ["sprints"],
-    queryFn: () => base44.entities.Sprint.list(),
+    queryFn: () => bragiQTC.entities.Sprint.list(),
   });
 
   const crossTeamSprints = sprints.filter(s => s.is_cross_team);

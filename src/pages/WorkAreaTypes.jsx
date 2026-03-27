@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Tag, Pencil, Trash2, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,11 +23,11 @@ export default function WorkAreaTypes() {
 
   const { data: types = [], isLoading } = useQuery({
     queryKey: ["workAreaTypes"],
-    queryFn: () => base44.entities.WorkAreaType.list(),
+    queryFn: () => bragiQTC.entities.WorkAreaType.list(),
   });
 
   const createType = useMutation({
-    mutationFn: (data) => base44.entities.WorkAreaType.create(data),
+    mutationFn: (data) => bragiQTC.entities.WorkAreaType.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workAreaTypes"] });
       setDialogOpen(false);
@@ -36,7 +36,7 @@ export default function WorkAreaTypes() {
   });
 
   const updateType = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.WorkAreaType.update(id, data),
+    mutationFn: ({ id, data }) => bragiQTC.entities.WorkAreaType.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workAreaTypes"] });
       setDialogOpen(false);
@@ -46,7 +46,7 @@ export default function WorkAreaTypes() {
   });
 
   const deleteType = useMutation({
-    mutationFn: (id) => base44.entities.WorkAreaType.delete(id),
+    mutationFn: (id) => bragiQTC.entities.WorkAreaType.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workAreaTypes"] }),
   });
 
