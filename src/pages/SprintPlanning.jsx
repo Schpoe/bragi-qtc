@@ -416,14 +416,53 @@ export default function SprintPlanning() {
        />
 
       <div className="mb-6">
-          {!effectiveTeamId ? (
-            <EmptyState icon={CalendarRange} title="Select a team" description="Choose a team from the filter to view the quarterly plan." />
-          ) : teamsLoading || sprintsLoading ? (
+          {teamsLoading || sprintsLoading ? (
             <div className="space-y-4">
               <Skeleton className="h-64 rounded-xl" />
             </div>
           ) : teams.length === 0 ? (
             <EmptyState icon={CalendarRange} title="No teams yet" description="First create a team under 'Teams'." />
+          ) : isViewingAllTeams ? (
+            <div className="space-y-6">
+              {teams.map(team => {
+                const tMembers = members.filter(m => m.team_id === team.id);
+                if (tMembers.length === 0) return null;
+                const tMemberIds = new Set(tMembers.map(m => m.id));
+                const tAllocatedWaIds = new Set(
+                  quarterlyAllocations
+                    .filter(a => tMemberIds.has(a.team_member_id) && a.quarter === selectedQuarter)
+                    .map(a => a.work_area_id)
+                );
+                const tSelection = workAreaSelections.find(s => s.team_id === team.id && s.quarter === selectedQuarter);
+                const tManualIds = new Set(tSelection?.work_area_ids || []);
+                const tWorkAreas = workAreas.filter(wa =>
+                  wa.is_cross_team ||
+                  wa.leading_team_id === team.id ||
+                  (wa.supporting_team_ids || []).includes(team.id) ||
+                  tAllocatedWaIds.has(wa.id) ||
+                  tManualIds.has(wa.id)
+                );
+                return (
+                  <Card key={team.id} className="border-primary/20">
+                    <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
+                      <CardTitle className="text-base font-bold text-foreground">{team.name} — {selectedQuarter}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <QuarterlyAllocationTable
+                        members={tMembers}
+                        workAreas={tWorkAreas}
+                        allocations={quarterlyAllocations}
+                        quarter={selectedQuarter}
+                        onAllocationChange={handleQuarterlyAllocationChange}
+                        selectedTeamId={team.id}
+                        onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: team.id, quarter: selectedQuarter, workAreaIds })}
+                        initialSelectedWorkAreaIds={tManualIds.size > 0 ? tManualIds : tAllocatedWaIds}
+                      />
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           ) : (
             <>
               <Card className="border-primary/20">
