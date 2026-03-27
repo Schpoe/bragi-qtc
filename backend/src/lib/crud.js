@@ -19,7 +19,8 @@ function attachCrud(router, model, filterableFields = []) {
       const items = await model.findMany({ where, orderBy: { created_at: 'asc' } });
       res.json(items);
     } catch (err) {
-      res.status(500).json({ message: err.message });
+      console.error(err);
+      res.status(500).json({ message: 'Internal server error' });
     }
   });
 
@@ -30,7 +31,8 @@ function attachCrud(router, model, filterableFields = []) {
       if (!item) return res.status(404).json({ message: 'Not found' });
       res.json(item);
     } catch (err) {
-      res.status(500).json({ message: err.message });
+      console.error(err);
+      res.status(500).json({ message: 'Internal server error' });
     }
   });
 
@@ -40,7 +42,8 @@ function attachCrud(router, model, filterableFields = []) {
       const item = await model.create({ data: req.body });
       res.status(201).json(item);
     } catch (err) {
-      res.status(400).json({ message: err.message });
+      console.error(err);
+      res.status(400).json({ message: 'Failed to create record' });
     }
   });
 
@@ -50,7 +53,8 @@ function attachCrud(router, model, filterableFields = []) {
       const item = await model.update({ where: { id: req.params.id }, data: req.body });
       res.json(item);
     } catch (err) {
-      res.status(400).json({ message: err.message });
+      console.error(err);
+      res.status(400).json({ message: 'Failed to update record' });
     }
   });
 
@@ -60,7 +64,8 @@ function attachCrud(router, model, filterableFields = []) {
       await model.delete({ where: { id: req.params.id } });
       res.json({ ok: true });
     } catch (err) {
-      res.status(400).json({ message: err.message });
+      console.error(err);
+      res.status(400).json({ message: 'Failed to delete record' });
     }
   });
 }

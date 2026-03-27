@@ -7,7 +7,7 @@ const router = express.Router();
 
 const strip = ({ password_hash, ...rest }) => rest;
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, async (_req, res) => {
   try {
     const users = await prisma.user.findMany({ orderBy: { created_at: 'asc' } });
     res.json(users.map(strip));
@@ -41,14 +41,24 @@ router.post('/', requireAdmin, async (req, res) => {
 });
 
 router.put('/:id', requireAuth, async (req, res) => {
+  const isAdmin = req.user.role === 'admin';
+  if (!isAdmin && req.user.id !== req.params.id) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
   try {
     const { password, password_hash, ...data } = req.body;
+    // Non-admins cannot change their own role or managed_team_ids
+    if (!isAdmin) {
+      delete data.role;
+      delete data.managed_team_ids;
+    }
     const update = { ...data };
     if (password) update.password_hash = await bcrypt.hash(password, 10);
     const user = await prisma.user.update({ where: { id: req.params.id }, data: update });
     res.json(strip(user));
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error(err);
+    res.status(400).json({ message: 'Failed to update user' });
   }
 });
 

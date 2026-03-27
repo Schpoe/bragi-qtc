@@ -51,55 +51,55 @@ router.post('/cleanupOrphanedAllocations', requireAdmin, async (_req, res) => {
 // Comprehensive orphan cleanup
 router.post('/cleanupAllOrphans', requireAdmin, async (_req, res) => {
   try {
-    const [teams, teamMembers, sprints, allocations, workAreas] = await Promise.all([
-      prisma.team.findMany({ select: { id: true } }),
-      prisma.teamMember.findMany(),
-      prisma.sprint.findMany(),
-      prisma.allocation.findMany(),
-      prisma.workArea.findMany({ select: { id: true } }),
-    ]);
+    const summary = await prisma.$transaction(async (tx) => {
+      const [teams, teamMembers, sprints, allocations, workAreas] = await Promise.all([
+        tx.team.findMany({ select: { id: true } }),
+        tx.teamMember.findMany(),
+        tx.sprint.findMany(),
+        tx.allocation.findMany(),
+        tx.workArea.findMany({ select: { id: true } }),
+      ]);
 
-    const teamIds = new Set(teams.map(t => t.id));
-    const workAreaIds = new Set(workAreas.map(w => w.id));
-    const summary = { orphanedMembers: 0, orphanedSprints: 0, orphanedAllocations: 0, orphanedWorkAreas: 0 };
+      const teamIds = new Set(teams.map(t => t.id));
+      const workAreaIds = new Set(workAreas.map(w => w.id));
+      const result = { orphanedMembers: 0, orphanedSprints: 0, orphanedAllocations: 0, orphanedWorkAreas: 0 };
 
-    // 1. Orphaned team members
-    const orphanedMembers = teamMembers.filter(m => m.team_id && !teamIds.has(m.team_id));
-    await Promise.all(orphanedMembers.map(m => prisma.teamMember.delete({ where: { id: m.id } })));
-    summary.orphanedMembers = orphanedMembers.length;
+      // 1. Orphaned team members
+      const orphanedMembers = teamMembers.filter(m => m.team_id && !teamIds.has(m.team_id));
+      await Promise.all(orphanedMembers.map(m => tx.teamMember.delete({ where: { id: m.id } })));
+      result.orphanedMembers = orphanedMembers.length;
 
-    // 2. Orphaned sprints (non-cross-team with missing team)
-    const orphanedSprints = sprints.filter(s => !s.is_cross_team && s.team_id && !teamIds.has(s.team_id));
-    await Promise.all(orphanedSprints.map(s => prisma.sprint.delete({ where: { id: s.id } })));
-    summary.orphanedSprints = orphanedSprints.length;
+      // 2. Orphaned sprints (non-cross-team with missing team)
+      const orphanedSprints = sprints.filter(s => !s.is_cross_team && s.team_id && !teamIds.has(s.team_id));
+      await Promise.all(orphanedSprints.map(s => tx.sprint.delete({ where: { id: s.id } })));
+      result.orphanedSprints = orphanedSprints.length;
 
-    // Refresh sets after cleanup
-    const remainingMemberIds = new Set(
-      (await prisma.teamMember.findMany({ select: { id: true } })).map(m => m.id)
-    );
-    const remainingSprintIds = new Set(
-      (await prisma.sprint.findMany({ select: { id: true } })).map(s => s.id)
-    );
+      const remainingMemberIds = new Set(orphanedMembers.map(m => m.id));
+      const remainingSprintIds = new Set(orphanedSprints.map(s => s.id));
 
-    // 3. Orphaned allocations
-    const orphanedAllocations = allocations.filter(
-      a => !remainingMemberIds.has(a.team_member_id) ||
-           !remainingSprintIds.has(a.sprint_id) ||
-           !workAreaIds.has(a.work_area_id)
-    );
-    await Promise.all(orphanedAllocations.map(a => prisma.allocation.delete({ where: { id: a.id } })));
-    summary.orphanedAllocations = orphanedAllocations.length;
+      // 3. Orphaned allocations
+      const orphanedAllocations = allocations.filter(
+        a => remainingMemberIds.has(a.team_member_id) ||
+             remainingSprintIds.has(a.sprint_id) ||
+             !workAreaIds.has(a.work_area_id)
+      );
+      await Promise.all(orphanedAllocations.map(a => tx.allocation.delete({ where: { id: a.id } })));
+      result.orphanedAllocations = orphanedAllocations.length;
 
-    // 4. Work areas with non-existent leading teams
-    const allWorkAreas = await prisma.workArea.findMany();
-    const orphanedWorkAreas = allWorkAreas.filter(w => w.leading_team_id && !teamIds.has(w.leading_team_id));
-    await Promise.all(orphanedWorkAreas.map(w => prisma.workArea.delete({ where: { id: w.id } })));
-    summary.orphanedWorkAreas = orphanedWorkAreas.length;
+      // 4. Work areas with non-existent leading teams
+      const allWorkAreas = await tx.workArea.findMany();
+      const orphanedWorkAreas = allWorkAreas.filter(w => w.leading_team_id && !teamIds.has(w.leading_team_id));
+      await Promise.all(orphanedWorkAreas.map(w => tx.workArea.delete({ where: { id: w.id } })));
+      result.orphanedWorkAreas = orphanedWorkAreas.length;
+
+      return result;
+    });
 
     const totalDeleted = Object.values(summary).reduce((a, b) => a + b, 0);
     res.json({ data: { success: true, totalDeleted, summary } });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Cleanup failed' });
   }
 });
 
