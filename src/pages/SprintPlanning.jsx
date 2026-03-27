@@ -451,7 +451,7 @@ export default function SprintPlanning() {
                     onAllocationChange={handleQuarterlyAllocationChange}
                     selectedTeamId={effectiveTeamId}
                     onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: effectiveTeamId, quarter: selectedQuarter, workAreaIds: workAreaIds })}
-                    initialSelectedWorkAreaIds={manuallySelectedIds}
+                    initialSelectedWorkAreaIds={manuallySelectedIds.size > 0 ? manuallySelectedIds : workAreasWithAllocations}
                   />
                 </CardContent>
               </Card>

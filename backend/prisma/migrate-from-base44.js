@@ -160,6 +160,7 @@ async function importSprints() {
         end_date: parseDate(row[idx(h, 'end_date')]),
         is_cross_team: parseBool(row[idx(h, 'is_cross_team')]),
         is_template: false,
+        relevant_work_area_ids: parseArr(row[idx(h, 'relevant_work_area_ids')]),
         created_at: parseDate(row[idx(h, 'created_date')]) || new Date(),
         updated_at: parseDate(row[idx(h, 'updated_date')]) || new Date(),
       },

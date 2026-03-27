@@ -10,9 +10,10 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
   const { user } = useAuth();
   const canEdit = canManageAllocations(user, sprint.team_id);
   
+  const sprintAllocatedWaIds = new Set(allocations.filter(a => a.sprint_id === sprint.id).map(a => a.work_area_id));
   const relevantWorkAreas = (sprint?.relevant_work_area_ids?.length ?? 0) > 0
     ? workAreas.filter(wa => sprint.relevant_work_area_ids.includes(wa.id))
-    : [];
+    : workAreas.filter(wa => sprintAllocatedWaIds.has(wa.id));
 
   const teamId = sprint.team_id;
   const leadingWAs = relevantWorkAreas.filter(wa => wa.leading_team_id === teamId);
