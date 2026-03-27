@@ -12,6 +12,9 @@ model User {
   email            String   @unique
   password_hash    String
   full_name        String?
+  first_name       String?
+  last_name        String?
+  position         String?
   role             String   @default("viewer")
   managed_team_ids String[]
   created_at       DateTime @default(now())
