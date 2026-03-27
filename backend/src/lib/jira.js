@@ -41,13 +41,13 @@ async function fetchFieldMap() {
 }
 
 async function searchJql(jql) {
-  const url = `${process.env.JIRA_BASE_URL}/rest/api/3/search`;
+  const url = `${process.env.JIRA_BASE_URL}/rest/api/3/search/jql`;
   let allIssues = [];
-  let startAt = 0;
-  const maxResults = 100;
+  let nextPageToken = null;
 
   do {
-    const body = { jql, startAt, maxResults, fields: ['*all'] };
+    const body = { jql, maxResults: 100, fields: ['*all'] };
+    if (nextPageToken) body.nextPageToken = nextPageToken;
 
     const res = await fetch(url, {
       method: 'POST',
@@ -66,13 +66,9 @@ async function searchJql(jql) {
     }
 
     const data = await res.json();
-    const page = data.issues || [];
-    allIssues = allIssues.concat(page);
-    startAt += page.length;
-
-    // Stop if we got fewer than requested (last page) or hit the reported total
-    if (page.length < maxResults || allIssues.length >= (data.total || 0)) break;
-  } while (true);
+    allIssues = allIssues.concat(data.issues || []);
+    nextPageToken = data.nextPageToken || null;
+  } while (nextPageToken);
 
   return allIssues;
 }
