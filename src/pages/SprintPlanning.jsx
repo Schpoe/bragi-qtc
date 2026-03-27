@@ -376,7 +376,7 @@ export default function SprintPlanning() {
       <Tabs defaultValue="quarterly" className="mb-6">
         <TabsList className="grid w-full grid-cols-2 max-w-md">
           <TabsTrigger value="quarterly">Quarterly Plan</TabsTrigger>
-          <TabsTrigger value="sprints">Sprint Planning</TabsTrigger>
+          <TabsTrigger value="sprints">Sprint Plan</TabsTrigger>
         </TabsList>
 
         <TabsContent value="quarterly">

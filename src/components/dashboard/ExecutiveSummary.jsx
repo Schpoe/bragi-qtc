@@ -34,13 +34,17 @@ function StatusBadge({ pct }) {
   return <Badge variant="outline" className="text-xs text-muted-foreground">Under-utilized</Badge>;
 }
 
-export default function ExecutiveSummary({ teams, sprints, members, allocations, workAreas, selectedQuarter }) {
+export default function ExecutiveSummary({ teams, sprints, members, allocations, workAreas, selectedQuarter, selectedTeamId }) {
   const data = useMemo(() => {
     const quarterSprints = sprints.
     filter((s) => s.quarter === selectedQuarter && !s.is_cross_team && s.team_id).
     sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    return teams.map((team) => {
+    const visibleTeams = selectedTeamId && selectedTeamId !== "all"
+      ? teams.filter((t) => t.id === selectedTeamId)
+      : teams;
+
+    return visibleTeams.map((team) => {
       const teamMembers = members.filter((m) => m.team_id === team.id);
       const teamMemberIds = new Set(teamMembers.map((m) => m.id));
       const teamSprints = quarterSprints.filter((s) => s.team_id === team.id);
