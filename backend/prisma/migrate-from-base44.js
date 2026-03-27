@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const prisma = new PrismaClient();
-const importDir = path.join(__dirname, '../../../import');
+const importDir = '/import';
 
 // CSV parser that handles quoted fields and escaped quotes ("")
 function parseCSV(content) {

@@ -24,6 +24,8 @@ services:
       JIRA_API_TOKEN: ${JIRA_API_TOKEN:-}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.com}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-changeme123}
+    volumes:
+      - ./import:/import:ro
     depends_on:
       db:
         condition: service_healthy
