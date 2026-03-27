@@ -437,29 +437,31 @@ export default function SprintPlanning() {
           ) : teams.length === 0 ? (
             <EmptyState icon={CalendarRange} title="No teams yet" description="First create a team under 'Teams'." />
           ) : (
-            <Card className="border-primary/20">
-              <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
-                <CardTitle className="text-base font-bold text-foreground">Quarterly Plan — {selectedQuarter}</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <QuarterlyAllocationTable
-                  members={teamMembers}
-                  workAreas={filteredWorkAreas}
-                  allocations={quarterlyAllocations}
-                  quarter={selectedQuarter}
-                  onAllocationChange={handleQuarterlyAllocationChange}
-                  selectedTeamId={effectiveTeamId}
-                  onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: effectiveTeamId, quarter: selectedQuarter, workAreaIds: workAreaIds })}
-                  initialSelectedWorkAreaIds={manuallySelectedIds}
-                />
-              </CardContent>
-            </Card>
-            <QuarterlyPlanHistoryPanel
-              quarter={selectedQuarter}
-              teamId={effectiveTeamId}
-              members={teamMembers}
-              workAreas={filteredWorkAreas}
-            />
+            <>
+              <Card className="border-primary/20">
+                <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
+                  <CardTitle className="text-base font-bold text-foreground">Quarterly Plan — {selectedQuarter}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <QuarterlyAllocationTable
+                    members={teamMembers}
+                    workAreas={filteredWorkAreas}
+                    allocations={quarterlyAllocations}
+                    quarter={selectedQuarter}
+                    onAllocationChange={handleQuarterlyAllocationChange}
+                    selectedTeamId={effectiveTeamId}
+                    onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: effectiveTeamId, quarter: selectedQuarter, workAreaIds: workAreaIds })}
+                    initialSelectedWorkAreaIds={manuallySelectedIds}
+                  />
+                </CardContent>
+              </Card>
+              <QuarterlyPlanHistoryPanel
+                quarter={selectedQuarter}
+                teamId={effectiveTeamId}
+                members={teamMembers}
+                workAreas={filteredWorkAreas}
+              />
+            </>
           )}
         </TabsContent>
 
