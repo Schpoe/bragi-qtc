@@ -7,12 +7,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, Trash2, RefreshCw, CheckCircle2, ChevronDown, ChevronRight, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Trash2, RefreshCw, CheckCircle2, ChevronDown, ChevronRight, ShieldAlert, Wrench } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import PageHeader from "../components/shared/PageHeader";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Toaster } from "sonner";
 import { cn } from "@/lib/utils";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -47,28 +46,22 @@ function OrphanItem({ checked, onToggle, title, subtitle, reasons }) {
   );
 }
 
-function CategorySection({ title, description, items, selectedIds, onToggle, onSelectAll, onDeselectAll, renderItem, defaultOpen = true }) {
+function CategorySection({ title, description, items, selectedIds, onSelectAll, onDeselectAll, renderItem, defaultOpen = true, actionSlot }) {
   const [open, setOpen] = useState(defaultOpen);
   const count = items.length;
-  const selectedCount = selectedIds.size;
+  const selectedCount = selectedIds ? selectedIds.size : 0;
   const isClean = count === 0;
 
   return (
     <Card className={cn(isClean ? "border-border" : "border-amber-300/60")}>
-      <CardHeader
-        className="py-3 px-4 cursor-pointer select-none"
-        onClick={() => setOpen(o => !o)}
-      >
+      <CardHeader className="py-3 px-4 cursor-pointer select-none" onClick={() => setOpen(o => !o)}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             {isClean
               ? <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-              : <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-            }
+              : <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />}
             <span className="font-semibold text-sm">{title}</span>
-            <Badge variant={isClean ? "outline" : "secondary"} className="text-xs shrink-0">
-              {count}
-            </Badge>
+            <Badge variant={isClean ? "outline" : "secondary"} className="text-xs shrink-0">{count}</Badge>
           </div>
           <div className="flex items-center gap-2">
             {!isClean && selectedCount > 0 && (
@@ -77,9 +70,7 @@ function CategorySection({ title, description, items, selectedIds, onToggle, onS
             {open ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
           </div>
         </div>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-0.5 ml-6">{description}</p>
-        )}
+        {description && <p className="text-xs text-muted-foreground mt-0.5 ml-6">{description}</p>}
       </CardHeader>
 
       {open && (
@@ -90,11 +81,16 @@ function CategorySection({ title, description, items, selectedIds, onToggle, onS
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-muted-foreground">{count} orphaned record{count !== 1 ? "s" : ""}</span>
+              <div className="flex items-center justify-between mb-3" onClick={e => e.stopPropagation()}>
+                <span className="text-xs text-muted-foreground">{count} record{count !== 1 ? "s" : ""}</span>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onSelectAll}>Select all</Button>
-                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onDeselectAll} disabled={selectedCount === 0}>Deselect all</Button>
+                  {actionSlot}
+                  {selectedIds && (
+                    <>
+                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onSelectAll}>Select all</Button>
+                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onDeselectAll} disabled={selectedCount === 0}>Deselect all</Button>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
@@ -116,7 +112,10 @@ const EMPTY_SELECTION = {
   allocations: new Set(),
   templateAllocations: new Set(),
   quarterlyAllocations: new Set(),
+  zeroAllocations: new Set(),
+  zeroQA: new Set(),
   workAreaSelections: new Set(),
+  unassignedWorkAreas: new Set(),
   workAreas: new Set(),
 };
 
@@ -124,7 +123,8 @@ export default function CleanupPage() {
   const [selected, setSelected] = useState(EMPTY_SELECTION);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmInput, setConfirmInput] = useState("");
-  const [deleteProgress, setDeleteProgress] = useState(null); // { done, total } | null
+  const [deleteProgress, setDeleteProgress] = useState(null);
+  const [repairing, setRepairing] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: teams = [], isLoading: teamsLoading, refetch: refetchTeams } = useQuery({ queryKey: ["teams"], queryFn: () => bragiQTC.entities.Team.list() });
@@ -146,10 +146,10 @@ export default function CleanupPage() {
   // ── Orphan detection ───────────────────────────────────────────────────────
 
   const orphans = useMemo(() => {
-    const teamIds      = new Set(teams.map(t => t.id));
-    const memberIds    = new Set(members.map(m => m.id));
-    const sprintIds    = new Set(sprints.map(s => s.id));
-    const workAreaIds  = new Set(workAreas.map(wa => wa.id));
+    const teamIds     = new Set(teams.map(t => t.id));
+    const memberIds   = new Set(members.map(m => m.id));
+    const sprintIds   = new Set(sprints.map(s => s.id));
+    const workAreaIds = new Set(workAreas.map(wa => wa.id));
     const templateSprintIds = new Set(sprints.filter(s => s.is_cross_team).map(s => s.id));
 
     // 1. Team members referencing a deleted team
@@ -164,82 +164,143 @@ export default function CleanupPage() {
       !sprintIds.has(a.sprint_id) ||
       (a.work_area_id && !workAreaIds.has(a.work_area_id))
     );
+    const orphanAllocationIds = new Set(orphanAllocations.map(a => a.id));
 
-    // 4. Allocations on template/cross-team sprints (should never exist)
+    // 4. Allocations on template/cross-team sprints
     const orphanTemplateAllocations = allocations.filter(a =>
-      templateSprintIds.has(a.sprint_id) &&
-      !orphanAllocations.some(o => o.id === a.id) // don't double-count
+      templateSprintIds.has(a.sprint_id) && !orphanAllocationIds.has(a.id)
     );
 
-    // 5. Quarterly allocations: missing member or work area
+    // 5. Zero-percent sprint allocations (useless records)
+    const zeroAllocations = allocations.filter(a =>
+      a.percent === 0 && !orphanAllocationIds.has(a.id) && !templateSprintIds.has(a.sprint_id)
+    );
+
+    // 6. Quarterly allocations: missing member or work area
     const orphanQA = quarterlyAllocations.filter(a =>
       !memberIds.has(a.team_member_id) ||
       (a.work_area_id && !workAreaIds.has(a.work_area_id))
     );
+    const orphanQAIds = new Set(orphanQA.map(a => a.id));
 
-    // 6. Work area selections: missing team OR contains deleted work area IDs
-    const orphanWAS = workAreaSelections.filter(s =>
-      !teamIds.has(s.team_id) ||
+    // 7. Zero-percent quarterly allocations
+    const zeroQA = quarterlyAllocations.filter(a =>
+      a.percent === 0 && !orphanQAIds.has(a.id)
+    );
+
+    // 8. Work area selections: missing team (delete-worthy)
+    const orphanWAS = workAreaSelections.filter(s => !teamIds.has(s.team_id));
+
+    // 9. Work area selections with stale work area IDs (repair-worthy — team still valid)
+    const staleWAS = workAreaSelections.filter(s =>
+      teamIds.has(s.team_id) &&
       (s.work_area_ids || []).some(waId => !workAreaIds.has(waId))
     );
 
-    // 7. Work areas: leading_team_id references a deleted team
-    const orphanWorkAreas = workAreas.filter(wa =>
-      wa.leading_team_id && !teamIds.has(wa.leading_team_id)
-    );
+    // 10. Work areas with deleted leading team
+    const orphanWorkAreas = workAreas.filter(wa => wa.leading_team_id && !teamIds.has(wa.leading_team_id));
+    const orphanWorkAreaIds = new Set(orphanWorkAreas.map(w => w.id));
 
-    // 8. Work areas: supporting_team_ids contains deleted team IDs
+    // 11. Work areas with no leading team at all (unassigned)
+    const unassignedWorkAreas = workAreas.filter(wa => !wa.leading_team_id && !orphanWorkAreaIds.has(wa.id));
+
+    // 12. Work areas with stale supporting team refs (repair-worthy)
     const staleWorkAreas = workAreas.filter(wa =>
-      !orphanWorkAreas.some(o => o.id === wa.id) && // not already flagged
+      !orphanWorkAreaIds.has(wa.id) &&
       (wa.supporting_team_ids || []).some(tid => !teamIds.has(tid))
     );
 
     return {
-      members:              orphanMembers,
-      sprints:              orphanSprints,
-      allocations:          orphanAllocations,
-      templateAllocations:  orphanTemplateAllocations,
+      members: orphanMembers,
+      sprints: orphanSprints,
+      allocations: orphanAllocations,
+      templateAllocations: orphanTemplateAllocations,
+      zeroAllocations,
       quarterlyAllocations: orphanQA,
-      workAreaSelections:   orphanWAS,
-      workAreas:            orphanWorkAreas,
-      staleWorkAreas,       // stale refs only — needs repair, not delete
+      zeroQA,
+      workAreaSelections: orphanWAS,
+      staleWAS,        // repair only
+      workAreas: orphanWorkAreas,
+      unassignedWorkAreas,
+      staleWorkAreas,  // repair only
     };
   }, [teams, members, sprints, allocations, quarterlyAllocations, workAreaSelections, workAreas]);
 
   // ── Selection helpers ──────────────────────────────────────────────────────
 
-  const toggle = (category, id) => {
-    setSelected(prev => {
-      const s = new Set(prev[category]);
-      s.has(id) ? s.delete(id) : s.add(id);
-      return { ...prev, [category]: s };
-    });
-  };
+  const toggle = (category, id) => setSelected(prev => {
+    const s = new Set(prev[category]);
+    s.has(id) ? s.delete(id) : s.add(id);
+    return { ...prev, [category]: s };
+  });
 
-  const selectAll  = (category) => setSelected(prev => ({ ...prev, [category]: new Set(orphans[category].map(i => i.id)) }));
+  const selectAll   = (category) => setSelected(prev => ({ ...prev, [category]: new Set(orphans[category].map(i => i.id)) }));
   const deselectAll = (category) => setSelected(prev => ({ ...prev, [category]: new Set() }));
 
-  const selectAllOrphans = () => {
-    setSelected({
-      members:              new Set(orphans.members.map(i => i.id)),
-      sprints:              new Set(orphans.sprints.map(i => i.id)),
-      allocations:          new Set(orphans.allocations.map(i => i.id)),
-      templateAllocations:  new Set(orphans.templateAllocations.map(i => i.id)),
-      quarterlyAllocations: new Set(orphans.quarterlyAllocations.map(i => i.id)),
-      workAreaSelections:   new Set(orphans.workAreaSelections.map(i => i.id)),
-      workAreas:            new Set(orphans.workAreas.map(i => i.id)),
-    });
-  };
+  const selectAllOrphans = () => setSelected({
+    members:              new Set(orphans.members.map(i => i.id)),
+    sprints:              new Set(orphans.sprints.map(i => i.id)),
+    allocations:          new Set(orphans.allocations.map(i => i.id)),
+    templateAllocations:  new Set(orphans.templateAllocations.map(i => i.id)),
+    zeroAllocations:      new Set(orphans.zeroAllocations.map(i => i.id)),
+    quarterlyAllocations: new Set(orphans.quarterlyAllocations.map(i => i.id)),
+    zeroQA:               new Set(orphans.zeroQA.map(i => i.id)),
+    workAreaSelections:   new Set(orphans.workAreaSelections.map(i => i.id)),
+    unassignedWorkAreas:  new Set(orphans.unassignedWorkAreas.map(i => i.id)),
+    workAreas:            new Set(orphans.workAreas.map(i => i.id)),
+  });
 
   const totalSelected =
     selected.members.size + selected.sprints.size + selected.allocations.size +
-    selected.templateAllocations.size + selected.quarterlyAllocations.size +
-    selected.workAreaSelections.size + selected.workAreas.size;
+    selected.templateAllocations.size + selected.zeroAllocations.size +
+    selected.quarterlyAllocations.size + selected.zeroQA.size +
+    selected.workAreaSelections.size + selected.unassignedWorkAreas.size +
+    selected.workAreas.size;
 
   const totalOrphans =
     orphans.members.length + orphans.sprints.length + orphans.allocations.length +
-    orphans.templateAllocations.length + orphans.quarterlyAllocations.length +
-    orphans.workAreaSelections.length + orphans.workAreas.length;
+    orphans.templateAllocations.length + orphans.zeroAllocations.length +
+    orphans.quarterlyAllocations.length + orphans.zeroQA.length +
+    orphans.workAreaSelections.length + orphans.unassignedWorkAreas.length +
+    orphans.workAreas.length;
+
+  const totalRepairable = orphans.staleWAS.length + orphans.staleWorkAreas.length;
+
+  // ── Repair operations ──────────────────────────────────────────────────────
+
+  const repairAll = async () => {
+    setRepairing(true);
+    const teamIds = new Set(teams.map(t => t.id));
+    const workAreaIds = new Set(workAreas.map(w => w.id));
+    let repaired = 0;
+    const errors = [];
+
+    for (const s of orphans.staleWAS) {
+      try {
+        const cleanIds = (s.work_area_ids || []).filter(id => workAreaIds.has(id));
+        await bragiQTC.entities.QuarterlyWorkAreaSelection.update(s.id, { work_area_ids: cleanIds });
+        repaired++;
+      } catch (e) { errors.push(e.message); }
+    }
+
+    for (const wa of orphans.staleWorkAreas) {
+      try {
+        const cleanIds = (wa.supporting_team_ids || []).filter(id => teamIds.has(id));
+        await bragiQTC.entities.WorkArea.update(wa.id, { supporting_team_ids: cleanIds });
+        repaired++;
+      } catch (e) { errors.push(e.message); }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["workAreaSelections"] });
+    queryClient.invalidateQueries({ queryKey: ["workAreas"] });
+    setRepairing(false);
+
+    if (errors.length > 0) {
+      toast.error(`Repaired ${repaired} with ${errors.length} error(s)`);
+    } else {
+      toast.success(`Repaired ${repaired} record${repaired !== 1 ? "s" : ""} — stale references removed`);
+    }
+  };
 
   // ── Deletion ───────────────────────────────────────────────────────────────
 
@@ -249,8 +310,11 @@ export default function CleanupPage() {
       ...[...selected.sprints].map(id              => () => bragiQTC.entities.Sprint.delete(id)),
       ...[...selected.allocations].map(id          => () => bragiQTC.entities.Allocation.delete(id)),
       ...[...selected.templateAllocations].map(id  => () => bragiQTC.entities.Allocation.delete(id)),
+      ...[...selected.zeroAllocations].map(id      => () => bragiQTC.entities.Allocation.delete(id)),
       ...[...selected.quarterlyAllocations].map(id => () => bragiQTC.entities.QuarterlyAllocation.delete(id)),
+      ...[...selected.zeroQA].map(id               => () => bragiQTC.entities.QuarterlyAllocation.delete(id)),
       ...[...selected.workAreaSelections].map(id   => () => bragiQTC.entities.QuarterlyWorkAreaSelection.delete(id)),
+      ...[...selected.unassignedWorkAreas].map(id  => () => bragiQTC.entities.WorkArea.delete(id)),
       ...[...selected.workAreas].map(id            => () => bragiQTC.entities.WorkArea.delete(id)),
     ];
 
@@ -259,19 +323,13 @@ export default function CleanupPage() {
     const errors = [];
 
     for (const op of ops) {
-      try {
-        await op();
-      } catch (e) {
-        errors.push(e.message);
-      }
+      try { await op(); } catch (e) { errors.push(e.message); }
       done++;
       setDeleteProgress({ done, total: ops.length });
     }
 
-    // Invalidate all caches
-    ["teamMembers", "sprints", "allocations", "quarterlyAllocations", "workAreaSelections", "workAreas"].forEach(k =>
-      queryClient.invalidateQueries({ queryKey: [k] })
-    );
+    ["teamMembers", "sprints", "allocations", "quarterlyAllocations", "workAreaSelections", "workAreas"]
+      .forEach(k => queryClient.invalidateQueries({ queryKey: [k] }));
 
     setSelected(EMPTY_SELECTION);
     setConfirmInput("");
@@ -279,41 +337,31 @@ export default function CleanupPage() {
     setConfirmOpen(false);
 
     if (errors.length > 0) {
-      toast.error(`Cleanup completed with ${errors.length} error${errors.length !== 1 ? "s" : ""}. ${ops.length - errors.length} records deleted.`);
+      toast.error(`Completed with ${errors.length} error${errors.length !== 1 ? "s" : ""}. ${ops.length - errors.length} records deleted.`);
     } else {
-      toast.success(`${ops.length} record${ops.length !== 1 ? "s" : ""} deleted successfully.`);
+      toast.success(`${ops.length} record${ops.length !== 1 ? "s" : ""} deleted.`);
     }
   };
 
   // ── Lookup helpers ─────────────────────────────────────────────────────────
 
-  const teamName   = id => teams.find(t => t.id === id)?.name ?? `[deleted ${id?.slice(0, 6)}…]`;
-  const memberName = id => members.find(m => m.id === id)?.name ?? `[deleted ${id?.slice(0, 6)}…]`;
-  const sprintName = id => sprints.find(s => s.id === id)?.name ?? `[deleted ${id?.slice(0, 6)}…]`;
+  const teamName   = id => teams.find(t => t.id === id)?.name    ?? `[deleted ${id?.slice(0, 6)}…]`;
+  const memberName = id => members.find(m => m.id === id)?.name  ?? `[deleted ${id?.slice(0, 6)}…]`;
+  const sprintName = id => sprints.find(s => s.id === id)?.name  ?? `[deleted ${id?.slice(0, 6)}…]`;
   const waName     = id => workAreas.find(w => w.id === id)?.name ?? `[deleted ${id?.slice(0, 6)}…]`;
 
   // ── Render helpers ─────────────────────────────────────────────────────────
 
   const memberItem = (m) => (
-    <OrphanItem
-      key={m.id}
-      checked={selected.members.has(m.id)}
-      onToggle={() => toggle("members", m.id)}
-      title={m.name}
-      subtitle={m.discipline}
-      reasons={[{ label: `Team deleted: ${m.team_id?.slice(0, 8)}…`, danger: true }]}
-    />
+    <OrphanItem key={m.id} checked={selected.members.has(m.id)} onToggle={() => toggle("members", m.id)}
+      title={m.name} subtitle={m.discipline}
+      reasons={[{ label: `Team deleted: ${m.team_id?.slice(0, 8)}…`, danger: true }]} />
   );
 
   const sprintItem = (s) => (
-    <OrphanItem
-      key={s.id}
-      checked={selected.sprints.has(s.id)}
-      onToggle={() => toggle("sprints", s.id)}
-      title={s.name}
-      subtitle={s.quarter}
-      reasons={[{ label: `Team deleted: ${s.team_id?.slice(0, 8)}…`, danger: true }]}
-    />
+    <OrphanItem key={s.id} checked={selected.sprints.has(s.id)} onToggle={() => toggle("sprints", s.id)}
+      title={s.name} subtitle={s.quarter}
+      reasons={[{ label: `Team deleted: ${s.team_id?.slice(0, 8)}…`, danger: true }]} />
   );
 
   const allocationItem = (a) => {
@@ -321,10 +369,7 @@ export default function CleanupPage() {
     const missingSprint = !sprints.some(s => s.id === a.sprint_id);
     const missingWA     = a.work_area_id && !workAreas.some(w => w.id === a.work_area_id);
     return (
-      <OrphanItem
-        key={a.id}
-        checked={selected.allocations.has(a.id)}
-        onToggle={() => toggle("allocations", a.id)}
+      <OrphanItem key={a.id} checked={selected.allocations.has(a.id)} onToggle={() => toggle("allocations", a.id)}
         title={`${a.percent}% allocation`}
         reasons={[
           missingMember && { label: `Member deleted: ${a.team_member_id?.slice(0, 8)}…`, danger: true },
@@ -333,355 +378,331 @@ export default function CleanupPage() {
           !missingSprint && { label: `Sprint: ${sprintName(a.sprint_id)}`, danger: false },
           missingWA && { label: `Work item deleted: ${a.work_area_id?.slice(0, 8)}…`, danger: true },
           !missingWA && a.work_area_id && { label: `Work item: ${waName(a.work_area_id)}`, danger: false },
-        ].filter(Boolean)}
-      />
+        ].filter(Boolean)} />
     );
   };
 
   const templateAllocItem = (a) => {
     const sprint = sprints.find(s => s.id === a.sprint_id);
     return (
-      <OrphanItem
-        key={a.id}
-        checked={selected.templateAllocations.has(a.id)}
-        onToggle={() => toggle("templateAllocations", a.id)}
-        title={`${a.percent}% allocation`}
-        subtitle={`Member: ${memberName(a.team_member_id)}`}
+      <OrphanItem key={a.id} checked={selected.templateAllocations.has(a.id)} onToggle={() => toggle("templateAllocations", a.id)}
+        title={`${a.percent}% allocation`} subtitle={`Member: ${memberName(a.team_member_id)}`}
         reasons={[
           { label: `On template sprint: ${sprint?.name ?? a.sprint_id?.slice(0, 8)}`, danger: true },
           a.work_area_id && { label: `Work item: ${waName(a.work_area_id)}`, danger: false },
-        ].filter(Boolean)}
-      />
+        ].filter(Boolean)} />
     );
   };
+
+  const zeroAllocItem = (a) => (
+    <OrphanItem key={a.id} checked={selected.zeroAllocations.has(a.id)} onToggle={() => toggle("zeroAllocations", a.id)}
+      title="0% sprint allocation"
+      reasons={[
+        { label: `Member: ${memberName(a.team_member_id)}`, danger: false },
+        { label: `Sprint: ${sprintName(a.sprint_id)}`, danger: false },
+        a.work_area_id && { label: `Work item: ${waName(a.work_area_id)}`, danger: false },
+      ].filter(Boolean)} />
+  );
 
   const qaItem = (a) => {
     const missingMember = !members.some(m => m.id === a.team_member_id);
     const missingWA     = a.work_area_id && !workAreas.some(w => w.id === a.work_area_id);
     return (
-      <OrphanItem
-        key={a.id}
-        checked={selected.quarterlyAllocations.has(a.id)}
-        onToggle={() => toggle("quarterlyAllocations", a.id)}
+      <OrphanItem key={a.id} checked={selected.quarterlyAllocations.has(a.id)} onToggle={() => toggle("quarterlyAllocations", a.id)}
         title={`${a.percent}% — ${a.quarter}`}
         reasons={[
           missingMember && { label: `Member deleted: ${a.team_member_id?.slice(0, 8)}…`, danger: true },
           !missingMember && { label: `Member: ${memberName(a.team_member_id)}`, danger: false },
           missingWA && { label: `Work item deleted: ${a.work_area_id?.slice(0, 8)}…`, danger: true },
           !missingWA && a.work_area_id && { label: `Work item: ${waName(a.work_area_id)}`, danger: false },
-        ].filter(Boolean)}
-      />
+        ].filter(Boolean)} />
     );
   };
 
-  const wasItem = (s) => {
-    const missingTeam = !teams.some(t => t.id === s.team_id);
-    const missingWAs  = (s.work_area_ids || []).filter(id => !workAreas.some(w => w.id === id));
-    return (
-      <OrphanItem
-        key={s.id}
-        checked={selected.workAreaSelections.has(s.id)}
-        onToggle={() => toggle("workAreaSelections", s.id)}
-        title={`${s.quarter} selection`}
-        reasons={[
-          missingTeam && { label: `Team deleted: ${s.team_id?.slice(0, 8)}…`, danger: true },
-          !missingTeam && { label: `Team: ${teamName(s.team_id)}`, danger: false },
-          missingWAs.length > 0 && { label: `${missingWAs.length} deleted work item ref${missingWAs.length !== 1 ? "s" : ""}`, danger: true },
-        ].filter(Boolean)}
-      />
-    );
-  };
-
-  const waItem = (wa) => (
-    <OrphanItem
-      key={wa.id}
-      checked={selected.workAreas.has(wa.id)}
-      onToggle={() => toggle("workAreas", wa.id)}
-      title={wa.name}
-      subtitle={`Type: ${wa.type}`}
-      reasons={[{ label: `Leading team deleted: ${wa.leading_team_id?.slice(0, 8)}…`, danger: true }]}
-    />
+  const zeroQAItem = (a) => (
+    <OrphanItem key={a.id} checked={selected.zeroQA.has(a.id)} onToggle={() => toggle("zeroQA", a.id)}
+      title={`0% quarterly — ${a.quarter}`}
+      reasons={[
+        { label: `Member: ${memberName(a.team_member_id)}`, danger: false },
+        a.work_area_id && { label: `Work item: ${waName(a.work_area_id)}`, danger: false },
+      ].filter(Boolean)} />
   );
 
-  // ── Loading state ──────────────────────────────────────────────────────────
+  const wasItem = (s) => (
+    <OrphanItem key={s.id} checked={selected.workAreaSelections.has(s.id)} onToggle={() => toggle("workAreaSelections", s.id)}
+      title={`${s.quarter} selection`}
+      reasons={[{ label: `Team deleted: ${s.team_id?.slice(0, 8)}…`, danger: true }]} />
+  );
+
+  const staleWASItem = (s) => {
+    const staleIds = (s.work_area_ids || []).filter(id => !workAreas.some(w => w.id === id));
+    return (
+      <div key={s.id} className="flex items-start gap-3 p-3 border rounded-lg bg-background">
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-sm">{s.quarter} — {teamName(s.team_id)}</div>
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            <ReasonTag danger>{staleIds.length} deleted work item ref{staleIds.length !== 1 ? "s" : ""}</ReasonTag>
+            <ReasonTag>{(s.work_area_ids || []).length - staleIds.length} valid refs kept</ReasonTag>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const unassignedWAItem = (wa) => (
+    <OrphanItem key={wa.id} checked={selected.unassignedWorkAreas.has(wa.id)} onToggle={() => toggle("unassignedWorkAreas", wa.id)}
+      title={wa.name} subtitle={wa.type || '—'}
+      reasons={[{ label: "No leading team assigned", danger: true }]} />
+  );
+
+  const waItem = (wa) => (
+    <OrphanItem key={wa.id} checked={selected.workAreas.has(wa.id)} onToggle={() => toggle("workAreas", wa.id)}
+      title={wa.name} subtitle={`Type: ${wa.type}`}
+      reasons={[{ label: `Leading team deleted: ${wa.leading_team_id?.slice(0, 8)}…`, danger: true }]} />
+  );
+
+  const staleWAItem = (wa) => {
+    const staleIds = (wa.supporting_team_ids || []).filter(tid => !teams.some(t => t.id === tid));
+    return (
+      <div key={wa.id} className="flex items-start gap-3 p-3 border rounded-lg bg-background">
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-sm">{wa.name}</div>
+          <div className="flex flex-wrap gap-1.5 mt-1.5">
+            <ReasonTag danger>{staleIds.length} deleted supporting team ref{staleIds.length !== 1 ? "s" : ""}</ReasonTag>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Loading ────────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
       <div>
         <PageHeader title="Data Cleanup" subtitle="Identify and remove orphaned data" />
-        <div className="space-y-4">
-          {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}
-        </div>
+        <div className="space-y-4">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
       </div>
     );
   }
 
-  const isDeletable = totalSelected > 0;
+  const isDeletable  = totalSelected > 0;
   const confirmReady = confirmInput.trim().toUpperCase() === "DELETE";
 
   return (
-    <>
-      <div>
-        <PageHeader title="Data Cleanup" subtitle="Scan for orphaned records across all datasets">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={rescan}>
-              <RefreshCw className="w-4 h-4 mr-2" /> Re-scan
+    <div>
+      <PageHeader title="Data Cleanup" subtitle="Scan for orphaned records across all datasets">
+        <div className="flex items-center gap-2">
+          {totalRepairable > 0 && (
+            <Button variant="outline" onClick={repairAll} disabled={repairing}>
+              <Wrench className="w-4 h-4 mr-2" />
+              {repairing ? "Repairing…" : `Repair Stale Refs (${totalRepairable})`}
             </Button>
-            {isDeletable && (
-              <Button variant="destructive" onClick={() => setConfirmOpen(true)}>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Selected ({totalSelected})
-              </Button>
-            )}
-          </div>
-        </PageHeader>
-
-        {/* ── Health summary ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: "Total records scanned", value: teams.length + members.length + sprints.length + allocations.length + quarterlyAllocations.length + workAreaSelections.length + workAreas.length },
-            { label: "Orphaned records found", value: totalOrphans, danger: totalOrphans > 0 },
-            { label: "Selected for deletion", value: totalSelected, danger: totalSelected > 0 },
-            { label: "Stale references", value: orphans.staleWorkAreas.length, warn: orphans.staleWorkAreas.length > 0 },
-          ].map(({ label, value, danger, warn }) => (
-            <Card key={label} className={cn(danger && value > 0 ? "border-destructive/40 bg-destructive/5" : warn && value > 0 ? "border-amber-300/60 bg-amber-50/40" : "")}>
-              <CardContent className="pt-4 pb-3">
-                <div className={cn("text-2xl font-bold tabular-nums", danger && value > 0 ? "text-destructive" : warn && value > 0 ? "text-amber-600" : "text-foreground")}>{value}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
-              </CardContent>
-            </Card>
-          ))}
+          )}
+          <Button variant="outline" onClick={rescan}>
+            <RefreshCw className="w-4 h-4 mr-2" /> Re-scan
+          </Button>
+          {isDeletable && (
+            <Button variant="destructive" onClick={() => setConfirmOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-2" /> Delete Selected ({totalSelected})
+            </Button>
+          )}
         </div>
+      </PageHeader>
 
-        {totalOrphans === 0 && orphans.staleWorkAreas.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-semibold">Database is Clean</h3>
-                <p className="text-sm text-muted-foreground">No orphaned or stale data found across all datasets.</p>
-              </div>
+      {/* ── Health summary ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: "Records scanned", value: teams.length + members.length + sprints.length + allocations.length + quarterlyAllocations.length + workAreaSelections.length + workAreas.length },
+          { label: "Orphaned / useless", value: totalOrphans, danger: totalOrphans > 0 },
+          { label: "Stale references", value: totalRepairable, warn: totalRepairable > 0 },
+          { label: "Selected for deletion", value: totalSelected, danger: totalSelected > 0 },
+        ].map(({ label, value, danger, warn }) => (
+          <Card key={label} className={cn(danger && value > 0 ? "border-destructive/40 bg-destructive/5" : warn && value > 0 ? "border-amber-300/60 bg-amber-50/40" : "")}>
+            <CardContent className="pt-4 pb-3">
+              <div className={cn("text-2xl font-bold tabular-nums", danger && value > 0 ? "text-destructive" : warn && value > 0 ? "text-amber-600" : "text-foreground")}>{value}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
             </CardContent>
           </Card>
-        ) : (
-          <div className="space-y-4">
-            {totalOrphans > 0 && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
-                  <AlertTriangle className="w-4 h-4" />
-                  {totalOrphans} orphaned record{totalOrphans !== 1 ? "s" : ""} found across {
-                    [orphans.members, orphans.sprints, orphans.allocations, orphans.templateAllocations,
-                      orphans.quarterlyAllocations, orphans.workAreaSelections, orphans.workAreas
-                    ].filter(a => a.length > 0).length
-                  } categories
-                </div>
-                <Button variant="outline" size="sm" onClick={selectAllOrphans}>
-                  Select all orphans
-                </Button>
-              </div>
-            )}
-
-            {/* ── Category sections ───────────────────────────────────────── */}
-            <CategorySection
-              title="Team Members"
-              description="Members whose team has been deleted"
-              items={orphans.members}
-              selectedIds={selected.members}
-              onToggle={(id) => toggle("members", id)}
-              onSelectAll={() => selectAll("members")}
-              onDeselectAll={() => deselectAll("members")}
-              renderItem={memberItem}
-              defaultOpen={orphans.members.length > 0}
-            />
-
-            <CategorySection
-              title="Sprints"
-              description="Sprints whose team has been deleted"
-              items={orphans.sprints}
-              selectedIds={selected.sprints}
-              onToggle={(id) => toggle("sprints", id)}
-              onSelectAll={() => selectAll("sprints")}
-              onDeselectAll={() => deselectAll("sprints")}
-              renderItem={sprintItem}
-              defaultOpen={orphans.sprints.length > 0}
-            />
-
-            <CategorySection
-              title="Sprint Allocations"
-              description="Allocations referencing a deleted member, sprint, or work item"
-              items={orphans.allocations}
-              selectedIds={selected.allocations}
-              onToggle={(id) => toggle("allocations", id)}
-              onSelectAll={() => selectAll("allocations")}
-              onDeselectAll={() => deselectAll("allocations")}
-              renderItem={allocationItem}
-              defaultOpen={orphans.allocations.length > 0}
-            />
-
-            <CategorySection
-              title="Template Sprint Allocations"
-              description="Allocations attached to cross-team template sprints — these should not exist"
-              items={orphans.templateAllocations}
-              selectedIds={selected.templateAllocations}
-              onToggle={(id) => toggle("templateAllocations", id)}
-              onSelectAll={() => selectAll("templateAllocations")}
-              onDeselectAll={() => deselectAll("templateAllocations")}
-              renderItem={templateAllocItem}
-              defaultOpen={orphans.templateAllocations.length > 0}
-            />
-
-            <CategorySection
-              title="Quarterly Allocations"
-              description="Quarterly allocations referencing a deleted member or work item"
-              items={orphans.quarterlyAllocations}
-              selectedIds={selected.quarterlyAllocations}
-              onToggle={(id) => toggle("quarterlyAllocations", id)}
-              onSelectAll={() => selectAll("quarterlyAllocations")}
-              onDeselectAll={() => deselectAll("quarterlyAllocations")}
-              renderItem={qaItem}
-              defaultOpen={orphans.quarterlyAllocations.length > 0}
-            />
-
-            <CategorySection
-              title="Work Item Selections"
-              description="Quarterly work item selections with a deleted team or containing deleted work item references"
-              items={orphans.workAreaSelections}
-              selectedIds={selected.workAreaSelections}
-              onToggle={(id) => toggle("workAreaSelections", id)}
-              onSelectAll={() => selectAll("workAreaSelections")}
-              onDeselectAll={() => deselectAll("workAreaSelections")}
-              renderItem={wasItem}
-              defaultOpen={orphans.workAreaSelections.length > 0}
-            />
-
-            <CategorySection
-              title="Work Items"
-              description="Work items whose leading team has been deleted"
-              items={orphans.workAreas}
-              selectedIds={selected.workAreas}
-              onToggle={(id) => toggle("workAreas", id)}
-              onSelectAll={() => selectAll("workAreas")}
-              onDeselectAll={() => deselectAll("workAreas")}
-              renderItem={waItem}
-              defaultOpen={orphans.workAreas.length > 0}
-            />
-
-            {/* ── Stale references (info only, no delete) ─────────────────── */}
-            {orphans.staleWorkAreas.length > 0 && (
-              <Card className="border-blue-200/60">
-                <CardHeader className="py-3 px-4">
-                  <div className="flex items-center gap-2">
-                    <ShieldAlert className="w-4 h-4 text-blue-500 shrink-0" />
-                    <span className="font-semibold text-sm">Stale References — Work Items</span>
-                    <Badge variant="outline" className="text-xs">{orphans.staleWorkAreas.length}</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground ml-6">
-                    These work items have deleted teams in their <em>supporting teams</em> list. The work item itself is valid — edit it to remove the stale references.
-                  </p>
-                </CardHeader>
-                <CardContent className="px-4 pb-4 pt-0">
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {orphans.staleWorkAreas.map(wa => {
-                      const staleIds = (wa.supporting_team_ids || []).filter(tid => !teams.some(t => t.id === tid));
-                      return (
-                        <div key={wa.id} className="flex items-start gap-3 p-3 border rounded-lg bg-background">
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm">{wa.name}</div>
-                            <div className="flex flex-wrap gap-1.5 mt-1.5">
-                              <ReasonTag danger>{staleIds.length} deleted supporting team ref{staleIds.length !== 1 ? "s" : ""}</ReasonTag>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-
-        {/* ── Confirm dialog ─────────────────────────────────────────────── */}
-        <Dialog open={confirmOpen} onOpenChange={(o) => { if (!deleteProgress) { setConfirmOpen(o); if (!o) setConfirmInput(""); } }}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="w-5 h-5" /> Confirm Permanent Deletion
-              </DialogTitle>
-              <DialogDescription>
-                You are about to permanently delete <strong>{totalSelected} record{totalSelected !== 1 ? "s" : ""}</strong>. This cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-2 py-2 max-h-52 overflow-y-auto">
-              {[
-                { key: "members",              label: "Team Members",                  entity: members,   nameFn: m => `${m.name} (${m.discipline})` },
-                { key: "sprints",              label: "Sprints",                       entity: sprints,   nameFn: s => `${s.name} — ${s.quarter}` },
-                { key: "allocations",          label: "Sprint Allocations",            entity: allocations },
-                { key: "templateAllocations",  label: "Template Sprint Allocations",   entity: allocations },
-                { key: "quarterlyAllocations", label: "Quarterly Allocations",         entity: quarterlyAllocations },
-                { key: "workAreaSelections",   label: "Work Item Selections",          entity: workAreaSelections },
-                { key: "workAreas",            label: "Work Items",                    entity: workAreas, nameFn: w => w.name },
-              ].map(({ key, label, entity, nameFn }) => {
-                const ids = selected[key];
-                if (!ids || ids.size === 0) return null;
-                return (
-                  <div key={key} className="p-3 bg-muted rounded-lg">
-                    <div className="font-semibold text-sm mb-1">{label} <span className="text-muted-foreground font-normal">({ids.size})</span></div>
-                    {nameFn && (
-                      <div className="space-y-0.5">
-                        {Array.from(ids).slice(0, 4).map(id => {
-                          const item = entity.find(i => i.id === id);
-                          return item ? <div key={id} className="text-xs text-muted-foreground">• {nameFn(item)}</div> : null;
-                        })}
-                        {ids.size > 4 && <div className="text-xs text-muted-foreground">… and {ids.size - 4} more</div>}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {deleteProgress ? (
-              <div className="space-y-2 py-2">
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Deleting records…</span>
-                  <span>{deleteProgress.done} / {deleteProgress.total}</span>
-                </div>
-                <Progress value={(deleteProgress.done / deleteProgress.total) * 100} />
-              </div>
-            ) : (
-              <div className="space-y-2 pt-2">
-                <label className="text-sm font-medium">Type <strong>DELETE</strong> to confirm</label>
-                <Input
-                  value={confirmInput}
-                  onChange={e => setConfirmInput(e.target.value)}
-                  placeholder="DELETE"
-                  autoFocus
-                  onKeyDown={e => { if (e.key === "Enter" && confirmReady) handleDelete(); }}
-                />
-              </div>
-            )}
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => { setConfirmOpen(false); setConfirmInput(""); }} disabled={!!deleteProgress}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={!confirmReady || !!deleteProgress}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                {deleteProgress ? "Deleting…" : `Delete ${totalSelected} Record${totalSelected !== 1 ? "s" : ""}`}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        ))}
       </div>
-      <Toaster position="top-center" richColors closeButton />
-    </>
+
+      {totalOrphans === 0 && totalRepairable === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-semibold">Database is Clean</h3>
+              <p className="text-sm text-muted-foreground">No orphaned or stale data found.</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {totalOrphans > 0 && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+                <AlertTriangle className="w-4 h-4" />
+                {totalOrphans} record{totalOrphans !== 1 ? "s" : ""} to clean up
+              </div>
+              <Button variant="outline" size="sm" onClick={selectAllOrphans}>Select all</Button>
+            </div>
+          )}
+
+          {/* ── Deletable categories ──────────────────────────────────────── */}
+          <CategorySection title="Team Members" description="Members whose team has been deleted"
+            items={orphans.members} selectedIds={selected.members}
+            onSelectAll={() => selectAll("members")} onDeselectAll={() => deselectAll("members")}
+            renderItem={memberItem} defaultOpen={orphans.members.length > 0} />
+
+          <CategorySection title="Sprints" description="Sprints whose team has been deleted"
+            items={orphans.sprints} selectedIds={selected.sprints}
+            onSelectAll={() => selectAll("sprints")} onDeselectAll={() => deselectAll("sprints")}
+            renderItem={sprintItem} defaultOpen={orphans.sprints.length > 0} />
+
+          <CategorySection title="Sprint Allocations" description="Allocations referencing a deleted member, sprint, or work item"
+            items={orphans.allocations} selectedIds={selected.allocations}
+            onSelectAll={() => selectAll("allocations")} onDeselectAll={() => deselectAll("allocations")}
+            renderItem={allocationItem} defaultOpen={orphans.allocations.length > 0} />
+
+          <CategorySection title="Template Sprint Allocations" description="Allocations attached to cross-team template sprints — should not exist"
+            items={orphans.templateAllocations} selectedIds={selected.templateAllocations}
+            onSelectAll={() => selectAll("templateAllocations")} onDeselectAll={() => deselectAll("templateAllocations")}
+            renderItem={templateAllocItem} defaultOpen={orphans.templateAllocations.length > 0} />
+
+          <CategorySection title="Zero-Percent Sprint Allocations" description="Sprint allocations with 0% — no capacity contribution, safe to remove"
+            items={orphans.zeroAllocations} selectedIds={selected.zeroAllocations}
+            onSelectAll={() => selectAll("zeroAllocations")} onDeselectAll={() => deselectAll("zeroAllocations")}
+            renderItem={zeroAllocItem} defaultOpen={orphans.zeroAllocations.length > 0} />
+
+          <CategorySection title="Quarterly Allocations" description="Quarterly allocations referencing a deleted member or work item"
+            items={orphans.quarterlyAllocations} selectedIds={selected.quarterlyAllocations}
+            onSelectAll={() => selectAll("quarterlyAllocations")} onDeselectAll={() => deselectAll("quarterlyAllocations")}
+            renderItem={qaItem} defaultOpen={orphans.quarterlyAllocations.length > 0} />
+
+          <CategorySection title="Zero-Percent Quarterly Allocations" description="Quarterly allocations with 0% — no effect on planning, safe to remove"
+            items={orphans.zeroQA} selectedIds={selected.zeroQA}
+            onSelectAll={() => selectAll("zeroQA")} onDeselectAll={() => deselectAll("zeroQA")}
+            renderItem={zeroQAItem} defaultOpen={orphans.zeroQA.length > 0} />
+
+          <CategorySection title="Work Item Selections (deleted team)" description="Quarterly selections whose team has been deleted — safe to delete"
+            items={orphans.workAreaSelections} selectedIds={selected.workAreaSelections}
+            onSelectAll={() => selectAll("workAreaSelections")} onDeselectAll={() => deselectAll("workAreaSelections")}
+            renderItem={wasItem} defaultOpen={orphans.workAreaSelections.length > 0} />
+
+          <CategorySection title="Unassigned Work Items" description="Work items with no leading team — incomplete records"
+            items={orphans.unassignedWorkAreas} selectedIds={selected.unassignedWorkAreas}
+            onSelectAll={() => selectAll("unassignedWorkAreas")} onDeselectAll={() => deselectAll("unassignedWorkAreas")}
+            renderItem={unassignedWAItem} defaultOpen={orphans.unassignedWorkAreas.length > 0} />
+
+          <CategorySection title="Work Items (deleted leading team)" description="Work items whose leading team has been deleted"
+            items={orphans.workAreas} selectedIds={selected.workAreas}
+            onSelectAll={() => selectAll("workAreas")} onDeselectAll={() => deselectAll("workAreas")}
+            renderItem={waItem} defaultOpen={orphans.workAreas.length > 0} />
+
+          {/* ── Repair-only categories ────────────────────────────────────── */}
+          <CategorySection
+            title="Work Item Selections — Stale References"
+            description="Team is still valid, but some selected work items were deleted. 'Repair All' removes only the stale IDs."
+            items={orphans.staleWAS}
+            selectedIds={null}
+            renderItem={staleWASItem}
+            defaultOpen={orphans.staleWAS.length > 0}
+            actionSlot={orphans.staleWAS.length > 0 && (
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={repairAll} disabled={repairing}>
+                <Wrench className="w-3 h-3" /> Repair All
+              </Button>
+            )}
+          />
+
+          <CategorySection
+            title="Work Items — Stale Supporting Teams"
+            description="Work items with deleted teams in their supporting list. 'Repair All' removes only the stale IDs."
+            items={orphans.staleWorkAreas}
+            selectedIds={null}
+            renderItem={staleWAItem}
+            defaultOpen={orphans.staleWorkAreas.length > 0}
+            actionSlot={orphans.staleWorkAreas.length > 0 && (
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={repairAll} disabled={repairing}>
+                <Wrench className="w-3 h-3" /> Repair All
+              </Button>
+            )}
+          />
+        </div>
+      )}
+
+      {/* ── Confirm dialog ──────────────────────────────────────────────────── */}
+      <Dialog open={confirmOpen} onOpenChange={(o) => { if (!deleteProgress) { setConfirmOpen(o); if (!o) setConfirmInput(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" /> Confirm Permanent Deletion
+            </DialogTitle>
+            <DialogDescription>
+              You are about to permanently delete <strong>{totalSelected} record{totalSelected !== 1 ? "s" : ""}</strong>. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-2 max-h-52 overflow-y-auto">
+            {[
+              { key: "members",              label: "Team Members",                   nameFn: m => `${m.name} (${m.discipline})`,      src: members },
+              { key: "sprints",              label: "Sprints",                        nameFn: s => `${s.name} — ${s.quarter}`,         src: sprints },
+              { key: "allocations",          label: "Sprint Allocations",             nameFn: null,                                    src: allocations },
+              { key: "templateAllocations",  label: "Template Sprint Allocations",    nameFn: null,                                    src: allocations },
+              { key: "zeroAllocations",      label: "Zero-% Sprint Allocations",      nameFn: null,                                    src: allocations },
+              { key: "quarterlyAllocations", label: "Quarterly Allocations",          nameFn: null,                                    src: quarterlyAllocations },
+              { key: "zeroQA",               label: "Zero-% Quarterly Allocations",   nameFn: null,                                    src: quarterlyAllocations },
+              { key: "workAreaSelections",   label: "Work Item Selections",           nameFn: null,                                    src: workAreaSelections },
+              { key: "unassignedWorkAreas",  label: "Unassigned Work Items",          nameFn: w => w.name,                             src: workAreas },
+              { key: "workAreas",            label: "Work Items (deleted team)",      nameFn: w => w.name,                             src: workAreas },
+            ].map(({ key, label, nameFn, src }) => {
+              const ids = selected[key];
+              if (!ids || ids.size === 0) return null;
+              return (
+                <div key={key} className="p-3 bg-muted rounded-lg">
+                  <div className="font-semibold text-sm mb-1">{label} <span className="text-muted-foreground font-normal">({ids.size})</span></div>
+                  {nameFn && (
+                    <div className="space-y-0.5">
+                      {Array.from(ids).slice(0, 4).map(id => {
+                        const item = src.find(i => i.id === id);
+                        return item ? <div key={id} className="text-xs text-muted-foreground">• {nameFn(item)}</div> : null;
+                      })}
+                      {ids.size > 4 && <div className="text-xs text-muted-foreground">… and {ids.size - 4} more</div>}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {deleteProgress ? (
+            <div className="space-y-2 py-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Deleting records…</span>
+                <span>{deleteProgress.done} / {deleteProgress.total}</span>
+              </div>
+              <Progress value={(deleteProgress.done / deleteProgress.total) * 100} />
+            </div>
+          ) : (
+            <div className="space-y-2 pt-2">
+              <label className="text-sm font-medium">Type <strong>DELETE</strong> to confirm</label>
+              <Input value={confirmInput} onChange={e => setConfirmInput(e.target.value)}
+                placeholder="DELETE" autoFocus
+                onKeyDown={e => { if (e.key === "Enter" && confirmReady) handleDelete(); }} />
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setConfirmOpen(false); setConfirmInput(""); }} disabled={!!deleteProgress}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={!confirmReady || !!deleteProgress}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              {deleteProgress ? "Deleting…" : `Delete ${totalSelected} Record${totalSelected !== 1 ? "s" : ""}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
