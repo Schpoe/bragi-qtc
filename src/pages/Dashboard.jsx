@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarRange } from "lucide-react";
+import { CalendarRange, AlertTriangle } from "lucide-react";
 import { getCurrentQuarter } from "@/lib/quarter-utils";
 import { useQuarters } from "@/lib/useQuarters";
 import PageHeader from "../components/shared/PageHeader";
@@ -117,6 +117,23 @@ export default function Dashboard() {
     return workAreas.filter(wa => selectedIds.has(wa.id));
   }, [workAreas, filteredWorkAreas, workAreaSelections, selectedTeamId, selectedQuarter]);
 
+  // Over-allocated members in the quarterly plan for the selected quarter + team
+  const quarterlyAlerts = useMemo(() => {
+    const relevantMembers = selectedTeamId === "all" ? members : quarterlyTabMembers;
+    const quarterAllocs = quarterlyAllocations.filter(a => a.quarter === selectedQuarter);
+    const teamMap = Object.fromEntries(teams.map(t => [t.id, t.name]));
+
+    return relevantMembers
+      .map(member => {
+        const total = quarterAllocs
+          .filter(a => a.team_member_id === member.id)
+          .reduce((sum, a) => sum + a.percent, 0);
+        return { member, total, teamName: teamMap[member.team_id] ?? "" };
+      })
+      .filter(({ total }) => total > 100)
+      .sort((a, b) => b.total - a.total);
+  }, [members, quarterlyTabMembers, quarterlyAllocations, selectedQuarter, selectedTeamId, teams]);
+
   const isLoading = teamsLoading;
 
   return (
@@ -154,7 +171,7 @@ export default function Dashboard() {
           <Tabs defaultValue="quarterly" className="mb-6">
             <TabsList className="grid w-full grid-cols-2 max-w-md mb-6">
               <TabsTrigger value="quarterly">Quarterly Plan</TabsTrigger>
-              <TabsTrigger value="sprint">Sprint Planning</TabsTrigger>
+              <TabsTrigger value="sprint">Sprint Plan</TabsTrigger>
             </TabsList>
 
             {/* ── Quarterly Plan tab ──────────────────────────────────────── */}
@@ -169,6 +186,35 @@ export default function Dashboard() {
                   selectedTeamId={selectedTeamId}
                 />
               </div>
+              {/* Over-allocation alerts */}
+              {quarterlyAlerts.length > 0 && (
+                <Card className="border-destructive/40 bg-destructive/5 mb-4">
+                  <CardHeader className="pb-2 pt-4">
+                    <CardTitle className="text-sm flex items-center gap-2 text-destructive">
+                      <AlertTriangle className="w-4 h-4" />
+                      Over-allocation Alerts — {quarterlyAlerts.length} member{quarterlyAlerts.length !== 1 ? "s" : ""} exceed 100%
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pb-4">
+                    <div className="flex flex-wrap gap-2">
+                      {quarterlyAlerts.map(({ member, total, teamName }) => (
+                        <div key={member.id} className="flex items-center gap-1.5 bg-background border border-destructive/30 rounded-md px-2 py-1 text-xs">
+                          <span className="font-semibold text-destructive">{total}%</span>
+                          <span className="text-muted-foreground">—</span>
+                          {selectedTeamId === "all" && (
+                            <>
+                              <span className="font-medium">{teamName}</span>
+                              <span className="text-muted-foreground">/</span>
+                            </>
+                          )}
+                          <span>{member.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <div id="quarterly-plan-content" className="space-y-6">
                 {/* Top 15 Work Items + Allocation by Type — always at the top */}
                 <QuarterlyWorkItemSummary
