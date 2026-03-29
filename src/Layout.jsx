@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { bragiQTC } from "@/api/bragiQTCClient";
 import ImpersonationBanner from "@/components/admin/ImpersonationBanner";
 import ImpersonateUserDialog from "@/components/admin/ImpersonateUserDialog";
+import logo from "@/bragi-qtc-new.png";
 
 const navItems = [
   { name: "Overview", page: "Dashboard", icon: LayoutDashboard },
@@ -66,9 +67,12 @@ export default function Layout({ children, currentPageName }) {
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card fixed h-full z-30">
         <div className="p-6 border-b border-border">
-          <h1 className="text-lg font-bold text-foreground tracking-tight">
-            Capacity<span className="text-primary">Planning</span>
-          </h1>
+          <div className="flex items-center gap-2">
+            <img src={logo} alt="Bragi" className="h-7 w-auto" />
+            <h1 className="text-lg font-bold text-foreground tracking-tight">
+              Capacity<span className="text-primary">Planning</span>
+            </h1>
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">Sprint & Quarter</p>
         </div>
         <nav className="flex-1 p-3 space-y-1">
@@ -127,6 +131,7 @@ export default function Layout({ children, currentPageName }) {
         <button onClick={() => setMobileOpen(true)} className="p-2 -ml-2">
           <Menu className="w-5 h-5" />
         </button>
+        <img src={logo} alt="Bragi" className="h-6 w-auto ml-2" />
         <h1 className="text-sm font-bold ml-2">
           Capacity<span className="text-primary">Planning</span>
         </h1>
@@ -138,9 +143,12 @@ export default function Layout({ children, currentPageName }) {
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
           <aside className="relative w-64 h-full bg-card border-r border-border flex flex-col">
             <div className="p-6 border-b border-border flex items-center justify-between">
-              <h1 className="text-lg font-bold">
-                Capacity<span className="text-primary">Planning</span>
-              </h1>
+              <div className="flex items-center gap-2">
+                <img src={logo} alt="Bragi" className="h-7 w-auto" />
+                <h1 className="text-lg font-bold">
+                  Capacity<span className="text-primary">Planning</span>
+                </h1>
+              </div>
               <button onClick={() => setMobileOpen(false)}>
                 <X className="w-5 h-5" />
               </button>
