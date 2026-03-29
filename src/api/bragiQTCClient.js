@@ -50,6 +50,11 @@ export const bragiQTC = {
       return data;
     },
     me: () => apiFetch('/api/auth/me'),
+    changePassword: (current_password, new_password) =>
+      apiFetch('/api/auth/me/password', {
+        method: 'PUT',
+        body: JSON.stringify({ current_password, new_password }),
+      }),
     logout: () => {
       localStorage.removeItem(TOKEN_KEY);
     },
