@@ -62,8 +62,12 @@ export default function UserProfile() {
   });
 
   const changePassword = useMutation({
-    mutationFn: ({ current_password, new_password }) =>
-      bragiQTC.auth.changePassword(current_password, new_password),
+    mutationFn: ({ current_password, new_password }) => {
+      if (viewingOwnProfile) {
+        return bragiQTC.auth.changePassword(current_password, new_password);
+      }
+      return bragiQTC.entities.User.update(userId, { password: new_password });
+    },
     onSuccess: () => {
       setPwForm({ current_password: '', new_password: '', confirm_password: '' });
       setPwError('');
@@ -203,27 +207,29 @@ export default function UserProfile() {
         </CardContent>
       </Card>
 
-      {viewingOwnProfile && (
+      {(viewingOwnProfile || currentUser?.role === 'admin') && (
         <Card className="max-w-2xl mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="w-5 h-5" />
-              Change Password
+              {viewingOwnProfile ? 'Change Password' : 'Set Password'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="current_password">Current password</Label>
-                <Input
-                  id="current_password"
-                  type="password"
-                  value={pwForm.current_password}
-                  onChange={(e) => setPwForm({ ...pwForm, current_password: e.target.value })}
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
+              {viewingOwnProfile && (
+                <div>
+                  <Label htmlFor="current_password">Current password</Label>
+                  <Input
+                    id="current_password"
+                    type="password"
+                    value={pwForm.current_password}
+                    onChange={(e) => setPwForm({ ...pwForm, current_password: e.target.value })}
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              )}
               <div>
                 <Label htmlFor="new_password">New password</Label>
                 <Input
@@ -248,7 +254,7 @@ export default function UserProfile() {
               </div>
               {pwError && <p className="text-sm text-destructive">{pwError}</p>}
               <Button type="submit" disabled={changePassword.isPending}>
-                {changePassword.isPending ? 'Saving...' : 'Change password'}
+                {changePassword.isPending ? 'Saving...' : viewingOwnProfile ? 'Change password' : 'Set password'}
               </Button>
             </form>
           </CardContent>
