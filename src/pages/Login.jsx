@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Eye, EyeOff } from 'lucide-react';
+import logo from '@/bragi-qtc-new.png';
 
 export default function Login() {
   const { login } = useAuth();
@@ -34,6 +35,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
+          <img src={logo} alt="Bragi" className="h-12 w-auto mx-auto mb-2" />
           <CardTitle className="text-2xl">Bragi QTC</CardTitle>
           <CardDescription>Sign in to your account</CardDescription>
         </CardHeader>
