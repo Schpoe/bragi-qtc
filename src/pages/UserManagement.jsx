@@ -39,6 +39,9 @@ export default function UserManagement() {
         role: data.role,
         managed_team_ids: data.managed_team_ids || [],
         initial_password: data.initial_password,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        position: data.position,
       });
       if (response.data?.error) {
         throw new Error(response.data.error);
