@@ -67,6 +67,12 @@ export default function Login() {
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
+          <p className="mt-4 text-xs text-center text-muted-foreground">
+            Need an account or role assignment?{' '}
+            <a href="mailto:benjamin.spiss@bragi.com" className="underline underline-offset-4 hover:text-foreground">
+              Contact Benjamin
+            </a>
+          </p>
         </CardContent>
       </Card>
     </div>

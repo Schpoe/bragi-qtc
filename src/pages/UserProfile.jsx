@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { bragiQTC } from "@/api/bragiQTCClient";
 import { useAuth } from "@/lib/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Save } from "lucide-react";
+import { User, Save, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,8 @@ export default function UserProfile() {
     position: ""
   });
   const [isEditing, setIsEditing] = useState(false);
+  const [pwForm, setPwForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
+  const [pwError, setPwError] = useState('');
   const queryClient = useQueryClient();
 
   // If user is admin and viewing from UserManagement, they can pass userId via URL params
@@ -58,6 +60,33 @@ export default function UserProfile() {
       toast.error("Failed to update profile: " + error.message);
     }
   });
+
+  const changePassword = useMutation({
+    mutationFn: ({ current_password, new_password }) =>
+      bragiQTC.auth.changePassword(current_password, new_password),
+    onSuccess: () => {
+      setPwForm({ current_password: '', new_password: '', confirm_password: '' });
+      setPwError('');
+      toast.success('Password changed successfully');
+    },
+    onError: (error) => {
+      setPwError(error.message || 'Failed to change password');
+    },
+  });
+
+  const handlePasswordSubmit = (e) => {
+    e.preventDefault();
+    setPwError('');
+    if (pwForm.new_password !== pwForm.confirm_password) {
+      setPwError('New passwords do not match');
+      return;
+    }
+    if (pwForm.new_password.length < 8) {
+      setPwError('New password must be at least 8 characters');
+      return;
+    }
+    changePassword.mutate({ current_password: pwForm.current_password, new_password: pwForm.new_password });
+  };
 
   const handleSave = () => {
     updateUser.mutate(formData);
@@ -173,6 +202,58 @@ export default function UserProfile() {
           )}
         </CardContent>
       </Card>
+
+      {viewingOwnProfile && (
+        <Card className="max-w-2xl mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              Change Password
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="current_password">Current password</Label>
+                <Input
+                  id="current_password"
+                  type="password"
+                  value={pwForm.current_password}
+                  onChange={(e) => setPwForm({ ...pwForm, current_password: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="new_password">New password</Label>
+                <Input
+                  id="new_password"
+                  type="password"
+                  value={pwForm.new_password}
+                  onChange={(e) => setPwForm({ ...pwForm, new_password: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="confirm_password">Confirm new password</Label>
+                <Input
+                  id="confirm_password"
+                  type="password"
+                  value={pwForm.confirm_password}
+                  onChange={(e) => setPwForm({ ...pwForm, confirm_password: e.target.value })}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              {pwError && <p className="text-sm text-destructive">{pwError}</p>}
+              <Button type="submit" disabled={changePassword.isPending}>
+                {changePassword.isPending ? 'Saving...' : 'Change password'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
