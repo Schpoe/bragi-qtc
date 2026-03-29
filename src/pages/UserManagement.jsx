@@ -15,15 +15,6 @@ import UserFormDialog from "../components/users/UserFormDialog";
 import ConfirmDeleteDialog from "../components/shared/ConfirmDeleteDialog";
 import { isAdmin } from "@/lib/permissions";
 
-const teamColors = {
-  blue: "bg-blue-500", indigo: "bg-indigo-500", purple: "bg-purple-500",
-  violet: "bg-violet-500", fuchsia: "bg-fuchsia-500", pink: "bg-pink-500",
-  rose: "bg-rose-500", red: "bg-red-500", orange: "bg-orange-500",
-  amber: "bg-amber-500", yellow: "bg-yellow-500", lime: "bg-lime-500",
-  green: "bg-emerald-500", teal: "bg-teal-500", cyan: "bg-cyan-500",
-  sky: "bg-sky-500", slate: "bg-slate-500", gray: "bg-gray-500",
-  zinc: "bg-zinc-500", stone: "bg-stone-500",
-};
 
 export default function UserManagement() {
   const { user: currentUser, checkAppState } = useAuth();
@@ -211,7 +202,7 @@ export default function UserManagement() {
                       const team = teams.find(t => t.id === teamId);
                       return team ? (
                         <Badge key={teamId} variant="outline" className="text-xs flex items-center gap-1.5">
-                          <span className={`w-2 h-2 rounded-full ${teamColors[team.color] || "bg-primary"}`} />
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: team.color || "hsl(var(--primary))" }} />
                           {team.name}
                         </Badge>
                       ) : null;
