@@ -85,7 +85,7 @@ function exportChangesCSV(rows, quarter) {
 
 // ── Versions tab ─────────────────────────────────────────────────────────────
 
-function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations, onRevert }) {
+function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations, workAreaSelections, onRevert }) {
   const queryClient = useQueryClient();
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [labelInput, setLabelInput] = useState("");
@@ -126,8 +126,10 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] });
       queryClient.invalidateQueries({ queryKey: ["quarterlyPlanHistory"] });
+      queryClient.invalidateQueries({ queryKey: ["workAreaSelections"] });
       setRevertTarget(null);
-      toast.success(`Reverted to "${res.data.label}" — ${res.data.restored} allocation(s) restored`);
+      const skippedMsg = res.data.skipped > 0 ? ` (${res.data.skipped} skipped — members no longer exist)` : "";
+      toast.success(`Reverted to "${res.data.label}" — ${res.data.restored} allocation(s) restored${skippedMsg}`);
       onRevert?.();
     },
     onError: (err) => {
@@ -157,6 +159,10 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
         };
       });
 
+    // Capture current work area selection
+    const currentSelection = workAreaSelections?.find(s => s.team_id === teamId && s.quarter === quarter);
+    const selected_work_area_ids = currentSelection?.work_area_ids ?? [];
+
     createSnapshot.mutate({
       quarter,
       team_id: teamId,
@@ -164,6 +170,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
       label: labelInput.trim(),
       note: noteInput.trim() || null,
       allocations,
+      selected_work_area_ids,
     });
   };
 
@@ -314,7 +321,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations }) {
+export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations, workAreaSelections }) {
   const [open, setOpen] = useState(false);
 
   const { data: allHistory = [], isLoading } = useQuery({
@@ -433,6 +440,7 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
                   members={members}
                   workAreas={workAreas}
                   quarterlyAllocations={quarterlyAllocations}
+                  workAreaSelections={workAreaSelections}
                 />
               </TabsContent>
 

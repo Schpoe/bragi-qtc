@@ -285,13 +285,20 @@ router.post('/revertQuarterlyPlanSnapshot', requireAuth, async (req, res) => {
     }
 
     const snapshotAllocations = Array.isArray(snapshot.allocations) ? snapshot.allocations : [];
+    const selectedWorkAreaIds = Array.isArray(snapshot.selected_work_area_ids) ? snapshot.selected_work_area_ids : [];
 
-    // Get all team member IDs for this team to scope the delete
+    // Get all current team members to filter out deleted ones
     const teamMembers = await prisma.teamMember.findMany({
       where: { team_id: snapshot.team_id },
       select: { id: true },
     });
+    const existingMemberIds = new Set(teamMembers.map(m => m.id));
     const memberIds = teamMembers.map(m => m.id);
+
+    // Only restore allocations for members that still exist
+    const restorableAllocations = snapshotAllocations.filter(
+      a => a.percent > 0 && existingMemberIds.has(a.team_member_id)
+    );
 
     await prisma.$transaction(async (tx) => {
       // Delete all current allocations for this team/quarter
@@ -299,15 +306,34 @@ router.post('/revertQuarterlyPlanSnapshot', requireAuth, async (req, res) => {
         where: { quarter: snapshot.quarter, team_member_id: { in: memberIds } },
       });
 
-      // Recreate from snapshot
-      for (const alloc of snapshotAllocations) {
-        if (alloc.percent > 0) {
-          await tx.quarterlyAllocation.create({
+      // Recreate allocations from snapshot (skipping deleted members)
+      for (const alloc of restorableAllocations) {
+        await tx.quarterlyAllocation.create({
+          data: {
+            quarter: snapshot.quarter,
+            team_member_id: alloc.team_member_id,
+            work_area_id: alloc.work_area_id,
+            percent: alloc.percent,
+          },
+        });
+      }
+
+      // Restore work area selection if snapshot captured it
+      if (selectedWorkAreaIds.length > 0) {
+        const existing = await tx.quarterlyWorkAreaSelection.findFirst({
+          where: { team_id: snapshot.team_id, quarter: snapshot.quarter },
+        });
+        if (existing) {
+          await tx.quarterlyWorkAreaSelection.update({
+            where: { id: existing.id },
+            data: { work_area_ids: selectedWorkAreaIds },
+          });
+        } else {
+          await tx.quarterlyWorkAreaSelection.create({
             data: {
+              team_id: snapshot.team_id,
               quarter: snapshot.quarter,
-              team_member_id: alloc.team_member_id,
-              work_area_id: alloc.work_area_id,
-              percent: alloc.percent,
+              work_area_ids: selectedWorkAreaIds,
             },
           });
         }
@@ -315,31 +341,30 @@ router.post('/revertQuarterlyPlanSnapshot', requireAuth, async (req, res) => {
 
       // Log revert action in history
       const now = new Date();
-      for (const alloc of snapshotAllocations) {
-        if (alloc.percent > 0) {
-          await tx.quarterlyPlanHistory.create({
-            data: {
-              quarter: snapshot.quarter,
-              team_id: snapshot.team_id,
-              team_name: snapshot.team_name,
-              team_member_id: alloc.team_member_id,
-              member_name: alloc.member_name || null,
-              member_discipline: alloc.member_discipline || null,
-              work_area_id: alloc.work_area_id,
-              work_area_name: alloc.work_area_name || null,
-              work_area_type: alloc.work_area_type || null,
-              action: 'reverted',
-              old_percent: null,
-              new_percent: alloc.percent,
-              changed_at: now,
-            },
-          });
-        }
+      for (const alloc of restorableAllocations) {
+        await tx.quarterlyPlanHistory.create({
+          data: {
+            quarter: snapshot.quarter,
+            team_id: snapshot.team_id,
+            team_name: snapshot.team_name,
+            team_member_id: alloc.team_member_id,
+            member_name: alloc.member_name || null,
+            member_discipline: alloc.member_discipline || null,
+            work_area_id: alloc.work_area_id,
+            work_area_name: alloc.work_area_name || null,
+            work_area_type: alloc.work_area_type || null,
+            action: 'reverted',
+            old_percent: null,
+            new_percent: alloc.percent,
+            changed_at: now,
+          },
+        });
       }
     });
 
-    const restoredCount = snapshotAllocations.filter(a => a.percent > 0).length;
-    res.json({ data: { success: true, restored: restoredCount, label: snapshot.label } });
+    const restoredCount = restorableAllocations.length;
+    const skippedCount = snapshotAllocations.filter(a => a.percent > 0).length - restoredCount;
+    res.json({ data: { success: true, restored: restoredCount, skipped: skippedCount, label: snapshot.label } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

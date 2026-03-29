@@ -128,15 +128,16 @@ model QuarterlyPlanHistory {
 }
 
 model QuarterlyPlanSnapshot {
-  id               String   @id @default(uuid())
-  quarter          String
-  team_id          String
-  team_name        String?
-  label            String
-  note             String?
-  created_by_email String?
-  created_at       DateTime @default(now())
-  allocations      Json
+  id                     String   @id @default(uuid())
+  quarter                String
+  team_id                String
+  team_name              String?
+  label                  String
+  note                   String?
+  created_by_email       String?
+  created_at             DateTime @default(now())
+  allocations            Json
+  selected_work_area_ids String[] @default([])
 }
 
 model PasswordResetToken {
