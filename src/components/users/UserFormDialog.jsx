@@ -15,6 +15,7 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
   const [lastName, setLastName] = useState("");
   const [position, setPosition] = useState("");
   const [initialPassword, setInitialPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -24,6 +25,7 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
       setFirstName(user.first_name || "");
       setLastName(user.last_name || "");
       setPosition(user.position || "");
+      setNewPassword("");
     } else {
       setRole("viewer");
       setManagedTeamIds([]);
@@ -44,12 +46,14 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
     }
     
     if (user) {
-      // Editing existing user - only role, position, and managed teams
-      onSave({
+      // Editing existing user - role, position, managed teams, and optionally password
+      const data = {
         position,
         role,
         managed_team_ids: role === "team_manager" ? managedTeamIds : []
-      });
+      };
+      if (newPassword) data.password = newPassword;
+      onSave(data);
     } else {
       // Creating new user - email, password, role, and managed teams
       onSave({
@@ -84,13 +88,25 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {user ? (
-            <div className="space-y-2">
-              <Label>Current User</Label>
-              <div className="p-2 bg-muted rounded text-sm">
-                <div className="font-medium">{user.full_name}</div>
-                <div className="text-xs text-muted-foreground">{user.email}</div>
+            <>
+              <div className="space-y-2">
+                <Label>Current User</Label>
+                <div className="p-2 bg-muted rounded text-sm">
+                  <div className="font-medium">{user.full_name}</div>
+                  <div className="text-xs text-muted-foreground">{user.email}</div>
+                </div>
               </div>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="new_password">New Password</Label>
+                <Input
+                  id="new_password"
+                  type="password"
+                  placeholder="Leave blank to keep current password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+            </>
           ) : (
             <>
               <div className="space-y-2">
