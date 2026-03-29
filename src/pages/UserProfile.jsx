@@ -25,7 +25,7 @@ export default function UserProfile() {
   // If user is admin and viewing from UserManagement, they can pass userId via URL params
   const urlParams = new URLSearchParams(window.location.search);
   const editUserId = urlParams.get('userId');
-  const viewingOwnProfile = !editUserId;
+  const viewingOwnProfile = !editUserId || editUserId === currentUser?.id;
 
   const userId = editUserId || currentUser?.id;
 
