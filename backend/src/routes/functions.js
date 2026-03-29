@@ -318,25 +318,28 @@ router.post('/revertQuarterlyPlanSnapshot', requireAuth, async (req, res) => {
         });
       }
 
-      // Restore work area selection if snapshot captured it
-      if (selectedWorkAreaIds.length > 0) {
-        const existing = await tx.quarterlyWorkAreaSelection.findFirst({
-          where: { team_id: snapshot.team_id, quarter: snapshot.quarter },
+        // Restore work area selection — use saved list if available,
+      // otherwise derive from the allocations being restored (handles old snapshots)
+      const workAreaIdsToRestore = selectedWorkAreaIds.length > 0
+        ? selectedWorkAreaIds
+        : [...new Set(restorableAllocations.map(a => a.work_area_id))];
+
+      const existingSelection = await tx.quarterlyWorkAreaSelection.findFirst({
+        where: { team_id: snapshot.team_id, quarter: snapshot.quarter },
+      });
+      if (existingSelection) {
+        await tx.quarterlyWorkAreaSelection.update({
+          where: { id: existingSelection.id },
+          data: { work_area_ids: workAreaIdsToRestore },
         });
-        if (existing) {
-          await tx.quarterlyWorkAreaSelection.update({
-            where: { id: existing.id },
-            data: { work_area_ids: selectedWorkAreaIds },
-          });
-        } else {
-          await tx.quarterlyWorkAreaSelection.create({
-            data: {
-              team_id: snapshot.team_id,
-              quarter: snapshot.quarter,
-              work_area_ids: selectedWorkAreaIds,
-            },
-          });
-        }
+      } else {
+        await tx.quarterlyWorkAreaSelection.create({
+          data: {
+            team_id: snapshot.team_id,
+            quarter: snapshot.quarter,
+            work_area_ids: workAreaIdsToRestore,
+          },
+        });
       }
 
       // Log revert action in history
