@@ -9,13 +9,13 @@ const router = express.Router();
 // Create a user with an initial password (replaces inviteUserWithTeams)
 router.post('/inviteUserWithTeams', requireAdmin, async (req, res) => {
   try {
-    const { email, role, managed_team_ids = [], initial_password } = req.body;
+    const { email, role, managed_team_ids = [], initial_password, first_name, last_name, position } = req.body;
     if (!email || !initial_password) {
       return res.status(400).json({ error: 'email and initial_password are required' });
     }
     const password_hash = await bcrypt.hash(initial_password, 10);
     const user = await prisma.user.create({
-      data: { email: email.toLowerCase(), role: role || 'viewer', managed_team_ids, password_hash },
+      data: { email: email.toLowerCase(), role: role || 'viewer', managed_team_ids, password_hash, first_name, last_name, position },
     });
     const { password_hash: _, ...userOut } = user;
     res.json({ data: { success: true, user: userOut } });

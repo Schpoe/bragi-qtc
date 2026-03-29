@@ -55,10 +55,13 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
       if (newPassword) data.password = newPassword;
       onSave(data);
     } else {
-      // Creating new user - email, password, role, and managed teams
+      // Creating new user - email, password, name, position, role, and managed teams
       onSave({
         email,
         initial_password: initialPassword,
+        first_name: firstName,
+        last_name: lastName,
+        position,
         role,
         managed_team_ids: role === "team_manager" ? managedTeamIds : []
       });
@@ -129,6 +132,35 @@ export default function UserFormDialog({ open, onOpenChange, user, teams, onSave
                   value={initialPassword}
                   onChange={(e) => setInitialPassword(e.target.value)}
                   required
+                />
+              </div>
+              <div className="flex gap-2">
+                <div className="space-y-2 flex-1">
+                  <Label htmlFor="first_name">First Name</Label>
+                  <Input
+                    id="first_name"
+                    placeholder="Jane"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 flex-1">
+                  <Label htmlFor="last_name">Last Name</Label>
+                  <Input
+                    id="last_name"
+                    placeholder="Smith"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="position">Job Title</Label>
+                <Input
+                  id="position"
+                  placeholder="e.g. Software Engineer"
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value)}
                 />
               </div>
             </>
