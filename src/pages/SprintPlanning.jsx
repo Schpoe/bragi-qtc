@@ -490,6 +490,7 @@ export default function SprintPlanning() {
                 members={teamMembers}
                 workAreas={quarterlyWorkAreas}
                 quarterlyAllocations={quarterlyAllocations}
+                workAreaSelections={workAreaSelections}
               />
             </>
           )}
