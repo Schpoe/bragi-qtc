@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, Trash2, RefreshCw, CheckCircle2, ChevronDown, ChevronRight, ShieldAlert, Wrench } from "lucide-react";
+import { AlertTriangle, Trash2, RefreshCw, CheckCircle2, ChevronDown, ChevronRight, ShieldAlert, Wrench, Download, Upload, DatabaseBackup } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import PageHeader from "../components/shared/PageHeader";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -608,6 +608,74 @@ export default function CleanupPage() {
     );
   };
 
+  // ── Backup / Restore ──────────────────────────────────────────────────────
+
+  const [restoring, setRestoring] = useState(false);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [pendingRestoreData, setPendingRestoreData] = useState(null);
+  const fileInputRef = React.useRef(null);
+
+  const handleBackup = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch('/api/backup', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bragi-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Backup downloaded');
+    } catch (err) {
+      toast.error('Backup failed: ' + err.message);
+    }
+  };
+
+  const handleRestoreFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (!parsed.version || !parsed.data) throw new Error('Invalid backup file');
+        setPendingRestoreData(parsed);
+        setRestoreConfirmOpen(true);
+      } catch (err) {
+        toast.error('Invalid backup file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleRestoreConfirm = async () => {
+    if (!pendingRestoreData) return;
+    setRestoring(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch('/api/backup/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(pendingRestoreData),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message);
+      toast.success('Restore complete — all data replaced');
+      ["teams", "teamMembers", "sprints", "allocations", "quarterlyAllocations", "workAreaSelections", "workAreas", "users"].forEach(k =>
+        queryClient.invalidateQueries({ queryKey: [k] })
+      );
+    } catch (err) {
+      toast.error('Restore failed: ' + err.message);
+    } finally {
+      setRestoring(false);
+      setRestoreConfirmOpen(false);
+      setPendingRestoreData(null);
+    }
+  };
+
   // ── Loading ────────────────────────────────────────────────────────────────
 
   if (isLoading) {
@@ -803,6 +871,46 @@ export default function CleanupPage() {
           />
         </div>
       )}
+
+      {/* ── Backup / Restore ────────────────────────────────────────────────── */}
+      <Card className="mt-6">
+        <CardHeader className="py-3 px-4">
+          <div className="flex items-center gap-2">
+            <DatabaseBackup className="w-4 h-4 text-muted-foreground" />
+            <span className="font-semibold text-sm">Backup & Restore</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5 ml-6">Download a full JSON backup of all data, or restore from a previous backup. Restoring replaces all existing data.</p>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-0 flex flex-wrap gap-3">
+          <Button variant="outline" onClick={handleBackup} className="gap-2">
+            <Download className="w-4 h-4" /> Download Backup
+          </Button>
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2">
+            <Upload className="w-4 h-4" /> Restore from Backup
+          </Button>
+          <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleRestoreFileChange} />
+        </CardContent>
+      </Card>
+
+      {/* ── Restore confirm dialog ──────────────────────────────────────────── */}
+      <Dialog open={restoreConfirmOpen} onOpenChange={(o) => { if (!restoring) { setRestoreConfirmOpen(o); if (!o) setPendingRestoreData(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" /> Restore Backup?
+            </DialogTitle>
+            <DialogDescription>
+              This will <strong>permanently replace all data</strong> with the contents of the backup from <strong>{pendingRestoreData?.exported_at ? new Date(pendingRestoreData.exported_at).toLocaleString() : "unknown date"}</strong>. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRestoreConfirmOpen(false); setPendingRestoreData(null); }} disabled={restoring}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRestoreConfirm} disabled={restoring}>
+              {restoring ? 'Restoring…' : 'Yes, Replace All Data'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Confirm dialog ──────────────────────────────────────────────────── */}
       <Dialog open={confirmOpen} onOpenChange={(o) => { if (!deleteProgress) { setConfirmOpen(o); if (!o) setConfirmInput(""); } }}>

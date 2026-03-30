@@ -24,6 +24,7 @@ const quarterlyPlanHistoryRoutes = require('./routes/quarterly-plan-history');
 const quarterlyPlanSnapshotRoutes = require('./routes/quarterly-plan-snapshots');
 const jiraSyncHistoryRoutes = require('./routes/jira-sync-history');
 const functionsRoutes = require('./routes/functions');
+const backupRoutes = require('./routes/backup');
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/quarterly-plan-history', quarterlyPlanHistoryRoutes);
 app.use('/api/quarterly-plan-snapshots', quarterlyPlanSnapshotRoutes);
 app.use('/api/jira-sync-history', jiraSyncHistoryRoutes);
 app.use('/api/functions', functionsRoutes);
+app.use('/api/backup', backupRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
