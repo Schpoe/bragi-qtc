@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import { resolveTypeColor, getWorkAreaColor } from "@/lib/utils";
 import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, FolderKanban, Pencil, Trash2, Users, Upload, Search, X, Link as LinkIcon, History, PieChart as PieChartIcon } from "lucide-react";
+import { Plus, FolderKanban, Pencil, Trash2, Users, Upload, Search, X, Link as LinkIcon, History, PieChart as PieChartIcon, CalendarRange, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
@@ -19,7 +22,10 @@ import JiraSyncButton from "../components/workareas/JiraSyncButton";
 import EpicLinkDialog from "../components/workareas/EpicLinkDialog";
 import JiraSyncHistoryTab from "../components/workareas/JiraSyncHistoryTab";
 import { useAuth } from "@/lib/AuthContext";
-import { canManageWorkAreas, canCreateWorkArea, isViewer } from "@/lib/permissions";
+import { canManageWorkAreas, canCreateWorkArea, isViewer, getManageableTeams, canManageAllocations } from "@/lib/permissions";
+import { useQuarters } from "@/lib/useQuarters";
+import { getCurrentQuarter } from "@/lib/quarter-utils";
+import { toast } from "sonner";
 
 // ── Pie chart tooltip ─────────────────────────────────────────────────────────
 
@@ -146,6 +152,12 @@ export default function WorkAreas() {
   const [mainTab, setMainTab] = useState("items");
   const queryClient = useQueryClient();
 
+  // Multi-select for "Add to Quarterly Plan"
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assignTeamId, setAssignTeamId] = useState("");
+  const [assignQuarter, setAssignQuarter] = useState(() => getCurrentQuarter());
+
   const { data: workAreas = [], isLoading } = useQuery({
     queryKey: ["workAreas"],
     queryFn: () => bragiQTC.entities.WorkArea.list(),
@@ -160,6 +172,51 @@ export default function WorkAreas() {
     queryKey: ["workAreaTypes"],
     queryFn: () => bragiQTC.entities.WorkAreaType.list(),
   });
+
+  const { data: sprints = [] } = useQuery({
+    queryKey: ["sprints"],
+    queryFn: () => bragiQTC.entities.Sprint.list(),
+  });
+
+  const { data: workAreaSelections = [] } = useQuery({
+    queryKey: ["workAreaSelections"],
+    queryFn: () => bragiQTC.entities.QuarterlyWorkAreaSelection.list(),
+  });
+
+  const quarters = useQuarters(sprints, { includeRange: true });
+  const manageableTeams = getManageableTeams(user, teams);
+
+  const assignToQuarterlyPlan = useMutation({
+    mutationFn: async ({ teamId, quarter, workAreaIds }) => {
+      const existing = workAreaSelections.find(s => s.team_id === teamId && s.quarter === quarter);
+      const merged = [...new Set([...(existing?.work_area_ids || []), ...workAreaIds])];
+      if (existing) {
+        return bragiQTC.entities.QuarterlyWorkAreaSelection.update(existing.id, { work_area_ids: merged });
+      }
+      return bragiQTC.entities.QuarterlyWorkAreaSelection.create({ team_id: teamId, quarter, work_area_ids: merged });
+    },
+    onSuccess: (_, { quarter, teamId }) => {
+      queryClient.invalidateQueries({ queryKey: ["workAreaSelections"] });
+      const team = teams.find(t => t.id === teamId);
+      toast.success(`Added ${selectedIds.size} work item${selectedIds.size !== 1 ? "s" : ""} to ${team?.name} — ${quarter}`);
+      setSelectedIds(new Set());
+      setAssignDialogOpen(false);
+    },
+    onError: (err) => toast.error("Failed to assign: " + err.message),
+  });
+
+  const handleAssignConfirm = () => {
+    if (!assignTeamId || !assignQuarter) return;
+    assignToQuarterlyPlan.mutate({ teamId: assignTeamId, quarter: assignQuarter, workAreaIds: Array.from(selectedIds) });
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
   const createWA = useMutation({
     mutationFn: (data) => bragiQTC.entities.WorkArea.create(data),
@@ -387,12 +444,22 @@ export default function WorkAreas() {
                 const canManage = canManageWorkAreas(user, wa);
                 const typeColor = resolveTypeColor(wa.type, workAreaTypes);
                 const dotColor = getWorkAreaColor(wa, workAreaTypes);
+                const isSelected = selectedIds.has(wa.id);
+                const canAssign = manageableTeams.length > 0;
 
                 return (
-                  <Card key={wa.id} className="group border-border/60 hover:shadow-md transition-all">
+                  <Card key={wa.id} className={`group border-border/60 hover:shadow-md transition-all ${isSelected ? "ring-2 ring-primary border-primary/40" : ""}`}>
                     <CardContent className="py-4 px-5">
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {canAssign && (
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleSelect(wa.id)}
+                              className={`shrink-0 transition-opacity ${isSelected || selectedIds.size > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          )}
                           <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -480,6 +547,67 @@ export default function WorkAreas() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* ── Floating selection bar ───────────────────────────────────────────── */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-card border border-border shadow-xl rounded-full px-5 py-3">
+          <span className="text-sm font-medium">{selectedIds.size} work item{selectedIds.size !== 1 ? "s" : ""} selected</span>
+          <Button size="sm" className="gap-2 rounded-full" onClick={() => { setAssignTeamId(manageableTeams.length === 1 ? manageableTeams[0].id : ""); setAssignDialogOpen(true); }}>
+            <CalendarRange className="w-4 h-4" /> Add to Quarterly Plan
+          </Button>
+          <Button size="sm" variant="ghost" className="rounded-full" onClick={() => setSelectedIds(new Set())}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* ── Assign to quarterly plan dialog ─────────────────────────────────── */}
+      <Dialog open={assignDialogOpen} onOpenChange={(o) => { setAssignDialogOpen(o); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarRange className="w-5 h-5" /> Add to Quarterly Plan
+            </DialogTitle>
+            <DialogDescription>
+              Add {selectedIds.size} selected work item{selectedIds.size !== 1 ? "s" : ""} to a team's quarterly plan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Team</Label>
+              <Select value={assignTeamId} onValueChange={setAssignTeamId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a team…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {manageableTeams.map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Quarter</Label>
+              <Select value={assignQuarter} onValueChange={setAssignQuarter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {quarters.map(q => (
+                    <SelectItem key={q} value={q}>{q}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleAssignConfirm} disabled={!assignTeamId || !assignQuarter || assignToQuarterlyPlan.isPending}>
+              {assignToQuarterlyPlan.isPending ? "Adding…" : "Add to Plan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <WorkAreaFormDialog
         open={dialogOpen}
