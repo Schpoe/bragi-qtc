@@ -48,20 +48,20 @@ export default function ExecutiveSummary({ teams, sprints, members, allocations,
       const teamMembers = members.filter((m) => m.team_id === team.id);
       const teamMemberIds = new Set(teamMembers.map((m) => m.id));
       const teamSprints = quarterSprints.filter((s) => s.team_id === team.id);
-      const teamCapacity = teamMembers.reduce((s, m) => s + (m.availability_percent || 100), 0);
+      const teamCapacity = teamMembers.reduce((s, m) => s + (m.sprint_days || 10), 0);
 
       // Per-sprint utilization
       const sprintStats = teamSprints.map((sprint) => {
         const sprintAllocs = allocations.filter(
           (a) => a.sprint_id === sprint.id && teamMemberIds.has(a.team_member_id)
         );
-        const totalAlloc = sprintAllocs.reduce((s, a) => s + (a.percent || 0), 0);
+        const totalAlloc = sprintAllocs.reduce((s, a) => s + (a.days || 0), 0);
         const utilPct = teamCapacity > 0 ? Math.round(totalAlloc / teamCapacity * 100) : 0;
 
         // Top work items by allocation
         const workAreaTotals = {};
         sprintAllocs.forEach((a) => {
-          workAreaTotals[a.work_area_id] = (workAreaTotals[a.work_area_id] || 0) + (a.percent || 0);
+          workAreaTotals[a.work_area_id] = (workAreaTotals[a.work_area_id] || 0) + (a.days || 0);
         });
         const topWorkAreas = Object.entries(workAreaTotals).
         sort(([, a], [, b]) => b - a).
@@ -75,8 +75,8 @@ export default function ExecutiveSummary({ teams, sprints, members, allocations,
         const overAllocated = teamMembers.filter((m) => {
           const memberAlloc = sprintAllocs.
           filter((a) => a.team_member_id === m.id).
-          reduce((s, a) => s + (a.percent || 0), 0);
-          return memberAlloc > (m.availability_percent || 100);
+          reduce((s, a) => s + (a.days || 0), 0);
+          return memberAlloc > (m.sprint_days || 10);
         });
 
         return { sprint, utilPct, totalAlloc, topWorkAreas, overAllocated };
@@ -94,10 +94,10 @@ export default function ExecutiveSummary({ teams, sprints, members, allocations,
       const disciplineStats = disciplines.map((discipline) => {
         const discMembers = teamMembers.filter((m) => m.discipline === discipline);
         const discMemberIds = new Set(discMembers.map((m) => m.id));
-        const discCapacity = discMembers.reduce((s, m) => s + (m.availability_percent || 100), 0) * Math.max(teamSprints.length, 1);
+        const discCapacity = discMembers.reduce((s, m) => s + (m.sprint_days || 10), 0) * Math.max(teamSprints.length, 1);
         const discAlloc = allocations.
         filter((a) => discMemberIds.has(a.team_member_id) && teamSprints.some((s) => s.id === a.sprint_id)).
-        reduce((s, a) => s + (a.percent || 0), 0);
+        reduce((s, a) => s + (a.days || 0), 0);
         const utilPct = discCapacity > 0 ? Math.round(discAlloc / discCapacity * 100) : 0;
         return { discipline, utilPct, memberCount: discMembers.length };
       });
@@ -109,7 +109,7 @@ export default function ExecutiveSummary({ teams, sprints, members, allocations,
         filter((a) => a.sprint_id === sprint.id && teamMemberIds.has(a.team_member_id)).
         forEach((a) => {
           const waName = workAreas.find((wa) => wa.id === a.work_area_id)?.name || "Unknown";
-          workAreaAllocMap[waName] = (workAreaAllocMap[waName] || 0) + (a.percent || 0);
+          workAreaAllocMap[waName] = (workAreaAllocMap[waName] || 0) + (a.days || 0);
         });
       });
       const topWorkAreasQuarterly = Object.entries(workAreaAllocMap).

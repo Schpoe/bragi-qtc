@@ -126,10 +126,10 @@ export default function Dashboard() {
       .map(member => {
         const total = quarterAllocs
           .filter(a => a.team_member_id === member.id)
-          .reduce((sum, a) => sum + a.percent, 0);
+          .reduce((sum, a) => sum + (a.days || 0), 0);
         return { member, total, teamName: teamMap[member.team_id] ?? "" };
       })
-      .filter(({ total }) => total > 100)
+      .filter(({ total }) => total > 60) // default quarterly capacity is 60 days
       .sort((a, b) => b.total - a.total);
   }, [members, quarterlyTabMembers, quarterlyAllocations, selectedQuarter, selectedTeamId, teams]);
 
@@ -195,7 +195,7 @@ export default function Dashboard() {
                 <div className="mb-4 space-y-3">
                   <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
                     <AlertTriangle className="w-4 h-4" />
-                    Over-allocation Alerts — {quarterlyAlerts.length} member{quarterlyAlerts.length !== 1 ? "s" : ""} exceed 100%
+                    Over-allocation Alerts — {quarterlyAlerts.length} member{quarterlyAlerts.length !== 1 ? "s" : ""} exceed quarterly capacity
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {Object.entries(quarterlyAlertsByTeam).map(([teamName, byDisc]) => (
@@ -210,7 +210,7 @@ export default function Dashboard() {
                               <div className="flex flex-wrap gap-1.5">
                                 {members.map(({ name, total }) => (
                                   <div key={name} className="flex items-center gap-1 bg-background border border-destructive/30 rounded px-1.5 py-0.5 text-xs">
-                                    <span className="font-semibold text-destructive">{total}%</span>
+                                    <span className="font-semibold text-destructive">{total}d</span>
                                     <span className="text-muted-foreground">·</span>
                                     <span>{name}</span>
                                   </div>

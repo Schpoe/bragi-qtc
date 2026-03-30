@@ -7,8 +7,8 @@ export default function StatsRow({ teams, members, workAreas, sprints, allocatio
   const sprintIds = new Set(sprints.map(s => s.id));
   const memberIds = new Set(filteredMembers.map(m => m.id));
   const relevantAllocs = allocations.filter(a => sprintIds.has(a.sprint_id) && memberIds.has(a.team_member_id));
-  const totalCapacity = filteredMembers.reduce((s, m) => s + (m.availability_percent || 100), 0) * sprints.length;
-  const totalAllocated = relevantAllocs.reduce((s, a) => s + (a.percent || 0), 0);
+  const totalCapacity = filteredMembers.reduce((s, m) => s + (m.sprint_days || 10), 0) * sprints.length;
+  const totalAllocated = relevantAllocs.reduce((s, a) => s + (a.days || 0), 0);
   const avgUtil = totalCapacity > 0 ? Math.round((totalAllocated / totalCapacity) * 100) : 0;
 
   const stats = [

@@ -23,7 +23,7 @@ export default function WorkAreaDistribution({ teams, members, workAreas, alloca
   const getWorkAreaAllocationPercent = (waId) => {
     return allocations
       .filter(a => a.work_area_id === waId && memberIds.has(a.team_member_id))
-      .reduce((sum, a) => sum + (a.percent || 0), 0);
+      .reduce((sum, a) => sum + (a.days || 0), 0);
   };
 
   const leadingAllocation = leadingWAs.reduce((sum, wa) => sum + getWorkAreaAllocationPercent(wa.id), 0);

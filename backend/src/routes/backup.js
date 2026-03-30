@@ -8,6 +8,7 @@ const router = express.Router();
 const TABLES = [
   'team',
   'teamMember',
+  'teamMemberCapacity',
   'workAreaType',
   'workArea',
   'sprint',

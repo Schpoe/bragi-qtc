@@ -18,8 +18,8 @@ export default function DisciplineBreakdown({ sprints, members, allocations, sel
     const sprintIds = new Set(sprints.map(s => s.id));
     const totalAlloc = allocations
       .filter(a => memberIds.has(a.team_member_id) && sprintIds.has(a.sprint_id))
-      .reduce((sum, a) => sum + (a.percent || 0), 0);
-    const maxCapacity = discMembers.reduce((sum, m) => sum + (m.availability_percent || 100), 0) * sprints.length;
+      .reduce((sum, a) => sum + (a.days || 0), 0);
+    const maxCapacity = discMembers.reduce((sum, m) => sum + (m.sprint_days || 10), 0) * sprints.length;
     return maxCapacity > 0 ? Math.round((totalAlloc / maxCapacity) * 100) : 0;
   };
 

@@ -32,13 +32,13 @@ model Team {
 }
 
 model TeamMember {
-  id                   String   @id @default(uuid())
-  team_id              String
-  name                 String
-  discipline           String
-  availability_percent Int      @default(100)
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
+  id           String   @id @default(uuid())
+  team_id      String
+  name         String
+  discipline   String
+  sprint_days  Int      @default(10)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
 }
 
 model WorkAreaType {
@@ -85,7 +85,7 @@ model Allocation {
   sprint_id      String
   team_member_id String
   work_area_id   String
-  percent        Int
+  days           Int
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 }
@@ -95,7 +95,16 @@ model QuarterlyAllocation {
   quarter        String
   team_member_id String
   work_area_id   String
-  percent        Int
+  days           Int
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+}
+
+model TeamMemberCapacity {
+  id             String   @id @default(uuid())
+  team_member_id String
+  quarter        String
+  working_days   Int      @default(60)
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 }
@@ -121,8 +130,8 @@ model QuarterlyPlanHistory {
   work_area_name    String?
   work_area_type    String?
   action            String?
-  old_percent       Int?
-  new_percent       Int?
+  old_days          Int?
+  new_days          Int?
   changed_at        DateTime?
   created_at        DateTime  @default(now())
 }

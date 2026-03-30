@@ -295,9 +295,15 @@ router.post('/revertQuarterlyPlanSnapshot', requireAuth, async (req, res) => {
     const existingMemberIds = new Set(teamMembers.map(m => m.id));
     const memberIds = teamMembers.map(m => m.id);
 
+    // Normalise snapshot allocations: old snapshots stored `percent`, new ones store `days`
+    const normalisedAllocations = snapshotAllocations.map(a => ({
+      ...a,
+      days: a.days != null ? a.days : Math.round((a.percent || 0) * 60 / 100),
+    }));
+
     // Only restore allocations for members that still exist
-    const restorableAllocations = snapshotAllocations.filter(
-      a => a.percent > 0 && existingMemberIds.has(a.team_member_id)
+    const restorableAllocations = normalisedAllocations.filter(
+      a => a.days > 0 && existingMemberIds.has(a.team_member_id)
     );
 
     await prisma.$transaction(async (tx) => {
@@ -313,12 +319,12 @@ router.post('/revertQuarterlyPlanSnapshot', requireAuth, async (req, res) => {
             quarter: snapshot.quarter,
             team_member_id: alloc.team_member_id,
             work_area_id: alloc.work_area_id,
-            percent: alloc.percent,
+            days: alloc.days,
           },
         });
       }
 
-        // Restore work area selection — use saved list if available,
+      // Restore work area selection — use saved list if available,
       // otherwise derive from the allocations being restored (handles old snapshots)
       const workAreaIdsToRestore = selectedWorkAreaIds.length > 0
         ? selectedWorkAreaIds
@@ -357,8 +363,8 @@ router.post('/revertQuarterlyPlanSnapshot', requireAuth, async (req, res) => {
             work_area_name: alloc.work_area_name || null,
             work_area_type: alloc.work_area_type || null,
             action: 'reverted',
-            old_percent: null,
-            new_percent: alloc.percent,
+            old_days: null,
+            new_days: alloc.days,
             changed_at: now,
           },
         });
@@ -366,7 +372,7 @@ router.post('/revertQuarterlyPlanSnapshot', requireAuth, async (req, res) => {
     });
 
     const restoredCount = restorableAllocations.length;
-    const skippedCount = snapshotAllocations.filter(a => a.percent > 0).length - restoredCount;
+    const skippedCount = normalisedAllocations.filter(a => a.days > 0).length - restoredCount;
     res.json({ data: { success: true, restored: restoredCount, skipped: skippedCount, label: snapshot.label } });
   } catch (err) {
     console.error(err);

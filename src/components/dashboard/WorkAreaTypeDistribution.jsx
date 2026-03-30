@@ -29,14 +29,14 @@ export default function WorkAreaTypeDistribution({ teams, workAreas, workAreaTyp
     if (selectedTeamId === "all") {
       const waAllocation = allocations
         .filter(a => a.work_area_id === wa.id)
-        .reduce((sum, a) => sum + (a.percent || 0), 0);
+        .reduce((sum, a) => sum + (a.days || 0), 0);
       typeStats[wa.type].allocation += waAllocation;
     } else {
       const teamMembers = members.filter(m => m.team_id === selectedTeamId);
       const memberIds = new Set(teamMembers.map(m => m.id));
       const waAllocation = allocations
         .filter(a => a.work_area_id === wa.id && memberIds.has(a.team_member_id))
-        .reduce((sum, a) => sum + (a.percent || 0), 0);
+        .reduce((sum, a) => sum + (a.days || 0), 0);
       typeStats[wa.type].allocation += waAllocation;
     }
   });

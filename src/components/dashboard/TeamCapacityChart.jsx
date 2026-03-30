@@ -23,20 +23,20 @@ export default function TeamCapacityChart({ teams, sprints, members, allocations
         if (sprint.team_id !== team.id) return;
 
         // Calculate total capacity
-        const totalCapacity = teamMembers.reduce((sum, m) => sum + (m.availability_percent || 100), 0);
+        const totalCapacity = teamMembers.reduce((sum, m) => sum + (m.sprint_days || 10), 0);
 
         // Calculate total allocation
         const sprintAllocations = allocations.filter(
           a => a.sprint_id === sprint.id && teamMembers.some(m => m.id === a.team_member_id)
         );
-        const totalAllocation = sprintAllocations.reduce((sum, a) => sum + (a.percent || 0), 0);
+        const totalAllocation = sprintAllocations.reduce((sum, a) => sum + (a.days || 0), 0);
 
         // Count members
         const membersOverAllocated = teamMembers.filter(m => {
           const memberAlloc = sprintAllocations
             .filter(a => a.team_member_id === m.id)
-            .reduce((sum, a) => sum + a.percent, 0);
-          return memberAlloc > (m.availability_percent || 100);
+            .reduce((sum, a) => sum + (a.days || 0), 0);
+          return memberAlloc > (m.sprint_days || 10);
         }).length;
 
         chartData.push({

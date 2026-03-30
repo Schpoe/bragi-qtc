@@ -25,13 +25,15 @@ export default function QuarterlyAllocationReport({
   const memberAllocations = useMemo(() => {
     return relevantMembers.map(member => {
       const memberAllocs = quarterAllocations.filter(a => a.team_member_id === member.id);
-      const totalPercent = memberAllocs.reduce((sum, a) => sum + a.percent, 0);
-      
+      const totalDays = memberAllocs.reduce((sum, a) => sum + (a.days || 0), 0);
+      const totalPercent = Math.round(totalDays * 100 / 60); // derive % using default 60d capacity
+
       return {
         member,
         allocations: memberAllocs,
+        totalDays,
         totalPercent,
-        isOverAllocated: totalPercent > 100
+        isOverAllocated: totalDays > 60
       };
     });
   }, [relevantMembers, quarterAllocations]);
@@ -46,7 +48,7 @@ export default function QuarterlyAllocationReport({
     );
   }
 
-  const hasAllocations = memberAllocations.some(m => m.totalPercent > 0);
+  const hasAllocations = memberAllocations.some(m => m.totalDays > 0);
 
   if (!hasAllocations) {
     return (
@@ -88,12 +90,12 @@ export default function QuarterlyAllocationReport({
               </TableCell>
               {relevantWorkAreas.map(wa => {
                 const alloc = memberAllocs.find(a => a.work_area_id === wa.id);
-                const value = alloc?.percent ?? 0;
+                const value = alloc?.days ?? 0;
 
                 return (
                   <TableCell key={`${member.id}-${wa.id}`} className="p-2 text-center">
                     <span className={cn("text-sm font-medium tabular-nums", value > 0 ? "text-foreground" : "text-muted-foreground")}>
-                      {value}%
+                      {value}d
                     </span>
                   </TableCell>
                 );

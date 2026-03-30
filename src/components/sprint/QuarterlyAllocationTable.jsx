@@ -1,14 +1,19 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { canManageAllocations } from "@/lib/permissions";
 import { useAuth } from "@/lib/AuthContext";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { bragiQTC } from "@/api/bragiQTCClient";
 import EmptyState from "@/components/shared/EmptyState";
 import { Users, Settings2 } from "lucide-react";
 import DisciplineBadge from "../shared/DisciplineBadge.jsx";
 import AllocationCell from "./AllocationCell";
 import QuarterlyAllocationDialog from "./QuarterlyAllocationDialog";
 import { cn, getWorkAreaColor } from "@/lib/utils";
+
+const DEFAULT_CAPACITY = 60;
 
 export default function QuarterlyAllocationTable({
   members,
@@ -23,7 +28,9 @@ export default function QuarterlyAllocationTable({
   const [selectedWorkAreaIds, setSelectedWorkAreaIds] = useState(() => new Set(initialSelectedWorkAreaIds));
   const [dialogOpen, setDialogOpen] = useState(false);
   const allocationTimeoutRef = useRef({});
+  const capacityTimeoutRef = useRef({});
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const relevantTeamId = selectedTeamId === "all" ? members[0]?.team_id : selectedTeamId;
   const canEdit = relevantTeamId && canManageAllocations(user, relevantTeamId);
 
@@ -31,6 +38,41 @@ export default function QuarterlyAllocationTable({
   useEffect(() => {
     setSelectedWorkAreaIds(new Set(initialSelectedWorkAreaIds));
   }, [initialSelectedWorkAreaIds]);
+
+  // Fetch per-member quarterly capacities
+  const { data: memberCapacities = [] } = useQuery({
+    queryKey: ["teamMemberCapacities", quarter],
+    queryFn: () => bragiQTC.entities.TeamMemberCapacity.filter({ quarter }),
+    enabled: !!quarter,
+  });
+
+  const capacityMap = useMemo(() => {
+    const map = {};
+    memberCapacities.forEach(c => { map[c.team_member_id] = c; });
+    return map;
+  }, [memberCapacities]);
+
+  const updateCapacity = useMutation({
+    mutationFn: async ({ memberId, working_days }) => {
+      const existing = capacityMap[memberId];
+      if (existing) {
+        return bragiQTC.entities.TeamMemberCapacity.update(existing.id, { working_days });
+      } else {
+        return bragiQTC.entities.TeamMemberCapacity.create({ team_member_id: memberId, quarter, working_days });
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teamMemberCapacities", quarter] }),
+  });
+
+  const handleCapacityChange = (memberId, value) => {
+    const key = `cap-${memberId}`;
+    if (capacityTimeoutRef.current[key]) clearTimeout(capacityTimeoutRef.current[key]);
+    capacityTimeoutRef.current[key] = setTimeout(() => {
+      const days = Math.max(1, Number(value) || DEFAULT_CAPACITY);
+      updateCapacity.mutate({ memberId, working_days: days });
+      delete capacityTimeoutRef.current[key];
+    }, 500);
+  };
 
   const relevantMembers = selectedTeamId === "all"
     ? members
@@ -61,16 +103,20 @@ export default function QuarterlyAllocationTable({
   const memberAllocations = useMemo(() => {
     return relevantMembers.map(member => {
       const memberAllocs = quarterAllocations.filter(a => a.team_member_id === member.id);
-      const totalPercent = memberAllocs.reduce((sum, a) => sum + a.percent, 0);
-      
+      const totalDays = memberAllocs.reduce((sum, a) => sum + (a.days || 0), 0);
+      const capacity = capacityMap[member.id]?.working_days ?? DEFAULT_CAPACITY;
+      const totalPercent = capacity > 0 ? Math.round(totalDays / capacity * 100) : 0;
+
       return {
         member,
         allocations: memberAllocs,
+        totalDays,
+        capacity,
         totalPercent,
-        isOverAllocated: totalPercent > 100
+        isOverAllocated: totalDays > capacity
       };
     });
-  }, [relevantMembers, quarterAllocations]);
+  }, [relevantMembers, quarterAllocations, capacityMap]);
 
   const handleWorkAreaSelectionChange = (selected) => {
     const newIds = selected instanceof Set ? selected : new Set(selected);
@@ -96,11 +142,7 @@ export default function QuarterlyAllocationTable({
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-medium">Work Items</h4>
           {canEdit && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDialogOpen(true)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
               <Settings2 className="w-4 h-4 mr-2" />
               Select Work Items
             </Button>
@@ -123,16 +165,14 @@ export default function QuarterlyAllocationTable({
     );
   }
 
+  const rowSpan = hasGroups ? 2 : undefined;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h4 className="text-sm font-semibold text-foreground">Work Items Allocation</h4>
         {canEdit && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDialogOpen(true)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
             <Settings2 className="w-4 h-4 mr-2" />
             Select Work Items
           </Button>
@@ -145,8 +185,9 @@ export default function QuarterlyAllocationTable({
           <TableHeader className="bg-primary/5 border-b-2 border-primary/20">
             {hasGroups && (
               <TableRow className="border-b-0">
-                <TableHead className="sticky left-0 z-20 bg-white font-semibold text-primary min-w-[180px] border-r" rowSpan={2}>Team Member</TableHead>
-                <TableHead className="text-xs text-center font-semibold text-primary min-w-[90px] sticky left-[180px] z-20 bg-white border-r" rowSpan={2}>Allocated</TableHead>
+                <TableHead className="sticky left-0 z-20 bg-white font-semibold text-primary min-w-[180px] border-r" rowSpan={rowSpan}>Team Member</TableHead>
+                <TableHead className="text-xs text-center font-semibold text-primary min-w-[70px] sticky left-[180px] z-20 bg-white border-r" rowSpan={rowSpan}>Capacity</TableHead>
+                <TableHead className="text-xs text-center font-semibold text-primary min-w-[110px] sticky left-[250px] z-20 bg-white border-r" rowSpan={rowSpan}>Allocated</TableHead>
                 {leadingWAs.length > 0 && (
                   <TableHead colSpan={leadingWAs.length} className="text-center text-xs font-semibold bg-primary/10 text-primary border-l-2 border-primary/30 py-1">
                     Leading
@@ -166,7 +207,8 @@ export default function QuarterlyAllocationTable({
             )}
             <TableRow>
               {!hasGroups && <TableHead className="sticky left-0 z-20 bg-white font-semibold text-primary min-w-[180px] border-r">Team Member</TableHead>}
-              {!hasGroups && <TableHead className="text-xs text-center font-semibold text-primary min-w-[90px] sticky left-[180px] z-20 bg-white border-r">Allocated</TableHead>}
+              {!hasGroups && <TableHead className="text-xs text-center font-semibold text-primary min-w-[70px] sticky left-[180px] z-20 bg-white border-r">Capacity</TableHead>}
+              {!hasGroups && <TableHead className="text-xs text-center font-semibold text-primary min-w-[110px] sticky left-[250px] z-20 bg-white border-r">Allocated</TableHead>}
               {groupedWAs.map(wa => (
                 <TableHead key={wa.id} className={cn("text-xs text-center font-semibold text-primary min-w-[130px] max-w-[180px]", getGroupBorder(wa))}>
                   <div className="flex items-start justify-center gap-1.5 px-1">
@@ -178,7 +220,7 @@ export default function QuarterlyAllocationTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {memberAllocations.map(({ member, allocations: memberAllocs, totalPercent, isOverAllocated }) => (
+            {memberAllocations.map(({ member, allocations: memberAllocs, totalDays, capacity, totalPercent, isOverAllocated }) => (
               <TableRow key={member.id} className={cn(
                 isOverAllocated ? "bg-red-50/50 hover:bg-red-50 border-l-4 border-red-500" : totalPercent > 80 ? "bg-amber-50/50 hover:bg-amber-50 border-l-4 border-amber-500" : "hover:bg-muted/30 border-l-4 border-transparent"
               )}>
@@ -188,14 +230,29 @@ export default function QuarterlyAllocationTable({
                     <DisciplineBadge discipline={member.discipline} />
                   </div>
                 </TableCell>
-                <TableCell className={cn("text-center sticky left-[180px] z-10 border-r", isOverAllocated ? "bg-red-50" : totalPercent > 80 ? "bg-amber-50" : "bg-white")}>
-                  <div className="flex flex-col items-center gap-1">
+                <TableCell className={cn("text-center sticky left-[180px] z-10 border-r p-1", isOverAllocated ? "bg-red-50" : totalPercent > 80 ? "bg-amber-50" : "bg-white")}>
+                  {canEdit ? (
+                    <Input
+                      type="number"
+                      min={1}
+                      defaultValue={capacity}
+                      key={`${member.id}-${capacity}`}
+                      onChange={(e) => handleCapacityChange(member.id, e.target.value)}
+                      className="w-14 h-7 text-center text-xs p-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">{capacity}d</span>
+                  )}
+                </TableCell>
+                <TableCell className={cn("text-center sticky left-[250px] z-10 border-r", isOverAllocated ? "bg-red-50" : totalPercent > 80 ? "bg-amber-50" : "bg-white")}>
+                  <div className="flex flex-col items-center gap-0.5">
                     <span className={cn(
-                      "text-sm font-bold tabular-nums",
+                      "text-xs font-bold tabular-nums",
                       isOverAllocated ? "text-red-600" : totalPercent > 80 ? "text-amber-600" : "text-green-600"
                     )}>
-                      {totalPercent}%
+                      {totalDays}d / {capacity}d
                     </span>
+                    <span className="text-xs text-muted-foreground">({totalPercent}%)</span>
                     <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
                       <div
                         className={cn(
@@ -209,7 +266,7 @@ export default function QuarterlyAllocationTable({
                 </TableCell>
                 {groupedWAs.map(wa => {
                   const alloc = memberAllocs.find(a => a.work_area_id === wa.id);
-                  const value = alloc?.percent ?? 0;
+                  const value = alloc?.days ?? 0;
 
                   return (
                     <TableCell key={`${member.id}-${wa.id}`} className={cn("p-2 text-center", getGroupBorder(wa))}>
@@ -226,7 +283,7 @@ export default function QuarterlyAllocationTable({
                                 team_member_id: member.id,
                                 quarter,
                                 work_area_id: wa.id,
-                                percent: newVal,
+                                days: newVal,
                                 allocationId: alloc?.id
                               });
                               delete allocationTimeoutRef.current[key];
@@ -235,7 +292,7 @@ export default function QuarterlyAllocationTable({
                         />
                       ) : (
                         <span className={cn("text-sm font-medium tabular-nums", value > 0 ? "text-foreground" : "text-muted-foreground")}>
-                          {value}%
+                          {value}d
                         </span>
                       )}
                     </TableCell>
@@ -249,25 +306,42 @@ export default function QuarterlyAllocationTable({
 
       {/* Mobile: Card view */}
       <div className="md:hidden space-y-3">
-        {memberAllocations.map(({ member, allocations: memberAllocs, totalPercent, isOverAllocated }) => (
+        {memberAllocations.map(({ member, allocations: memberAllocs, totalDays, capacity, totalPercent, isOverAllocated }) => (
           <div key={member.id} className={cn(
             "border-l-4 border rounded-lg p-4",
             isOverAllocated ? "border-l-red-500 border-red-300 bg-red-50/50" : totalPercent > 80 ? "border-l-amber-500 border-amber-300 bg-amber-50/50" : "border-l-green-500 border-muted"
           )}>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="text-sm font-semibold truncate">{member.name}</span>
                 <DisciplineBadge discipline={member.discipline} />
               </div>
               <span className={cn(
-                "text-lg font-bold tabular-nums whitespace-nowrap ml-2",
+                "text-sm font-bold tabular-nums whitespace-nowrap ml-2",
                 isOverAllocated ? "text-red-600" : totalPercent > 80 ? "text-amber-600" : "text-green-600"
               )}>
-                {totalPercent}%
+                {totalDays}d / {capacity}d
               </span>
             </div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs text-muted-foreground">({totalPercent}%)</span>
+              {canEdit && (
+                <div className="flex items-center gap-1 ml-auto">
+                  <span className="text-xs text-muted-foreground">Capacity:</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    defaultValue={capacity}
+                    key={`mob-${member.id}-${capacity}`}
+                    onChange={(e) => handleCapacityChange(member.id, e.target.value)}
+                    className="w-14 h-6 text-center text-xs p-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="text-xs text-muted-foreground">d</span>
+                </div>
+              )}
+            </div>
             <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-4">
-              <div 
+              <div
                 className={cn(
                   "h-full transition-all",
                   isOverAllocated ? "bg-red-500" : totalPercent > 80 ? "bg-amber-500" : "bg-green-500"
@@ -286,7 +360,7 @@ export default function QuarterlyAllocationTable({
                   <div className="grid grid-cols-2 gap-3">
                     {group.items.map(wa => {
                       const alloc = memberAllocs.find(a => a.work_area_id === wa.id);
-                      const value = alloc?.percent ?? 0;
+                      const value = alloc?.days ?? 0;
                       return (
                         <div key={wa.id}>
                           <div className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
@@ -306,7 +380,7 @@ export default function QuarterlyAllocationTable({
                                     team_member_id: member.id,
                                     quarter,
                                     work_area_id: wa.id,
-                                    percent: newVal,
+                                    days: newVal,
                                     allocationId: alloc?.id
                                   });
                                   delete allocationTimeoutRef.current[key];
@@ -314,7 +388,7 @@ export default function QuarterlyAllocationTable({
                               }}
                             />
                           ) : (
-                            <span className="text-sm font-semibold tabular-nums">{value}%</span>
+                            <span className="text-sm font-semibold tabular-nums">{value}d</span>
                           )}
                         </div>
                       );
