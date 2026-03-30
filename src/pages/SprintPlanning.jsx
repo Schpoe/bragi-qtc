@@ -181,8 +181,8 @@ export default function SprintPlanning() {
             work_area_name:    wa?.name,
             work_area_type:    wa?.type,
             action:            "removed",
-            old_percent:       alloc.percent,
-            new_percent:       null,
+            old_days:       alloc.days,
+            new_days:       null,
             changed_at:        new Date().toISOString(),
           });
         }
@@ -248,10 +248,10 @@ export default function SprintPlanning() {
         if (value === 0) {
           deleteAllocation.mutate(existing.id);
         } else {
-          updateAllocation.mutate({ id: existing.id, data: { percent: value } });
+          updateAllocation.mutate({ id: existing.id, data: { days: value } });
         }
       } else if (value > 0) {
-        createAllocation.mutate({ team_member_id: memberId, sprint_id: sprintId, work_area_id: workAreaId, percent: value });
+        createAllocation.mutate({ team_member_id: memberId, sprint_id: sprintId, work_area_id: workAreaId, days: value });
       }
       delete allocationTimeoutRef.current[key];
     }, 300);
@@ -296,21 +296,21 @@ export default function SprintPlanning() {
       };
 
       if (existing) {
-        if (data.percent === 0) {
+        if (data.days === 0) {
           deleteQuarterlyAllocation.mutate(existing.id);
-          logQuarterlyHistory({ ...histBase, action: "removed", old_percent: existing.percent, new_percent: null });
-        } else if (existing.percent !== data.percent) {
-          updateQuarterlyAllocation.mutate({ id: existing.id, data: { percent: data.percent } });
-          logQuarterlyHistory({ ...histBase, action: "updated", old_percent: existing.percent, new_percent: data.percent });
+          logQuarterlyHistory({ ...histBase, action: "removed", old_days: existing.days, new_days: null });
+        } else if (existing.days !== data.days) {
+          updateQuarterlyAllocation.mutate({ id: existing.id, data: { days: data.days } });
+          logQuarterlyHistory({ ...histBase, action: "updated", old_days: existing.days, new_days: data.days });
         }
-      } else if (data.percent > 0) {
+      } else if (data.days > 0) {
         createQuarterlyAllocation.mutate({
           team_member_id: data.team_member_id,
           quarter: data.quarter,
           work_area_id: data.work_area_id,
-          percent: data.percent
+          days: data.days
         });
-        logQuarterlyHistory({ ...histBase, action: "set", old_percent: null, new_percent: data.percent });
+        logQuarterlyHistory({ ...histBase, action: "set", old_days: null, new_days: data.days });
       }
       delete quarterlyAllocationTimeoutRef.current[key];
     }, 300);

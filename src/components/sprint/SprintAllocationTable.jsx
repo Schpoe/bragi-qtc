@@ -33,7 +33,7 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
     const alloc = allocations.find(
       a => a.team_member_id === memberId && a.sprint_id === sprint.id && a.work_area_id === workAreaId
     );
-    return alloc ? alloc.percent : 0;
+    return alloc ? alloc.days : 0;
   };
 
   const getMemberTotal = (memberId) => {
@@ -91,8 +91,8 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
           <TableBody>
             {members.map(member => {
               const total = getMemberTotal(member.id);
-              const isOver = total > (member.availability_percent || 100);
-              const capacity = member.availability_percent || 100;
+              const isOver = total > (member.sprint_days || 10);
+              const capacity = member.sprint_days || 10;
               const utilization = Math.round((total / capacity) * 100);
               
               return (
@@ -111,7 +111,7 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
                         "text-sm font-bold tabular-nums",
                         isOver ? "text-red-600" : utilization > 80 ? "text-amber-600" : "text-green-600"
                       )}>
-                        {total}%
+                        {total}d / {capacity}d
                       </span>
                       <div className="w-12 h-1.5 bg-muted rounded-full overflow-hidden">
                         <div
@@ -135,7 +135,7 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
                           />
                         ) : (
                           <span className={cn("text-sm font-medium tabular-nums", val > 0 ? "text-foreground" : "text-muted-foreground")}>
-                            {val}%
+                            {val}d
                           </span>
                         )}
                       </TableCell>
@@ -152,7 +152,7 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
       <div className="md:hidden space-y-3">
         {members.map(member => {
           const total = getMemberTotal(member.id);
-          const capacity = member.availability_percent || 100;
+          const capacity = member.sprint_days || 10;
           const isOver = total > capacity;
           const utilization = Math.round((total / capacity) * 100);
           
@@ -170,7 +170,7 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
                   "text-lg font-bold tabular-nums",
                   isOver ? "text-red-600" : utilization > 80 ? "text-amber-600" : "text-green-600"
                 )}>
-                  {total}%
+                  {total}d / {capacity}d
                 </span>
               </div>
               <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-3">
@@ -203,7 +203,7 @@ export default function SprintAllocationTable({ sprint, members, workAreas, allo
                               onChange={(val) => onAllocationChange(member.id, sprint.id, wa.id, val)}
                             />
                           ) : (
-                            <span className="font-semibold">{getAllocation(member.id, wa.id)}%</span>
+                            <span className="font-semibold">{getAllocation(member.id, wa.id)}d</span>
                           )}
                         </div>
                       ))}

@@ -177,9 +177,9 @@ export default function CleanupPage() {
       templateSprintIds.has(a.sprint_id) && !orphanAllocationIds.has(a.id)
     );
 
-    // 5. Zero-percent sprint allocations (useless records)
+    // 5. Zero-day sprint allocations (useless records)
     const zeroAllocations = allocations.filter(a =>
-      a.percent === 0 && !orphanAllocationIds.has(a.id) && !templateSprintIds.has(a.sprint_id)
+      a.days === 0 && !orphanAllocationIds.has(a.id) && !templateSprintIds.has(a.sprint_id)
     );
 
     // 6. Quarterly allocations: missing member or work area
@@ -189,9 +189,9 @@ export default function CleanupPage() {
     );
     const orphanQAIds = new Set(orphanQA.map(a => a.id));
 
-    // 7. Zero-percent quarterly allocations
+    // 7. Zero-day quarterly allocations
     const zeroQA = quarterlyAllocations.filter(a =>
-      a.percent === 0 && !orphanQAIds.has(a.id)
+      a.days === 0 && !orphanQAIds.has(a.id)
     );
 
     // 8. Work area selections: missing team (delete-worthy)
@@ -461,7 +461,7 @@ export default function CleanupPage() {
     const missingWA     = a.work_area_id && !workAreas.some(w => w.id === a.work_area_id);
     return (
       <OrphanItem key={a.id} checked={selected.allocations.has(a.id)} onToggle={() => toggle("allocations", a.id)}
-        title={`${a.percent}% allocation`}
+        title={`${a.days}d allocation`}
         reasons={[
           missingMember && { label: `Member deleted: ${a.team_member_id?.slice(0, 8)}…`, danger: true },
           !missingMember && { label: `Member: ${memberName(a.team_member_id)}`, danger: false },
@@ -477,7 +477,7 @@ export default function CleanupPage() {
     const sprint = sprints.find(s => s.id === a.sprint_id);
     return (
       <OrphanItem key={a.id} checked={selected.templateAllocations.has(a.id)} onToggle={() => toggle("templateAllocations", a.id)}
-        title={`${a.percent}% allocation`} subtitle={`Member: ${memberName(a.team_member_id)}`}
+        title={`${a.days}d allocation`} subtitle={`Member: ${memberName(a.team_member_id)}`}
         reasons={[
           { label: `On template sprint: ${sprint?.name ?? a.sprint_id?.slice(0, 8)}`, danger: true },
           a.work_area_id && { label: `Work item: ${waName(a.work_area_id)}`, danger: false },
@@ -487,7 +487,7 @@ export default function CleanupPage() {
 
   const zeroAllocItem = (a) => (
     <OrphanItem key={a.id} checked={selected.zeroAllocations.has(a.id)} onToggle={() => toggle("zeroAllocations", a.id)}
-      title="0% sprint allocation"
+      title="0d sprint allocation"
       reasons={[
         { label: `Member: ${memberName(a.team_member_id)}`, danger: false },
         { label: `Sprint: ${sprintName(a.sprint_id)}`, danger: false },
@@ -500,7 +500,7 @@ export default function CleanupPage() {
     const missingWA     = a.work_area_id && !workAreas.some(w => w.id === a.work_area_id);
     return (
       <OrphanItem key={a.id} checked={selected.quarterlyAllocations.has(a.id)} onToggle={() => toggle("quarterlyAllocations", a.id)}
-        title={`${a.percent}% — ${a.quarter}`}
+        title={`${a.days}d — ${a.quarter}`}
         reasons={[
           missingMember && { label: `Member deleted: ${a.team_member_id?.slice(0, 8)}…`, danger: true },
           !missingMember && { label: `Member: ${memberName(a.team_member_id)}`, danger: false },
@@ -512,7 +512,7 @@ export default function CleanupPage() {
 
   const zeroQAItem = (a) => (
     <OrphanItem key={a.id} checked={selected.zeroQA.has(a.id)} onToggle={() => toggle("zeroQA", a.id)}
-      title={`0% quarterly — ${a.quarter}`}
+      title={`0d quarterly — ${a.quarter}`}
       reasons={[
         { label: `Member: ${memberName(a.team_member_id)}`, danger: false },
         a.work_area_id && { label: `Work item: ${waName(a.work_area_id)}`, danger: false },
@@ -570,7 +570,7 @@ export default function CleanupPage() {
     const sprint = sprints.find(s => s.id === a.sprint_id);
     return (
       <OrphanItem key={a.id} checked={selected.unassignedAllocations.has(a.id)} onToggle={() => toggle("unassignedAllocations", a.id)}
-        title={`${a.percent}% allocation`}
+        title={`${a.days}d allocation`}
         subtitle={`Member: ${memberName(a.team_member_id)}`}
         reasons={[
           { label: `Sprint: ${sprint?.name ?? sprintName(a.sprint_id)}`, danger: false },
@@ -583,7 +583,7 @@ export default function CleanupPage() {
     const sprint = sprints.find(s => s.id === a.sprint_id);
     return (
       <OrphanItem key={a.id} checked={selected.detachedAllocations.has(a.id)} onToggle={() => toggle("detachedAllocations", a.id)}
-        title={`${a.percent}% allocation`}
+        title={`${a.days}d allocation`}
         subtitle={`Member: ${memberName(a.team_member_id)}`}
         reasons={[
           { label: `Sprint: ${sprint?.name ?? sprintName(a.sprint_id)}`, danger: false },

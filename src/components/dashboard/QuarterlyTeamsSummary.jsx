@@ -41,12 +41,10 @@ export default function QuarterlyTeamsSummary({
         memberIds.has(a.team_member_id)
       );
 
-      // Total capacity = sum of each member's availability_percent
-      const totalAllocated = teamAllocs.reduce((sum, a) => sum + a.percent, 0);
-      // Capacity = count * 100: quarterly percent is relative to 100% per member,
-      // matching how QuarterlyAllocationReport displays totals
+      // totalAllocated in days; derive utilization % using default 60d capacity
+      const totalAllocated = teamAllocs.reduce((sum, a) => sum + (a.days || 0), 0);
       const overallUtil =
-        teamMembers.length > 0 ? Math.round(totalAllocated / teamMembers.length) : 0;
+        teamMembers.length > 0 ? Math.round(totalAllocated * 100 / (teamMembers.length * 60)) : 0;
 
       // By discipline
       const disciplines = [...new Set(teamMembers.map((m) => m.discipline).filter(Boolean))];
@@ -55,9 +53,9 @@ export default function QuarterlyTeamsSummary({
         const discMemberIds = new Set(discMembers.map((m) => m.id));
         const discAllocated = teamAllocs
           .filter((a) => discMemberIds.has(a.team_member_id))
-          .reduce((sum, a) => sum + a.percent, 0);
+          .reduce((sum, a) => sum + (a.days || 0), 0);
         const util =
-          discMembers.length > 0 ? Math.round(discAllocated / discMembers.length) : 0;
+          discMembers.length > 0 ? Math.round(discAllocated * 100 / (discMembers.length * 60)) : 0;
         return { discipline: disc, util };
       }).sort((a, b) => b.util - a.util);
 
@@ -65,7 +63,7 @@ export default function QuarterlyTeamsSummary({
       const waAllocTotals = {};
       teamAllocs.forEach((a) => {
         if (!a.work_area_id) return;
-        waAllocTotals[a.work_area_id] = (waAllocTotals[a.work_area_id] || 0) + a.percent;
+        waAllocTotals[a.work_area_id] = (waAllocTotals[a.work_area_id] || 0) + (a.days || 0);
       });
       const topWorkItems = Object.entries(waAllocTotals)
         .map(([waId, total]) => {
@@ -93,9 +91,9 @@ export default function QuarterlyTeamsSummary({
       const discMemberIds = new Set(discMembers.map((m) => m.id));
       const discAllocated = quarterAllocations
         .filter((a) => discMemberIds.has(a.team_member_id))
-        .reduce((sum, a) => sum + a.percent, 0);
+        .reduce((sum, a) => sum + (a.days || 0), 0);
       const util =
-        discMembers.length > 0 ? Math.round(discAllocated / discMembers.length) : 0;
+        discMembers.length > 0 ? Math.round(discAllocated * 100 / (discMembers.length * 60)) : 0;
       const count = discMembers.length;
       return { discipline: disc, util, count };
     }).sort((a, b) => b.util - a.util);

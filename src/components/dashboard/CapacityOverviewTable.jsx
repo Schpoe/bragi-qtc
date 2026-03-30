@@ -21,12 +21,12 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
       const memberIds = new Set(teamMembers.map(m => m.id));
       return allocations
         .filter(a => a.sprint_id === sprintId && memberIds.has(a.team_member_id) && relevantWorkAreaIds.has(a.work_area_id))
-        .reduce((sum, a) => sum + (a.percent || 0), 0);
+        .reduce((sum, a) => sum + (a.days || 0), 0);
     };
 
     const getTeamMaxCapacity = (teamId) => {
       const teamMembers = members.filter(m => m.team_id === teamId);
-      return teamMembers.reduce((sum, m) => sum + (m.availability_percent || 100), 0);
+      return teamMembers.reduce((sum, m) => sum + (m.sprint_days || 10), 0);
     };
 
     const getDisciplineCapacityForTeam = (sprintId, teamId, discipline) => {
@@ -36,13 +36,13 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
       const memberIds = new Set(teamMembers.map(m => m.id));
       return allocations
         .filter(a => a.sprint_id === sprintId && memberIds.has(a.team_member_id) && relevantWorkAreaIds.has(a.work_area_id))
-        .reduce((sum, a) => sum + (a.percent || 0), 0);
+        .reduce((sum, a) => sum + (a.days || 0), 0);
     };
 
     const getDisciplineMaxCapacityForTeam = (teamId, discipline) => {
       return members
         .filter(m => m.team_id === teamId && m.discipline === discipline)
-        .reduce((sum, m) => sum + (m.availability_percent || 100), 0);
+        .reduce((sum, m) => sum + (m.sprint_days || 10), 0);
     };
 
     if (teamSpecificSprints.length === 0 || teamsToDisplay.length === 0) {
@@ -58,8 +58,8 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
          const memberIds = new Set(teamMembers.map(m => m.id));
          const totalAlloc = allocations
            .filter(a => memberIds.has(a.team_member_id))
-           .reduce((sum, a) => sum + (a.percent || 0), 0);
-         const maxCapacity = teamMembers.reduce((sum, m) => sum + (m.availability_percent || 100), 0);
+           .reduce((sum, a) => sum + (a.days || 0), 0);
+         const maxCapacity = teamMembers.reduce((sum, m) => sum + (m.sprint_days || 10), 0);
          return maxCapacity > 0 ? Math.round((totalAlloc / maxCapacity) * 100) : 0;
        };
 
@@ -220,8 +220,8 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
      const getMemberAvgUtil = (memberId) => {
        const totalAlloc = allocations
          .filter(a => a.team_member_id === memberId)
-         .reduce((sum, a) => sum + (a.percent || 0), 0);
-       const maxCapacity = teamMembers.find(m => m.id === memberId)?.availability_percent || 100;
+         .reduce((sum, a) => sum + (a.days || 0), 0);
+       const maxCapacity = teamMembers.find(m => m.id === memberId)?.sprint_days || 10;
        return maxCapacity > 0 ? Math.round((totalAlloc / maxCapacity) * 100) : 0;
      };
 
@@ -238,7 +238,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
     const relevantWorkAreaIds = new Set(sprint?.relevant_work_area_ids || []);
     return allocations
       .filter(a => a.sprint_id === sprintId && a.team_member_id === memberId && relevantWorkAreaIds.has(a.work_area_id))
-      .reduce((sum, a) => sum + (a.percent || 0), 0);
+      .reduce((sum, a) => sum + (a.days || 0), 0);
   };
 
   const getDisciplineCapacity = (sprintId, discipline) => {
@@ -247,13 +247,13 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
     const disciplineMembers = teamMembers.filter(m => m.discipline === discipline).map(m => m.id);
     return allocations
       .filter(a => a.sprint_id === sprintId && disciplineMembers.includes(a.team_member_id) && relevantWorkAreaIds.has(a.work_area_id))
-      .reduce((sum, a) => sum + (a.percent || 0), 0);
+      .reduce((sum, a) => sum + (a.days || 0), 0);
   };
 
   const getDisciplineMaxCapacity = (discipline) => {
     return teamMembers
       .filter(m => m.discipline === discipline)
-      .reduce((sum, m) => sum + (m.availability_percent || 100), 0);
+      .reduce((sum, m) => sum + (m.sprint_days || 10), 0);
   };
 
   if (teamSpecificSprints.length === 0 || disciplines.length === 0) {
@@ -364,7 +364,7 @@ export default function CapacityOverviewTable({ sprints, teams, members, allocat
                   </TableCell>
                   {teamSpecificSprints.map(sprint => {
                     const capacity = getMemberCapacity(sprint.id, member.id);
-                    const maxCapacity = member.availability_percent || 100;
+                    const maxCapacity = member.sprint_days || 10;
                     const utilPct = maxCapacity > 0 ? Math.round((capacity / maxCapacity) * 100) : 0;
                     return (
                       <TableCell key={sprint.id} className="text-center">

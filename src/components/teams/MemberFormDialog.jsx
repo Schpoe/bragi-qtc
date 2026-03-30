@@ -9,7 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 
 export default function MemberFormDialog({ open, onOpenChange, member, teamId, onSave }) {
-  const [form, setForm] = useState({ name: "", discipline: "", availability_percent: 100 });
+  const [form, setForm] = useState({ name: "", discipline: "", sprint_days: 100 });
   const [newDiscipline, setNewDiscipline] = useState("");
   const [showNewDiscipline, setShowNewDiscipline] = useState(false);
 
@@ -22,9 +22,9 @@ export default function MemberFormDialog({ open, onOpenChange, member, teamId, o
 
   useEffect(() => {
     if (member) {
-      setForm({ name: member.name, discipline: member.discipline, availability_percent: member.availability_percent || 100 });
+      setForm({ name: member.name, discipline: member.discipline, sprint_days: member.sprint_days ?? 10 });
     } else {
-      setForm({ name: "", discipline: existingDisciplines[0] || "", availability_percent: 100 });
+      setForm({ name: "", discipline: existingDisciplines[0] || "", sprint_days: 10 });
     }
     setNewDiscipline("");
     setShowNewDiscipline(false);
@@ -79,8 +79,8 @@ export default function MemberFormDialog({ open, onOpenChange, member, teamId, o
             )}
           </div>
           <div className="space-y-2">
-            <Label>Availability (%)</Label>
-            <Input type="number" min={0} max={100} value={form.availability_percent} onChange={(e) => setForm({ ...form, availability_percent: Number(e.target.value) })} />
+            <Label>Sprint capacity (days)</Label>
+            <Input type="number" min={1} value={form.sprint_days} onChange={(e) => setForm({ ...form, sprint_days: Number(e.target.value) })} />
           </div>
         </div>
         <DialogFooter>

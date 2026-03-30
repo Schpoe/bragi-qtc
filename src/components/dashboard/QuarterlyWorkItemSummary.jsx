@@ -39,7 +39,7 @@ export default function QuarterlyWorkItemSummary({
     quarterAllocs
       .filter((a) => memberIds.has(a.team_member_id) && a.work_area_id)
       .forEach((a) => {
-        map[a.work_area_id] = (map[a.work_area_id] || 0) + a.percent;
+        map[a.work_area_id] = (map[a.work_area_id] || 0) + (a.days || 0);
       });
     return map;
   }, [quarterAllocs, memberIds, memberCount]);

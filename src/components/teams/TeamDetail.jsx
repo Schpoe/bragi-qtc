@@ -76,7 +76,7 @@ export default function TeamDetail({ team, members, onBack }) {
                   </div>
                   <div>
                     <p className="font-medium text-sm">{member.name}</p>
-                    <p className="text-xs text-muted-foreground">{member.availability_percent || 100}% available</p>
+                    <p className="text-xs text-muted-foreground">{member.sprint_days || 10}d / sprint</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

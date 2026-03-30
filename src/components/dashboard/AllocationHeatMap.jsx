@@ -33,8 +33,8 @@ export default function AllocationHeatMap({ teams, members, sprints, allocations
         
         sprintAllocs.forEach(alloc => {
           const waId = alloc.work_area_id;
-          workAreaAllocations[waId] = (workAreaAllocations[waId] || 0) + alloc.percent;
-          totalAllocation += alloc.percent;
+          workAreaAllocations[waId] = (workAreaAllocations[waId] || 0) + alloc.days;
+          totalAllocation += alloc.days;
         });
       });
 
@@ -45,7 +45,7 @@ export default function AllocationHeatMap({ teams, members, sprints, allocations
       });
 
       const avgTotalAllocation = Math.round(totalAllocation / sprintCount);
-      const maxCapacity = member.availability_percent || 100;
+      const maxCapacity = member.sprint_days || 10;
       const utilizationPct = maxCapacity > 0 ? Math.round((avgTotalAllocation / maxCapacity) * 100) : 0;
 
       return {

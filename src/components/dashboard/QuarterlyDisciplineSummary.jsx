@@ -25,10 +25,10 @@ export default function QuarterlyDisciplineSummary({
         const discIds = new Set(discMembers.map((m) => m.id));
         const allocated = quarterAllocs
           .filter((a) => discIds.has(a.team_member_id))
-          .reduce((sum, a) => sum + a.percent, 0);
+          .reduce((sum, a) => sum + (a.days || 0), 0);
         const util =
           discMembers.length > 0
-            ? Math.round(allocated / discMembers.length)
+            ? Math.round(allocated * 100 / (discMembers.length * 60))
             : 0;
         return { discipline: disc, util, count: discMembers.length };
       })

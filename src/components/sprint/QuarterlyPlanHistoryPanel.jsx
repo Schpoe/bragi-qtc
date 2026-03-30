@@ -33,12 +33,12 @@ function DeltaBadge({ delta }) {
   if (delta === 0) return <Badge variant="outline" className="text-xs gap-1"><Minus className="w-3 h-3" /> No change</Badge>;
   if (delta > 0) return (
     <Badge className="text-xs gap-1 bg-amber-100 text-amber-800 border border-amber-300">
-      <TrendingUp className="w-3 h-3" /> +{delta}%
+      <TrendingUp className="w-3 h-3" /> +{delta}d
     </Badge>
   );
   return (
     <Badge className="text-xs gap-1 bg-blue-100 text-blue-800 border border-blue-300">
-      <TrendingDown className="w-3 h-3" /> {delta}%
+      <TrendingDown className="w-3 h-3" /> {delta}d
     </Badge>
   );
 }
@@ -61,7 +61,7 @@ function ActionBadge({ action }) {
 // ── CSV export ────────────────────────────────────────────────────────────────
 
 function exportChangesCSV(rows, quarter) {
-  const header = ["Member", "Discipline", "Work Item", "Work Item Type", "Initial %", "Current %", "Change %"];
+  const header = ["Member", "Discipline", "Work Item", "Work Item Type", "Initial (d)", "Current (d)", "Change (d)"];
   const lines = [
     header.join(","),
     ...rows.map(r => [
@@ -155,7 +155,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
           work_area_id: a.work_area_id,
           work_area_name: wa?.name ?? null,
           work_area_type: wa?.type ?? null,
-          percent: a.percent,
+          days: a.days,
         };
       });
 
@@ -244,7 +244,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
         <div className="space-y-2">
           {snapshots.map(snap => {
             const allocs = Array.isArray(snap.allocations) ? snap.allocations : [];
-            const nonZero = allocs.filter(a => a.percent > 0).length;
+            const nonZero = allocs.filter(a => (a.days ?? a.percent ?? 0) > 0).length;
             const canDelete = canManage;
             return (
               <div key={snap.id} className="rounded-lg border border-border bg-background p-3 flex items-start gap-3">
@@ -299,7 +299,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
             <DialogTitle>Revert to "{revertTarget?.label}"?</DialogTitle>
             <DialogDescription>
               This will replace all current allocations for <strong>{teamName}</strong> in <strong>{quarter}</strong> with
-              those from this snapshot ({Array.isArray(revertTarget?.allocations) ? revertTarget.allocations.filter(a => a.percent > 0).length : 0} allocations).
+              those from this snapshot ({Array.isArray(revertTarget?.allocations) ? revertTarget.allocations.filter(a => (a.days ?? a.percent ?? 0) > 0).length : 0} allocations).
               The current state will be lost unless you save it as a version first.
             </DialogDescription>
           </DialogHeader>
@@ -360,8 +360,8 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
     });
 
     return Object.values(pairMap).map(({ first, last }) => {
-      const initial = (first.action === "set") ? 0 : (first.old_percent ?? 0);
-      const current = (last.action === "removed") ? 0 : (last.new_percent ?? 0);
+      const initial = (first.action === "set") ? 0 : (first.old_days ?? 0);
+      const current = (last.action === "removed") ? 0 : (last.new_days ?? 0);
       const delta = current - initial;
       return {
         key: `${first.team_member_id}::${first.work_area_id}`,
@@ -480,11 +480,11 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
                                   <span className="truncate max-w-[160px] block" title={r.workAreaName}>{r.workAreaName}</span>
                                   {r.workAreaType && <span className="text-muted-foreground/60">{r.workAreaType}</span>}
                                 </td>
-                                <td className="py-2 px-3 text-center tabular-nums text-muted-foreground">{r.initial}%</td>
+                                <td className="py-2 px-3 text-center tabular-nums text-muted-foreground">{r.initial}d</td>
                                 <td className="py-2 px-1 text-center hidden sm:table-cell">
                                   <ArrowRight className="w-3 h-3 text-muted-foreground/40 mx-auto" />
                                 </td>
-                                <td className="py-2 px-3 text-center tabular-nums font-semibold">{r.current}%</td>
+                                <td className="py-2 px-3 text-center tabular-nums font-semibold">{r.current}d</td>
                                 <td className="py-2 pl-3 text-right"><DeltaBadge delta={r.delta} /></td>
                               </tr>
                             ))}
@@ -502,11 +502,11 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
                                 <td className="py-2 pr-3 font-medium whitespace-nowrap">{r.memberName}</td>
                                 <td className="py-2 px-3 text-muted-foreground hidden sm:table-cell">{r.discipline}</td>
                                 <td className="py-2 px-3">{r.workAreaName}</td>
-                                <td className="py-2 px-3 text-center tabular-nums text-muted-foreground">{r.initial}%</td>
+                                <td className="py-2 px-3 text-center tabular-nums text-muted-foreground">{r.initial}d</td>
                                 <td className="py-2 px-1 text-center hidden sm:table-cell">
                                   <ArrowRight className="w-3 h-3 text-muted-foreground/40 mx-auto" />
                                 </td>
-                                <td className="py-2 px-3 text-center tabular-nums">{r.current}%</td>
+                                <td className="py-2 px-3 text-center tabular-nums">{r.current}d</td>
                                 <td className="py-2 pl-3 text-right"><DeltaBadge delta={0} /></td>
                               </tr>
                             ))}
@@ -547,20 +547,20 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-0.5 text-muted-foreground">
                                   {h.action === "set" && (
-                                    <span>Set to <strong className="text-foreground">{h.new_percent}%</strong></span>
+                                    <span>Set to <strong className="text-foreground">{h.new_days}d</strong></span>
                                   )}
                                   {h.action === "updated" && (
                                     <span>
-                                      <strong className="text-muted-foreground line-through">{h.old_percent}%</strong>
+                                      <strong className="text-muted-foreground line-through">{h.old_days}d</strong>
                                       {" → "}
-                                      <strong className="text-foreground">{h.new_percent}%</strong>
+                                      <strong className="text-foreground">{h.new_days}d</strong>
                                     </span>
                                   )}
                                   {h.action === "removed" && (
-                                    <span>Removed <strong className="text-muted-foreground line-through">{h.old_percent}%</strong></span>
+                                    <span>Removed <strong className="text-muted-foreground line-through">{h.old_days}d</strong></span>
                                   )}
                                   {h.action === "reverted" && (
-                                    <span>Restored to <strong className="text-foreground">{h.new_percent}%</strong></span>
+                                    <span>Restored to <strong className="text-foreground">{h.new_days}d</strong></span>
                                   )}
                                 </div>
                               </div>

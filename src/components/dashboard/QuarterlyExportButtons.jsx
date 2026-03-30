@@ -34,19 +34,19 @@ export default function QuarterlyExportButtons({
       // Member-level: total allocation and per-work-area breakdown
       const memberRows = teamMembers.map((m) => {
         const mAllocs = teamAllocs.filter((a) => a.team_member_id === m.id);
-        const total = mAllocs.reduce((s, a) => s + a.percent, 0);
+        const total = mAllocs.reduce((s, a) => s + (a.days || 0), 0);
         const byWorkArea = mAllocs.map((a) => ({
           workArea: workAreas.find((wa) => wa.id === a.work_area_id)?.name ?? "Unknown",
-          percent: a.percent,
+          days: a.days,
         }));
         return { member: m, total, byWorkArea };
       });
 
-      // Overall util: average total per member
+      // Overall util: average days / default 60d capacity
       const overallUtil =
         teamMembers.length > 0
           ? Math.round(
-              teamAllocs.reduce((s, a) => s + a.percent, 0) / teamMembers.length
+              teamAllocs.reduce((s, a) => s + (a.days || 0), 0) * 100 / (teamMembers.length * 60)
             )
           : 0;
 
@@ -57,16 +57,16 @@ export default function QuarterlyExportButtons({
         const discIds = new Set(discMembers.map((m) => m.id));
         const discAlloc = teamAllocs
           .filter((a) => discIds.has(a.team_member_id))
-          .reduce((s, a) => s + a.percent, 0);
+          .reduce((s, a) => s + (a.days || 0), 0);
         const util =
-          discMembers.length > 0 ? Math.round(discAlloc / discMembers.length) : 0;
+          discMembers.length > 0 ? Math.round(discAlloc * 100 / (discMembers.length * 60)) : 0;
         return { discipline: disc, util, memberCount: discMembers.length };
       });
 
       // Top work items
       const waMap = {};
       teamAllocs.forEach((a) => {
-        waMap[a.work_area_id] = (waMap[a.work_area_id] || 0) + a.percent;
+        waMap[a.work_area_id] = (waMap[a.work_area_id] || 0) + (a.days || 0);
       });
       const topWorkItems = Object.entries(waMap)
         .map(([waId, total]) => ({
@@ -127,8 +127,8 @@ export default function QuarterlyExportButtons({
         if (byWorkArea.length === 0) {
           memberRows.push([d.team.name, member.name, member.discipline ?? "", "—", 0]);
         } else {
-          byWorkArea.forEach(({ workArea, percent }) =>
-            memberRows.push([d.team.name, member.name, member.discipline ?? "", workArea, percent])
+          byWorkArea.forEach(({ workArea, days }) =>
+            memberRows.push([d.team.name, member.name, member.discipline ?? "", workArea, days])
           );
         }
       })
@@ -169,13 +169,13 @@ export default function QuarterlyExportButtons({
         ]),
         ...d.memberRows.flatMap(({ member, byWorkArea }) =>
           byWorkArea.length > 0
-            ? byWorkArea.map(({ workArea, percent }) => [
+            ? byWorkArea.map(({ workArea, days }) => [
                 "Member Allocation",
                 d.team.name,
                 member.name,
                 member.discipline ?? "",
                 workArea,
-                percent,
+                days,
               ])
             : [["Member Allocation", d.team.name, member.name, member.discipline ?? "", "—", 0]]
         ),
