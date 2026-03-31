@@ -101,8 +101,8 @@ export default function Dashboard() {
 
   // Members scoped to the selected team
   const quarterlyTabMembers = useMemo(() =>
-    selectedTeamId === "all" ? members : members.filter(m => m.team_id === selectedTeamId),
-    [members, selectedTeamId]
+    selectedTeamId === "all" ? activeMembers : activeMembers.filter(m => m.team_id === selectedTeamId),
+    [activeMembers, selectedTeamId]
   );
 
   // Work areas restricted to what was actually selected in the quarterly plan
@@ -118,9 +118,9 @@ export default function Dashboard() {
 
   // Over-allocated members in the quarterly plan for the selected quarter + team
   const quarterlyAlerts = useMemo(() => {
-    const relevantMembers = selectedTeamId === "all" ? members : quarterlyTabMembers;
+    const relevantMembers = selectedTeamId === "all" ? activeMembers : quarterlyTabMembers;
     const quarterAllocs = quarterlyAllocations.filter(a => a.quarter === selectedQuarter);
-    const teamMap = Object.fromEntries(teams.map(t => [t.id, t.name]));
+    const teamMap = Object.fromEntries(activeTeams.map(t => [t.id, t.name]));
 
     return relevantMembers
       .map(member => {
@@ -144,6 +144,9 @@ export default function Dashboard() {
     });
     return byTeam;
   }, [quarterlyAlerts]);
+
+  const activeTeams = useMemo(() => teams.filter(t => t.is_active !== false), [teams]);
+  const activeMembers = useMemo(() => members.filter(m => activeTeams.some(t => t.id === m.team_id)), [members, activeTeams]);
 
   const isLoading = teamsLoading;
 
@@ -171,8 +174,8 @@ export default function Dashboard() {
       ) : (
         <>
           <StatsRow
-            teams={teams}
-            members={members}
+            teams={activeTeams}
+            members={activeMembers}
             workAreas={filteredWorkAreas}
             sprints={quarterSprints}
             allocations={allocations}
@@ -182,8 +185,8 @@ export default function Dashboard() {
           <div className="mb-6">
               <div className="flex justify-end mb-4">
                 <QuarterlyExportButtons
-                  teams={teams}
-                  members={members}
+                  teams={activeTeams}
+                  members={activeMembers}
                   workAreas={workAreas}
                   quarterlyAllocations={quarterlyAllocations}
                   selectedQuarter={selectedQuarter}
@@ -228,7 +231,7 @@ export default function Dashboard() {
               <div id="quarterly-plan-content" className="space-y-6">
                 {/* Top 15 Work Items + Allocation by Type — always at the top */}
                 <QuarterlyWorkItemSummary
-                  members={selectedTeamId === "all" ? members : quarterlyTabMembers}
+                  members={selectedTeamId === "all" ? activeMembers : quarterlyTabMembers}
                   workAreas={workAreas}
                   quarterlyAllocations={quarterlyAllocations}
                   selectedQuarter={selectedQuarter}
@@ -236,8 +239,8 @@ export default function Dashboard() {
 
                 {selectedTeamId === "all" ? (
                   <QuarterlyTeamsSummary
-                    teams={teams}
-                    members={members}
+                    teams={activeTeams}
+                    members={activeMembers}
                     workAreas={workAreas}
                     quarterlyAllocations={quarterlyAllocations}
                     workAreaSelections={workAreaSelections}
