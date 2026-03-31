@@ -17,7 +17,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONF_FILE="$SCRIPT_DIR/.backup.conf"
 ENV_FILE="$SCRIPT_DIR/.env"
 LOG_FILE="$SCRIPT_DIR/backup.log"
-MOUNT_POINT="/Volumes/bragi-nas"
+MOUNT_POINT="/mnt/bragi-nas"
 
 # ── Load config ───────────────────────────────────────────────────────────────
 for f in "$CONF_FILE" "$ENV_FILE"; do
@@ -45,7 +45,7 @@ die() { log "ERROR: $*"; exit 1; }
 # ── Cleanup on exit ───────────────────────────────────────────────────────────
 TEMP_DIR=""
 cleanup() {
-  mount | grep -q "$MOUNT_POINT" && umount "$MOUNT_POINT" 2>/dev/null || true
+  mountpoint -q "$MOUNT_POINT" 2>/dev/null && umount "$MOUNT_POINT" 2>/dev/null || true
   [[ -n "$TEMP_DIR" && -d "$TEMP_DIR" ]] && rm -rf "$TEMP_DIR"
 }
 trap cleanup EXIT
@@ -91,7 +91,8 @@ log "  Archive: ${BACKUP_NAME}.tar.gz ($ARCHIVE_SIZE)"
 # ── 4. Mount NAS and copy ─────────────────────────────────────────────────────
 log "Mounting NAS //${NAS_HOST}/${NAS_SHARE}..."
 mkdir -p "$MOUNT_POINT"
-mount_smbfs "//${NAS_USER}:${NAS_PASS}@${NAS_HOST}/${NAS_SHARE}" "$MOUNT_POINT" \
+mount -t cifs "//${NAS_HOST}/${NAS_SHARE}" "$MOUNT_POINT" \
+  -o "username=${NAS_USER},password=${NAS_PASS},uid=$(id -u),gid=$(id -g),file_mode=0660,dir_mode=0770" \
   || die "Failed to mount NAS — check NAS_HOST/USER/PASS and connectivity"
 
 REMOTE_DIR="${MOUNT_POINT}/${NAS_BACKUP_DIR}"
