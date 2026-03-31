@@ -5,8 +5,11 @@ const { requireAuth } = require('../middleware/auth');
  * @param {import('express').Router} router
  * @param {object} model - Prisma model delegate (e.g. prisma.team)
  * @param {string[]} [filterableFields] - Fields allowed as query-string filters
+ * @param {object} [options]
+ * @param {object} [options.orderBy] - Prisma orderBy clause (default: { created_at: 'asc' })
  */
-function attachCrud(router, model, filterableFields = []) {
+function attachCrud(router, model, filterableFields = [], options = {}) {
+  const orderBy = options.orderBy ?? { created_at: 'asc' };
   // List
   router.get('/', requireAuth, async (req, res) => {
     try {
@@ -16,7 +19,7 @@ function attachCrud(router, model, filterableFields = []) {
           where[field] = req.query[field];
         }
       }
-      const items = await model.findMany({ where, orderBy: { created_at: 'asc' } });
+      const items = await model.findMany({ where, orderBy });
       res.json(items);
     } catch (err) {
       console.error(err);
