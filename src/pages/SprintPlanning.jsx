@@ -424,7 +424,7 @@ export default function SprintPlanning() {
             <EmptyState icon={CalendarRange} title="No teams yet" description="First create a team under 'Teams'." />
           ) : isViewingAllTeams ? (
             <div className="space-y-6">
-              {teams.map(team => {
+              {teams.filter(t => t.is_active !== false).map(team => {
                 const tMembers = members.filter(m => m.team_id === team.id);
                 if (tMembers.length === 0) return null;
                 const tMemberIds = new Set(tMembers.map(m => m.id));
@@ -662,7 +662,7 @@ export default function SprintPlanning() {
                   <SelectValue placeholder="Select a team" />
                 </SelectTrigger>
                 <SelectContent>
-                  {teams.map(team => (
+                  {teams.filter(t => t.is_active !== false).map(team => (
                     <SelectItem key={team.id} value={team.id}>
                       {team.name}
                     </SelectItem>

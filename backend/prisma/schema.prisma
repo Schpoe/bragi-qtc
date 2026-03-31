@@ -27,6 +27,7 @@ model Team {
   color       String?
   description String?
   lead_id     String?
+  is_active   Boolean  @default(true)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 }

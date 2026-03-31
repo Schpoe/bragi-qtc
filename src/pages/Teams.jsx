@@ -3,7 +3,7 @@ import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { Plus, Users } from "lucide-react";
-import { canManageTeam, getManageableTeams } from "@/lib/permissions";
+import { canManageTeam, getManageableTeams, isAdmin } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import PageHeader from "../components/shared/PageHeader";
@@ -41,6 +41,11 @@ export default function Teams() {
 
   const deleteTeam = useMutation({
     mutationFn: (id) => bragiQTC.entities.Team.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teams"] }),
+  });
+
+  const toggleTeam = useMutation({
+    mutationFn: (team) => bragiQTC.entities.Team.update(team.id, { is_active: team.is_active === false }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["teams"] }),
   });
 
@@ -92,6 +97,7 @@ export default function Teams() {
               team={team}
               members={members.filter(m => m.team_id === team.id)}
               onEdit={canManageTeam(user, team.id) ? (t) => { setEditingTeam(t); setTeamDialogOpen(true); } : null}
+              onToggleDisable={isAdmin(user) ? (t) => toggleTeam.mutate(t) : null}
               onDelete={canManageTeam(user, team.id) ? (t) => deleteTeam.mutate(t.id) : null}
               onClick={() => setSelectedTeam(team.id)}
             />

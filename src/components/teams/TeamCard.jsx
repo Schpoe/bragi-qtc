@@ -1,7 +1,8 @@
 import React from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Pencil, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Users, Pencil, Trash2, EyeOff, Eye } from "lucide-react";
 import DisciplineBadge from "../shared/DisciplineBadge";
 
 const teamColors = {
@@ -27,12 +28,13 @@ const teamColors = {
   stone: "bg-stone-500",
 };
 
-export default function TeamCard({ team, members, onEdit, onDelete, onClick }) {
+export default function TeamCard({ team, members, onEdit, onDelete, onToggleDisable, onClick }) {
   const disciplines = [...new Set(members.map(m => m.discipline))];
+  const isDisabled = team.is_active === false;
 
   return (
-    <Card 
-      className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-border/60 hover:border-primary/30"
+    <Card
+      className={`group hover:shadow-lg transition-all duration-300 cursor-pointer border-border/60 hover:border-primary/30 ${isDisabled ? "opacity-50" : ""}`}
       onClick={onClick}
     >
       <CardHeader className="pb-3">
@@ -40,12 +42,18 @@ export default function TeamCard({ team, members, onEdit, onDelete, onClick }) {
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${teamColors[team.color] || "bg-primary"}`} />
             <h3 className="font-semibold text-foreground">{team.name}</h3>
+            {isDisabled && <Badge variant="secondary" className="text-xs">Disabled</Badge>}
           </div>
-          {(onEdit || onDelete) && (
+          {(onEdit || onDelete || onToggleDisable) && (
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               {onEdit && (
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onEdit(team); }}>
                   <Pencil className="w-3.5 h-3.5" />
+                </Button>
+              )}
+              {onToggleDisable && (
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" title={isDisabled ? "Enable team" : "Disable team"} onClick={(e) => { e.stopPropagation(); onToggleDisable(team); }}>
+                  {isDisabled ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                 </Button>
               )}
               {onDelete && (
