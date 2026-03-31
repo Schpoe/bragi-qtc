@@ -45,7 +45,7 @@ die() { log "ERROR: $*"; exit 1; }
 # ── Cleanup on exit ───────────────────────────────────────────────────────────
 TEMP_DIR=""
 cleanup() {
-  mountpoint -q "$MOUNT_POINT" 2>/dev/null && umount "$MOUNT_POINT" 2>/dev/null || true
+  mountpoint -q "$MOUNT_POINT" 2>/dev/null && sudo umount "$MOUNT_POINT" 2>/dev/null || true
   [[ -n "$TEMP_DIR" && -d "$TEMP_DIR" ]] && rm -rf "$TEMP_DIR"
 }
 trap cleanup EXIT
@@ -90,8 +90,8 @@ log "  Archive: ${BACKUP_NAME}.tar.gz ($ARCHIVE_SIZE)"
 
 # ── 4. Mount NAS and copy ─────────────────────────────────────────────────────
 log "Mounting NAS //${NAS_HOST}/${NAS_SHARE}..."
-mkdir -p "$MOUNT_POINT"
-mount -t cifs "//${NAS_HOST}/${NAS_SHARE}" "$MOUNT_POINT" \
+sudo mkdir -p "$MOUNT_POINT"
+sudo mount -t cifs "//${NAS_HOST}/${NAS_SHARE}" "$MOUNT_POINT" \
   -o "username=${NAS_USER},password=${NAS_PASS},uid=$(id -u),gid=$(id -g),file_mode=0660,dir_mode=0770" \
   || die "Failed to mount NAS — check NAS_HOST/USER/PASS and connectivity"
 
