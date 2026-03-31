@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 export default function QuarterlyAllocationDialog({ open, onOpenChange, quarter, teamId, onConfirm, initialSelectedIds = new Set() }) {
    const [selectedWorkAreaIds, setSelectedWorkAreaIds] = useState(new Set());
+   const [initialOrderIds, setInitialOrderIds] = useState(new Set());
    const [searchQuery, setSearchQuery] = useState("");
 
    const { data: workAreas = [] } = useQuery({
@@ -19,9 +20,12 @@ export default function QuarterlyAllocationDialog({ open, onOpenChange, quarter,
 
    useEffect(() => {
      if (open) {
-       setSelectedWorkAreaIds(new Set(initialSelectedIds));
+       const ids = new Set(initialSelectedIds);
+       setSelectedWorkAreaIds(ids);
+       setInitialOrderIds(ids);
      } else {
        setSelectedWorkAreaIds(new Set());
+       setInitialOrderIds(new Set());
        setSearchQuery("");
      }
    }, [open, initialSelectedIds]);
@@ -42,8 +46,8 @@ export default function QuarterlyAllocationDialog({ open, onOpenChange, quarter,
   const filterBySearch = (items) => items
     .filter(wa => wa.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => {
-      const aSelected = selectedWorkAreaIds.has(a.id);
-      const bSelected = selectedWorkAreaIds.has(b.id);
+      const aSelected = initialOrderIds.has(a.id);
+      const bSelected = initialOrderIds.has(b.id);
       if (aSelected !== bSelected) return aSelected ? -1 : 1;
       return 0;
     });
