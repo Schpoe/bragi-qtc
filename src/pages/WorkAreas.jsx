@@ -230,7 +230,11 @@ export default function WorkAreas() {
 
   const deleteWA = useMutation({
     mutationFn: (id) => bragiQTC.entities.WorkArea.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workAreas"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workAreas"] });
+      toast.success("Work item deleted");
+    },
+    onError: (err) => toast.error("Failed to delete work item: " + err.message),
   });
 
   const handleSave = (data) => {
