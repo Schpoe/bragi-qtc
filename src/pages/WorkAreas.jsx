@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import PageHeader from "../components/shared/PageHeader";
@@ -22,7 +23,7 @@ import JiraSyncButton from "../components/workareas/JiraSyncButton";
 import EpicLinkDialog from "../components/workareas/EpicLinkDialog";
 import JiraSyncHistoryTab from "../components/workareas/JiraSyncHistoryTab";
 import { useAuth } from "@/lib/AuthContext";
-import { canManageWorkAreas, canCreateWorkArea, isViewer, getManageableTeams, canManageAllocations } from "@/lib/permissions";
+import { canManageWorkAreas, canCreateWorkArea, isViewer, isAdmin, getManageableTeams, canManageAllocations } from "@/lib/permissions";
 import { useQuarters } from "@/lib/useQuarters";
 import { getCurrentQuarter } from "@/lib/quarter-utils";
 import { toast } from "sonner";
@@ -152,11 +153,13 @@ export default function WorkAreas() {
   const [mainTab, setMainTab] = useState("items");
   const queryClient = useQueryClient();
 
-  // Multi-select for "Add to Quarterly Plan"
+  // Multi-select for "Add to Quarterly Plan" / bulk delete
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [assignTeamId, setAssignTeamId] = useState("");
   const [assignQuarter, setAssignQuarter] = useState(() => getCurrentQuarter());
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [idsToDelete, setIdsToDelete] = useState([]);
 
   const { data: workAreas = [], isLoading } = useQuery({
     queryKey: ["workAreas"],
@@ -236,6 +239,26 @@ export default function WorkAreas() {
     },
     onError: (err) => toast.error("Failed to delete work item: " + err.message),
   });
+
+  const bulkDeleteWA = useMutation({
+    mutationFn: (ids) => Promise.all(ids.map(id => bragiQTC.entities.WorkArea.delete(id))),
+    onSuccess: (_, ids) => {
+      queryClient.invalidateQueries({ queryKey: ["workAreas"] });
+      toast.success(`${ids.length} work item${ids.length !== 1 ? "s" : ""} deleted`);
+      setSelectedIds(new Set());
+    },
+    onError: (err) => toast.error("Failed to delete work items: " + err.message),
+  });
+
+  const handleBulkDeleteRequest = (ids) => {
+    setIdsToDelete(ids);
+    setBulkDeleteConfirmOpen(true);
+  };
+
+  const confirmBulkDelete = () => {
+    bulkDeleteWA.mutate(idsToDelete);
+    setBulkDeleteConfirmOpen(false);
+  };
 
   const handleSave = (data) => {
     if (editing) {
@@ -407,7 +430,7 @@ export default function WorkAreas() {
               />
             )}
 
-            {/* Result count */}
+            {/* Result count + select all */}
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <span>
                 <span className="font-semibold text-foreground">{filteredWorkAreas.length}</span> work item{filteredWorkAreas.length !== 1 ? "s" : ""}
@@ -423,6 +446,25 @@ export default function WorkAreas() {
                   </span>
                 )}
               </span>
+              {isAdmin(user) && filteredWorkAreas.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto py-0.5 px-2 text-xs text-muted-foreground"
+                  onClick={() => {
+                    const allIds = filteredWorkAreas.map(wa => wa.id);
+                    const allSelected = allIds.every(id => selectedIds.has(id));
+                    if (allSelected) {
+                      setSelectedIds(new Set());
+                    } else {
+                      setSelectedIds(new Set(allIds));
+                    }
+                  }}
+                >
+                  <CheckSquare className="w-3.5 h-3.5 mr-1" />
+                  {filteredWorkAreas.every(wa => selectedIds.has(wa.id)) ? "Deselect all" : "Select all"}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -449,7 +491,7 @@ export default function WorkAreas() {
                 const typeColor = resolveTypeColor(wa.type, workAreaTypes);
                 const dotColor = getWorkAreaColor(wa, workAreaTypes);
                 const isSelected = selectedIds.has(wa.id);
-                const canAssign = manageableTeams.length > 0;
+                const canAssign = manageableTeams.length > 0 || isAdmin(user);
 
                 return (
                   <Card key={wa.id} className={`group border-border/60 hover:shadow-md transition-all ${isSelected ? "ring-2 ring-primary border-primary/40" : ""}`}>
@@ -530,10 +572,12 @@ export default function WorkAreas() {
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditing(wa); setDialogOpen(true); }}>
                                 <Pencil className="w-3.5 h-3.5" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteWA.mutate(wa.id)}>
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
                             </>
+                          )}
+                          {isAdmin(user) && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleBulkDeleteRequest([wa.id])}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -556,9 +600,16 @@ export default function WorkAreas() {
       {selectedIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-card border border-border shadow-xl rounded-full px-5 py-3">
           <span className="text-sm font-medium">{selectedIds.size} work item{selectedIds.size !== 1 ? "s" : ""} selected</span>
-          <Button size="sm" className="gap-2 rounded-full" onClick={() => { setAssignTeamId(manageableTeams.length === 1 ? manageableTeams[0].id : ""); setAssignDialogOpen(true); }}>
-            <CalendarRange className="w-4 h-4" /> Add to Quarterly Plan
-          </Button>
+          {manageableTeams.length > 0 && (
+            <Button size="sm" className="gap-2 rounded-full" onClick={() => { setAssignTeamId(manageableTeams.length === 1 ? manageableTeams[0].id : ""); setAssignDialogOpen(true); }}>
+              <CalendarRange className="w-4 h-4" /> Add to Quarterly Plan
+            </Button>
+          )}
+          {isAdmin(user) && (
+            <Button size="sm" variant="destructive" className="gap-2 rounded-full" onClick={() => handleBulkDeleteRequest(Array.from(selectedIds))}>
+              <Trash2 className="w-4 h-4" /> Delete
+            </Button>
+          )}
           <Button size="sm" variant="ghost" className="rounded-full" onClick={() => setSelectedIds(new Set())}>
             <X className="w-4 h-4" />
           </Button>
@@ -633,6 +684,27 @@ export default function WorkAreas() {
         workArea={linkingWorkArea}
         onLinked={handleEpicLinked}
       />
+
+      {/* ── Bulk delete confirmation ─────────────────────────────────────────── */}
+      <AlertDialog open={bulkDeleteConfirmOpen} onOpenChange={setBulkDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {idsToDelete.length} work item{idsToDelete.length !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {idsToDelete.length === 1 ? "this work item" : `these ${idsToDelete.length} work items`}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmBulkDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
