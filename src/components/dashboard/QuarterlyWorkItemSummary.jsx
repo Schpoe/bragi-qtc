@@ -31,8 +31,10 @@ export default function QuarterlyWorkItemSummary({
   );
 
   const memberCount = members.length;
+  // Total quarterly capacity for the team (default 60 days/member)
+  const totalCapacityDays = memberCount * 60;
 
-  // Raw sums per work area (un-normalised), scoped to relevant members + quarter.
+  // Raw sums per work area, scoped to relevant members + quarter.
   const rawSums = useMemo(() => {
     if (memberCount === 0) return {};
     const map = {};
@@ -44,40 +46,39 @@ export default function QuarterlyWorkItemSummary({
     return map;
   }, [quarterAllocs, memberIds, memberCount]);
 
-  // Normalise per work area: raw sum / memberCount = avg % of capacity per member.
-  // Top 15 by normalised value.
+  // Top 15 by total days allocated. Bar width = share of total team capacity.
   const top15 = useMemo(() => {
     return Object.entries(rawSums)
-      .map(([waId, sum]) => {
+      .map(([waId, days]) => {
         const wa = workAreas.find((w) => w.id === waId);
         return {
           name: wa?.name ?? "Unknown",
           color: getWorkAreaColor(wa),
-          pct: Math.round(sum / memberCount),
+          days,
+          pct: totalCapacityDays > 0 ? Math.round(days * 100 / totalCapacityDays) : 0,
         };
       })
-      .sort((a, b) => b.pct - a.pct)
+      .sort((a, b) => b.days - a.days)
       .slice(0, 15);
-  }, [rawSums, workAreas, memberCount]);
+  }, [rawSums, workAreas, totalCapacityDays]);
 
-  // Type breakdown: aggregate RAW sums per type first, then normalise once.
-  // Summing already-normalised per-WA values would inflate results when a type
-  // has many work areas (e.g. 8 Features × 15% each = 120%, which is wrong).
+  // Type breakdown: aggregate raw days per type, show as % of total capacity.
   const typeBreakdown = useMemo(() => {
     const rawByType = {};
-    Object.entries(rawSums).forEach(([waId, sum]) => {
+    Object.entries(rawSums).forEach(([waId, days]) => {
       const type = workAreas.find((w) => w.id === waId)?.type ?? "Other";
-      rawByType[type] = (rawByType[type] || 0) + sum;
+      rawByType[type] = (rawByType[type] || 0) + days;
     });
     return Object.entries(rawByType)
-      .map(([type, sum]) => ({ type, pct: Math.round(sum / memberCount) }))
-      .sort((a, b) => b.pct - a.pct);
-  }, [rawSums, workAreas, memberCount]);
+      .map(([type, days]) => ({
+        type,
+        days,
+        pct: totalCapacityDays > 0 ? Math.round(days * 100 / totalCapacityDays) : 0,
+      }))
+      .sort((a, b) => b.days - a.days);
+  }, [rawSums, workAreas, totalCapacityDays]);
 
   if (top15.length === 0 && typeBreakdown.length === 0) return null;
-
-  const maxItem = top15[0]?.pct ?? 1;
-  const maxType = typeBreakdown[0]?.pct ?? 1;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -89,7 +90,7 @@ export default function QuarterlyWorkItemSummary({
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-3">
-              {top15.map(({ name, color, pct }, idx) => (
+              {top15.map(({ name, color, days, pct }, idx) => (
                 <div key={idx}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -100,10 +101,10 @@ export default function QuarterlyWorkItemSummary({
                       <span className="text-sm truncate" title={name}>{name}</span>
                     </div>
                     <span className="text-sm font-semibold tabular-nums text-muted-foreground ml-3 flex-shrink-0">
-                      {pct}%
+                      {days}d · {pct}%
                     </span>
                   </div>
-                  <HBar value={pct} max={maxItem} color={color || "#6b7280"} />
+                  <HBar value={pct} max={100} color={color || "#6b7280"} />
                 </div>
               ))}
             </div>
@@ -119,7 +120,7 @@ export default function QuarterlyWorkItemSummary({
           </CardHeader>
           <CardContent className="pt-4">
             <div className="space-y-3">
-              {typeBreakdown.map(({ type, pct }) => {
+              {typeBreakdown.map(({ type, days, pct }) => {
                 const color = getWorkAreaTypeColor(type);
                 return (
                   <div key={type}>
@@ -132,10 +133,10 @@ export default function QuarterlyWorkItemSummary({
                         <span className="text-sm font-medium">{type}</span>
                       </div>
                       <span className="text-sm font-semibold tabular-nums text-muted-foreground ml-3">
-                        {pct}%
+                        {days}d · {pct}%
                       </span>
                     </div>
-                    <HBar value={pct} max={maxType} color={color} />
+                    <HBar value={pct} max={100} color={color} />
                   </div>
                 );
               })}

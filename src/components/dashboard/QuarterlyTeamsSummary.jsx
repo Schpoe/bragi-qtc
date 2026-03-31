@@ -212,7 +212,7 @@ export default function QuarterlyTeamsSummary({
                             style={{ backgroundColor: color || "#6b7280" }}
                           />
                           <span className="text-xs truncate flex-1" title={name}>{name}</span>
-                          <span className="text-xs font-semibold tabular-nums text-muted-foreground">{total}%</span>
+                          <span className="text-xs font-semibold tabular-nums text-muted-foreground">{total}d</span>
                         </div>
                       ))}
                     </div>
