@@ -80,7 +80,7 @@ export default function Layout({ children, currentPageName }) {
         collapsed ? "w-14" : "w-64"
       )}>
         {/* Header */}
-        <div className={cn("border-b border-border flex items-center", collapsed ? "p-3 justify-center" : "p-5")}>
+        <div className={cn("border-b border-border flex items-center justify-between", collapsed ? "p-3 flex-col gap-2" : "p-5")}>
           {collapsed ? (
             <img src={logo} alt="Bragi" className="h-7 w-auto" />
           ) : (
@@ -94,6 +94,14 @@ export default function Layout({ children, currentPageName }) {
               <p className="text-xs text-muted-foreground mt-0.5">Quarterly Capacity Planning</p>
             </div>
           )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground" onClick={toggleCollapsed}>
+                {collapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">{collapsed ? "Expand sidebar" : "Collapse sidebar"}</TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Nav */}
@@ -170,15 +178,6 @@ export default function Layout({ children, currentPageName }) {
               Logout
             </Button>
           )}
-          {/* Collapse toggle */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="w-full h-9 text-muted-foreground hover:text-foreground" onClick={toggleCollapsed}>
-                {collapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">{collapsed ? "Expand sidebar" : "Collapse sidebar"}</TooltipContent>
-          </Tooltip>
         </div>
       </aside>
       </TooltipProvider>
