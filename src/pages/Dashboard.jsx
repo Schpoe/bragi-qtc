@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarRange, AlertTriangle } from "lucide-react";
-import { getCurrentQuarter } from "@/lib/quarter-utils";
+import { useSelectedQuarter, useSelectedTeam } from "@/lib/useSelectedQuarter";
 import { useQuarters } from "@/lib/useQuarters";
 import PageHeader from "../components/shared/PageHeader";
 import FilterBar from "../components/shared/FilterBar";
@@ -23,8 +23,8 @@ import QuarterlyWorkItemSummary from "../components/dashboard/QuarterlyWorkItemS
 import QuarterlyDisciplineSummary from "../components/dashboard/QuarterlyDisciplineSummary";
 
 export default function Dashboard() {
-  const [selectedQuarter, setSelectedQuarter] = useState(() => getCurrentQuarter());
-  const [selectedTeamId, setSelectedTeamId] = useState("all");
+  const [selectedQuarter, setSelectedQuarter] = useSelectedQuarter();
+  const [selectedTeamId, setSelectedTeamId] = useSelectedTeam();
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ["teams"],

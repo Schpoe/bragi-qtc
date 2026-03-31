@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { getCurrentQuarter } from "@/lib/quarter-utils";
+import { useSelectedQuarter, useSelectedTeam } from "@/lib/useSelectedQuarter";
 import { useQuarters } from "@/lib/useQuarters";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
@@ -26,12 +26,11 @@ export default function SprintPlanning() {
   const { user } = useAuth();
   const [sprintDialogOpen, setSprintDialogOpen] = useState(false);
   const [editingSprint, setEditingSprint] = useState(null);
-  const [selectedQuarter, setSelectedQuarter] = useState(() => getCurrentQuarter());
-  const [selectedTeamId, setSelectedTeamId] = useState(() =>
-    isTeamManager(user) && user?.managed_team_ids?.length > 0
-      ? user.managed_team_ids[0]
-      : "all"
-  );
+  const [selectedQuarter, setSelectedQuarter] = useSelectedQuarter();
+  const defaultTeamId = isTeamManager(user) && user?.managed_team_ids?.length > 0
+    ? user.managed_team_ids[0]
+    : "all";
+  const [selectedTeamId, setSelectedTeamId] = useSelectedTeam(defaultTeamId);
   const [teamSelectDialogOpen, setTeamSelectDialogOpen] = useState(false);
   const [teamSelectValue, setTeamSelectValue] = useState("");
   const [sprintToCopy, setSprintToCopy] = useState(null);

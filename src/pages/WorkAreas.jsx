@@ -25,7 +25,7 @@ import JiraSyncHistoryTab from "../components/workareas/JiraSyncHistoryTab";
 import { useAuth } from "@/lib/AuthContext";
 import { canManageWorkAreas, canCreateWorkArea, isViewer, isAdmin, getManageableTeams, canManageAllocations } from "@/lib/permissions";
 import { useQuarters } from "@/lib/useQuarters";
-import { getCurrentQuarter } from "@/lib/quarter-utils";
+import { useSelectedQuarter } from "@/lib/useSelectedQuarter";
 import { toast } from "sonner";
 
 // ── Pie chart tooltip ─────────────────────────────────────────────────────────
@@ -157,7 +157,7 @@ export default function WorkAreas() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [assignTeamId, setAssignTeamId] = useState("");
-  const [assignQuarter, setAssignQuarter] = useState(() => getCurrentQuarter());
+  const [assignQuarter, setAssignQuarter] = useSelectedQuarter();
   const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
   const [idsToDelete, setIdsToDelete] = useState([]);
 
