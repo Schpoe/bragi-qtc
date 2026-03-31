@@ -68,8 +68,9 @@ export default function ImpersonateUserDialog({ open, onOpenChange }) {
                     onClick={() => handleImpersonate(u)}
                   >
                     <div>
-                      <div className="font-medium text-sm">{u.full_name || u.email}</div>
-                      <div className="text-xs text-muted-foreground">{u.email}</div>
+                      {u.full_name && <div className="font-medium text-sm">{u.full_name}</div>}
+                      <div className={u.full_name ? "text-xs text-muted-foreground" : "font-medium text-sm"}>{u.email}</div>
+                      <div className="text-xs text-muted-foreground capitalize">{u.role || "viewer"}</div>
                     </div>
                   </Button>
                 ))
