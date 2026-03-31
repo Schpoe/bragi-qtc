@@ -97,6 +97,9 @@ export default function Dashboard() {
     ? workAreas
     : workAreas.filter((wa) => wa.is_cross_team || wa.leading_team_id === selectedTeamId || wa.supporting_team_ids.includes(selectedTeamId));
 
+  const activeTeams = useMemo(() => teams.filter(t => t.is_active !== false), [teams]);
+  const activeMembers = useMemo(() => members.filter(m => activeTeams.some(t => t.id === m.team_id)), [members, activeTeams]);
+
   // ── Quarterly tab data ───────────────────────────────────────────────────────
 
   // Members scoped to the selected team
@@ -144,9 +147,6 @@ export default function Dashboard() {
     });
     return byTeam;
   }, [quarterlyAlerts]);
-
-  const activeTeams = useMemo(() => teams.filter(t => t.is_active !== false), [teams]);
-  const activeMembers = useMemo(() => members.filter(m => activeTeams.some(t => t.id === m.team_id)), [members, activeTeams]);
 
   const isLoading = teamsLoading;
 
