@@ -101,7 +101,7 @@ export default function QuarterlyWorkItemSummary({
                       <span className="text-sm truncate" title={name}>{name}</span>
                     </div>
                     <span className="text-sm font-semibold tabular-nums text-muted-foreground ml-3 flex-shrink-0">
-                      {days}d · {pct}%
+                      {pct}% · {days}d
                     </span>
                   </div>
                   <HBar value={pct} max={100} color={color || "#6b7280"} />
@@ -133,7 +133,7 @@ export default function QuarterlyWorkItemSummary({
                         <span className="text-sm font-medium">{type}</span>
                       </div>
                       <span className="text-sm font-semibold tabular-nums text-muted-foreground ml-3">
-                        {days}d · {pct}%
+                        {pct}% · {days}d
                       </span>
                     </div>
                     <HBar value={pct} max={100} color={color} />
