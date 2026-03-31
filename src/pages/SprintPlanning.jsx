@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
@@ -380,15 +380,15 @@ export default function SprintPlanning() {
    // Work items for Quarterly Plan tab — based solely on team assignment,
    // quarterly allocations, and manual quarterly selection. Sprint work items
    // do NOT bleed into this pool.
-   const teamMemberIds = new Set(teamMembers.map(m => m.id));
-   const workAreasWithAllocations = new Set(
+   const teamMemberIds = useMemo(() => new Set(teamMembers.map(m => m.id)), [teamMembers]);
+   const workAreasWithAllocations = useMemo(() => new Set(
      quarterlyAllocations
        .filter(a => teamMemberIds.has(a.team_member_id) && a.quarter === selectedQuarter)
        .map(a => a.work_area_id)
-   );
+   ), [quarterlyAllocations, teamMemberIds, selectedQuarter]);
 
    const currentSelection = workAreaSelections.find(s => s.team_id === effectiveTeamId && s.quarter === selectedQuarter);
-   const manuallySelectedIds = new Set(currentSelection?.work_area_ids || []);
+   const manuallySelectedIds = useMemo(() => new Set(currentSelection?.work_area_ids || []), [currentSelection]);
 
    const quarterlyWorkAreas = effectiveTeamId ? workAreas.filter(wa =>
      wa.is_cross_team ||
