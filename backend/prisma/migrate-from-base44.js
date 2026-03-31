@@ -259,21 +259,41 @@ async function importQuarterlyWorkAreaSelections() {
   console.log(`Imported ${count} quarterly work area selections`);
 }
 
+function fileExists(filename) {
+  return fs.existsSync(path.join(importDir, filename));
+}
+
 async function main() {
   console.log('Starting Base44 data migration...\n');
-  await importTeams();
-  await importWorkAreaTypes();
-  await importTeamMembers();
-  await importWorkAreas();
-  await importSprints();
+
+  if (fileExists('Team_export.csv')) await importTeams();
+  else console.log('Skipping teams (no Team_export.csv)');
+
+  if (fileExists('WorkAreaType_export.csv')) await importWorkAreaTypes();
+  else console.log('Skipping work area types (no WorkAreaType_export.csv)');
+
+  if (fileExists('TeamMember_export.csv')) await importTeamMembers();
+  else console.log('Skipping team members (no TeamMember_export.csv)');
+
+  if (fileExists('WorkArea_export.csv')) await importWorkAreas();
+  else console.log('Skipping work areas (no WorkArea_export.csv)');
+
+  if (fileExists('Sprint_export.csv')) await importSprints();
+  else console.log('Skipping sprints (no Sprint_export.csv)');
 
   // Build member → sprint_days map so allocation importers can convert percent → days
   const members = await prisma.teamMember.findMany({ select: { id: true, sprint_days: true } });
   const memberSprintDays = Object.fromEntries(members.map(m => [m.id, m.sprint_days]));
 
-  await importAllocations(memberSprintDays);
-  await importQuarterlyAllocations(memberSprintDays);
-  await importQuarterlyWorkAreaSelections();
+  if (fileExists('Allocation_export.csv')) await importAllocations(memberSprintDays);
+  else console.log('Skipping sprint allocations (no Allocation_export.csv)');
+
+  if (fileExists('QuarterlyAllocation_export.csv')) await importQuarterlyAllocations(memberSprintDays);
+  else console.log('Skipping quarterly allocations (no QuarterlyAllocation_export.csv)');
+
+  if (fileExists('QuarterlyWorkAreaSelection_export.csv')) await importQuarterlyWorkAreaSelections();
+  else console.log('Skipping quarterly work area selections (no QuarterlyWorkAreaSelection_export.csv)');
+
   console.log('\nMigration complete!');
 }
 
