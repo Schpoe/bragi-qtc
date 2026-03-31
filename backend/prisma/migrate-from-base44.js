@@ -93,6 +93,9 @@ async function importTeamMembers() {
   let count = 0;
   for (const row of rows.slice(1)) {
     if (!row[idx(h, 'id')]) continue;
+    // availability_percent (0-100) → sprint_days: 100% = 10 days, rounded
+    const availabilityPercent = parseIntVal(row[idx(h, 'availability_percent')], 100);
+    const sprintDays = Math.round(availabilityPercent / 10);
     await prisma.teamMember.upsert({
       where: { id: row[idx(h, 'id')] },
       update: {},
@@ -101,7 +104,7 @@ async function importTeamMembers() {
         team_id: row[idx(h, 'team_id')],
         name: row[idx(h, 'name')],
         discipline: row[idx(h, 'discipline')] || '',
-        availability_percent: parseIntVal(row[idx(h, 'availability_percent')], 100),
+        sprint_days: sprintDays,
         created_at: parseDate(row[idx(h, 'created_date')]) || new Date(),
         updated_at: parseDate(row[idx(h, 'updated_date')]) || new Date(),
       },
@@ -170,21 +173,25 @@ async function importSprints() {
   console.log(`Imported ${count} sprints`);
 }
 
-async function importAllocations() {
+async function importAllocations(memberSprintDays) {
   const rows = parseCSV(fs.readFileSync(path.join(importDir, 'Allocation_export.csv'), 'utf8'));
   const h = rows[0];
   let count = 0;
   for (const row of rows.slice(1)) {
     if (!row[idx(h, 'id')]) continue;
+    const memberId = row[idx(h, 'team_member_id')];
+    const sprintDays = memberSprintDays[memberId] ?? 10;
+    const percent = parseIntVal(row[idx(h, 'percent')], 0);
+    const days = Math.round(percent * sprintDays / 100);
     await prisma.allocation.upsert({
       where: { id: row[idx(h, 'id')] },
       update: {},
       create: {
         id: row[idx(h, 'id')],
         sprint_id: row[idx(h, 'sprint_id')],
-        team_member_id: row[idx(h, 'team_member_id')],
+        team_member_id: memberId,
         work_area_id: row[idx(h, 'work_area_id')],
-        percent: parseIntVal(row[idx(h, 'percent')], 0),
+        days,
         created_at: parseDate(row[idx(h, 'created_date')]) || new Date(),
         updated_at: parseDate(row[idx(h, 'updated_date')]) || new Date(),
       },
@@ -194,21 +201,32 @@ async function importAllocations() {
   console.log(`Imported ${count} allocations`);
 }
 
-async function importQuarterlyAllocations() {
+// Default quarterly working days used when no TeamMemberCapacity record exists.
+// Adjust if your quarters have a different number of working days.
+const DEFAULT_QUARTERLY_DAYS = 60;
+
+async function importQuarterlyAllocations(memberSprintDays) {
   const rows = parseCSV(fs.readFileSync(path.join(importDir, 'QuarterlyAllocation_export.csv'), 'utf8'));
   const h = rows[0];
   let count = 0;
   for (const row of rows.slice(1)) {
     if (!row[idx(h, 'id')]) continue;
+    const memberId = row[idx(h, 'team_member_id')];
+    // Use the member's sprint_days proportion to estimate quarterly days,
+    // falling back to DEFAULT_QUARTERLY_DAYS for a fully available member.
+    const sprintDays = memberSprintDays[memberId] ?? 10;
+    const quarterlyDays = Math.round(DEFAULT_QUARTERLY_DAYS * sprintDays / 10);
+    const percent = parseIntVal(row[idx(h, 'percent')], 0);
+    const days = Math.round(percent * quarterlyDays / 100);
     await prisma.quarterlyAllocation.upsert({
       where: { id: row[idx(h, 'id')] },
       update: {},
       create: {
         id: row[idx(h, 'id')],
         quarter: row[idx(h, 'quarter')],
-        team_member_id: row[idx(h, 'team_member_id')],
+        team_member_id: memberId,
         work_area_id: row[idx(h, 'work_area_id')],
-        percent: parseIntVal(row[idx(h, 'percent')], 0),
+        days,
         created_at: parseDate(row[idx(h, 'created_date')]) || new Date(),
         updated_at: parseDate(row[idx(h, 'updated_date')]) || new Date(),
       },
@@ -248,8 +266,13 @@ async function main() {
   await importTeamMembers();
   await importWorkAreas();
   await importSprints();
-  await importAllocations();
-  await importQuarterlyAllocations();
+
+  // Build member → sprint_days map so allocation importers can convert percent → days
+  const members = await prisma.teamMember.findMany({ select: { id: true, sprint_days: true } });
+  const memberSprintDays = Object.fromEntries(members.map(m => [m.id, m.sprint_days]));
+
+  await importAllocations(memberSprintDays);
+  await importQuarterlyAllocations(memberSprintDays);
   await importQuarterlyWorkAreaSelections();
   console.log('\nMigration complete!');
 }
