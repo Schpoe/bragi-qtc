@@ -137,10 +137,12 @@ export default function Dashboard() {
     const selection = workAreaSelections.find(
       s => s.team_id === selectedTeamId && s.quarter === selectedQuarter
     );
-    const baseIds = new Set([
-      ...(selection?.work_area_ids?.length ? selection.work_area_ids : filteredWorkAreas.map(wa => wa.id)),
-      ...allocatedWaIds,
-    ]);
+    const selectionIds = selection?.work_area_ids?.length ? selection.work_area_ids : [];
+    const baseIds = new Set([...selectionIds, ...allocatedWaIds]);
+    // Only fall back to filteredWorkAreas if no selection and no allocations exist yet
+    if (baseIds.size === 0) {
+      filteredWorkAreas.forEach(wa => baseIds.add(wa.id));
+    }
     return workAreas.filter(wa => baseIds.has(wa.id));
   }, [workAreas, filteredWorkAreas, workAreaSelections, selectedTeamId, selectedQuarter, quarterlyAllocations, quarterlyTabMembers]);
 
