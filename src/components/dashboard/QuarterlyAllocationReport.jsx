@@ -11,6 +11,7 @@ export default function QuarterlyAllocationReport({
   quarterlyAllocations,
   selectedQuarter,
   selectedTeamId,
+  capacityMap = {},
 }) {
   const relevantMembers = selectedTeamId === "all"
     ? members
@@ -24,17 +25,18 @@ export default function QuarterlyAllocationReport({
     return relevantMembers.map(member => {
       const memberAllocs = quarterAllocations.filter(a => a.team_member_id === member.id);
       const totalDays = memberAllocs.reduce((sum, a) => sum + (a.days || 0), 0);
-      const totalPercent = Math.round(totalDays * 100 / 60); // derive % using default 60d capacity
+      const capacity = capacityMap[member.id] ?? 60;
+      const totalPercent = Math.round(totalDays * 100 / capacity);
 
       return {
         member,
         allocations: memberAllocs,
         totalDays,
         totalPercent,
-        isOverAllocated: totalDays > 60
+        isOverAllocated: totalDays > capacity
       };
     });
-  }, [relevantMembers, quarterAllocations]);
+  }, [relevantMembers, quarterAllocations, capacityMap]);
 
   if (relevantMembers.length === 0 || relevantWorkAreas.length === 0) {
     return (

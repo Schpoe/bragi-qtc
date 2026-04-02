@@ -61,6 +61,19 @@ export default function Dashboard() {
     queryFn: () => bragiQTC.entities.QuarterlyWorkAreaSelection.list()
   });
 
+  const { data: memberCapacities = [] } = useQuery({
+    queryKey: ["teamMemberCapacities", selectedQuarter],
+    queryFn: () => bragiQTC.entities.TeamMemberCapacity.filter({ quarter: selectedQuarter }),
+    enabled: !!selectedQuarter,
+  });
+
+  // member_id → working_days (falls back to 60 if no custom capacity set)
+  const capacityMap = useMemo(() => {
+    const map = {};
+    memberCapacities.forEach(c => { map[c.team_member_id] = c.working_days; });
+    return map;
+  }, [memberCapacities]);
+
   // Cleanup template sprint allocations on mount
   React.useEffect(() => {
     const cleanupTemplateAllocations = async () => {
@@ -142,11 +155,12 @@ export default function Dashboard() {
         const total = quarterAllocs
           .filter(a => a.team_member_id === member.id)
           .reduce((sum, a) => sum + (a.days || 0), 0);
-        return { member, total, teamName: teamMap[member.team_id] ?? "" };
+        const capacity = capacityMap[member.id] ?? 60;
+        return { member, total, capacity, teamName: teamMap[member.team_id] ?? "" };
       })
-      .filter(({ total }) => total > 60) // default quarterly capacity is 60 days
+      .filter(({ total, capacity }) => total > capacity)
       .sort((a, b) => b.total - a.total);
-  }, [members, quarterlyTabMembers, quarterlyAllocations, selectedQuarter, selectedTeamId, teams]);
+  }, [members, quarterlyTabMembers, quarterlyAllocations, selectedQuarter, selectedTeamId, teams, capacityMap]);
 
   // Group quarterly alerts by team → discipline for display
   const quarterlyAlertsByTeam = useMemo(() => {
@@ -247,6 +261,7 @@ export default function Dashboard() {
                   workAreas={workAreas}
                   quarterlyAllocations={quarterlyAllocations}
                   selectedQuarter={selectedQuarter}
+                  capacityMap={capacityMap}
                 />
 
                 {selectedTeamId === "all" ? (
@@ -257,6 +272,7 @@ export default function Dashboard() {
                     quarterlyAllocations={quarterlyAllocations}
                     workAreaSelections={workAreaSelections}
                     selectedQuarter={selectedQuarter}
+                    capacityMap={capacityMap}
                   />
                 ) : (
                   <>
@@ -265,6 +281,7 @@ export default function Dashboard() {
                       members={quarterlyTabMembers}
                       quarterlyAllocations={quarterlyAllocations}
                       selectedQuarter={selectedQuarter}
+                      capacityMap={capacityMap}
                     />
 
                     {/* Member × work area allocation table */}
@@ -281,6 +298,7 @@ export default function Dashboard() {
                           quarterlyAllocations={quarterlyAllocations}
                           selectedQuarter={selectedQuarter}
                           selectedTeamId={selectedTeamId}
+                          capacityMap={capacityMap}
                         />
                       </CardContent>
                     </Card>
