@@ -143,19 +143,7 @@ export default function Dashboard() {
     if (baseIds.size === 0) {
       filteredWorkAreas.forEach(wa => baseIds.add(wa.id));
     }
-    const result = workAreas.filter(wa => baseIds.has(wa.id));
-    console.log("[Dashboard] quarterlyTabWorkAreas debug", {
-      team: selectedTeamId, quarter: selectedQuarter,
-      memberIds: [...memberIds], memberCount: memberIds.size,
-      allocatedWaIds: [...allocatedWaIds],
-      selectionIds,
-      resultColumns: result.map(wa => wa.id),
-      sampleAllocations: quarterlyAllocations
-        .filter(a => memberIds.has(a.team_member_id) && a.quarter === selectedQuarter)
-        .slice(0, 5)
-        .map(a => ({ member: a.team_member_id, wa: a.work_area_id, days: a.days })),
-    });
-    return result;
+    return workAreas.filter(wa => baseIds.has(wa.id));
   }, [workAreas, filteredWorkAreas, workAreaSelections, selectedTeamId, selectedQuarter, quarterlyAllocations, quarterlyTabMembers]);
 
   // Over-allocated members in the quarterly plan for the selected quarter + team
