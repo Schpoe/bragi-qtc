@@ -6,6 +6,7 @@ export default function QuarterlyDisciplineSummary({
   members,
   quarterlyAllocations,
   selectedQuarter,
+  capacityMap = {},
 }) {
   const quarterAllocs = useMemo(
     () => quarterlyAllocations.filter((a) => a.quarter === selectedQuarter),
@@ -26,14 +27,12 @@ export default function QuarterlyDisciplineSummary({
         const allocated = quarterAllocs
           .filter((a) => discIds.has(a.team_member_id))
           .reduce((sum, a) => sum + (a.days || 0), 0);
-        const util =
-          discMembers.length > 0
-            ? Math.round(allocated * 100 / (discMembers.length * 60))
-            : 0;
+        const totalCapacity = discMembers.reduce((sum, m) => sum + (capacityMap[m.id] ?? 60), 0);
+        const util = totalCapacity > 0 ? Math.round(allocated * 100 / totalCapacity) : 0;
         return { discipline: disc, util, count: discMembers.length };
       })
       .sort((a, b) => b.util - a.util);
-  }, [members, quarterAllocs]);
+  }, [members, quarterAllocs, capacityMap]);
 
   if (breakdown.length === 0) return null;
 

@@ -19,6 +19,7 @@ export default function QuarterlyWorkItemSummary({
   workAreas,
   quarterlyAllocations,
   selectedQuarter,
+  capacityMap = {},
 }) {
   const quarterAllocs = useMemo(
     () => quarterlyAllocations.filter((a) => a.quarter === selectedQuarter),
@@ -31,8 +32,7 @@ export default function QuarterlyWorkItemSummary({
   );
 
   const memberCount = members.length;
-  // Total quarterly capacity for the team (default 60 days/member)
-  const totalCapacityDays = memberCount * 60;
+  const totalCapacityDays = members.reduce((sum, m) => sum + (capacityMap[m.id] ?? 60), 0);
 
   // Raw sums per work area, scoped to relevant members + quarter.
   const rawSums = useMemo(() => {
