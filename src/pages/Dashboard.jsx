@@ -108,16 +108,28 @@ export default function Dashboard() {
     [activeMembers, selectedTeamId]
   );
 
-  // Work areas restricted to what was actually selected in the quarterly plan
+  // Work areas restricted to what was actually selected in the quarterly plan,
+  // plus any work areas that have actual allocations for the team's members.
   const quarterlyTabWorkAreas = useMemo(() => {
     if (selectedTeamId === "all") return filteredWorkAreas;
+
+    // Work areas that have existing allocations for this team's members this quarter
+    const memberIds = new Set(quarterlyTabMembers.map(m => m.id));
+    const allocatedWaIds = new Set(
+      quarterlyAllocations
+        .filter(a => memberIds.has(a.team_member_id) && a.quarter === selectedQuarter)
+        .map(a => a.work_area_id)
+    );
+
     const selection = workAreaSelections.find(
       s => s.team_id === selectedTeamId && s.quarter === selectedQuarter
     );
-    if (!selection?.work_area_ids?.length) return filteredWorkAreas;
-    const selectedIds = new Set(selection.work_area_ids);
-    return workAreas.filter(wa => selectedIds.has(wa.id));
-  }, [workAreas, filteredWorkAreas, workAreaSelections, selectedTeamId, selectedQuarter]);
+    const baseIds = new Set([
+      ...(selection?.work_area_ids?.length ? selection.work_area_ids : filteredWorkAreas.map(wa => wa.id)),
+      ...allocatedWaIds,
+    ]);
+    return workAreas.filter(wa => baseIds.has(wa.id));
+  }, [workAreas, filteredWorkAreas, workAreaSelections, selectedTeamId, selectedQuarter, quarterlyAllocations, quarterlyTabMembers]);
 
   // Over-allocated members in the quarterly plan for the selected quarter + team
   const quarterlyAlerts = useMemo(() => {

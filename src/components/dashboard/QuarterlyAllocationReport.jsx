@@ -16,9 +16,7 @@ export default function QuarterlyAllocationReport({
     ? members
     : members.filter(m => m.team_id === selectedTeamId);
 
-  const relevantWorkAreas = selectedTeamId === "all"
-    ? workAreas
-    : workAreas.filter(wa => wa.is_cross_team || wa.leading_team_id === selectedTeamId || wa.supporting_team_ids.includes(selectedTeamId));
+  const relevantWorkAreas = workAreas; // already filtered by parent (Dashboard)
 
   const quarterAllocations = quarterlyAllocations.filter(a => a.quarter === selectedQuarter);
 
