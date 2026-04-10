@@ -29,6 +29,7 @@ const teamMemberCapacityRoutes = require('./routes/team-member-capacities');
 
 const app = express();
 
+app.set('trust proxy', 1); // trust nginx reverse proxy
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost' }));
 app.use(express.json());
 
