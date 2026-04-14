@@ -407,10 +407,10 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     // All issues touched during the quarter — classify by status on our side
     const allJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" ORDER BY updated DESC`;
 
-    const diagIssues = await jira.searchJql(`project = "${project}" ORDER BY updated DESC`);
-    console.log(`[jira] diagnostic — total issues in project ${project}: ${diagIssues.length}`);
+    const diagQ  = await jira.searchJql(`project = "${project}" ORDER BY updated DESC`);
+    const diagNQ = await jira.searchJql(`project = ${project} ORDER BY updated DESC`);
     const diagAny = await jira.searchJql(`ORDER BY updated DESC`);
-    console.log(`[jira] diagnostic — any issues visible to API user: ${diagAny.length}`);
+    console.log(`[jira] diag quoted=${diagQ.length} unquoted=${diagNQ.length} any=${diagAny.length}`);
 
     const allIssues = await jira.searchJql(allJql);
     console.log(`[jira] fetchQuarterlyJiraActuals: ${allIssues.length} issues for ${project} in ${quarter}`);
