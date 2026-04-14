@@ -93,6 +93,17 @@ router.post('/jiraSync', requireAdmin, async (req, res) => {
 
     const issues = await jira.searchJql(jql);
     logs.push(`JQL returned ${issues.length} issue(s)`);
+    if (issues.length === 0) {
+      // Try fetching one of the issues directly as a sanity check
+      const firstKey = jql.match(/[A-Z]+-\d+/)?.[0];
+      if (firstKey) {
+        const direct = await jira.fetchIssue(firstKey);
+        logs.push(direct
+          ? `Direct fetch of ${firstKey} succeeded (type: ${direct.fields?.issuetype?.name}) — search API may lack permission for this issue type`
+          : `Direct fetch of ${firstKey} also failed — check Jira credentials`
+        );
+      }
+    }
 
     const workAreaTypes = new Set();
     const teams = new Set();
