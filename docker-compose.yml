@@ -37,6 +37,13 @@ services:
       - "${PORT:-3003}:80"
     depends_on:
       - backend
+    networks:
+      - default
+      - proxy_net
+
+networks:
+  proxy_net:
+    external: true
 
 volumes:
   postgres_data:
