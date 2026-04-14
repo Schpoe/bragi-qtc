@@ -718,7 +718,16 @@ function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarte
 
         {actuals && (
           <div className="space-y-3">
-            <div className="text-xs text-muted-foreground">{actuals.dateRange.start} → {actuals.dateRange.end}</div>
+            <div className="text-xs text-muted-foreground">{actuals.dateRange.start} → {actuals.dateRange.end} · SP field: <code>{actuals.storyPointsField}</code></div>
+            {actuals.jql && (
+              <details className="text-xs">
+                <summary className="cursor-pointer text-muted-foreground hover:text-foreground py-0.5">Show JQL queries</summary>
+                <div className="mt-1.5 space-y-1.5">
+                  <div className="font-mono bg-muted rounded p-2 break-all">{actuals.jql.completed}</div>
+                  <div className="font-mono bg-muted rounded p-2 break-all">{actuals.jql.inProgress}</div>
+                </div>
+              </details>
+            )}
 
             {/* Summary cards */}
             <div className="grid grid-cols-2 gap-3">
