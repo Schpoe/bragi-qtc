@@ -55,6 +55,31 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
+// Mark a snapshot as the "initial plan" for that team+quarter (unsets all others)
+router.patch('/:id/set-initial-plan', requireAuth, async (req, res) => {
+  try {
+    const snapshot = await prisma.quarterlyPlanSnapshot.findUnique({ where: { id: req.params.id } });
+    if (!snapshot) return res.status(404).json({ error: 'Not found' });
+    if (!canManageTeam(req.user, snapshot.team_id)) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    await prisma.$transaction([
+      prisma.quarterlyPlanSnapshot.updateMany({
+        where: { team_id: snapshot.team_id, quarter: snapshot.quarter },
+        data: { is_initial_plan: false },
+      }),
+      prisma.quarterlyPlanSnapshot.update({
+        where: { id: req.params.id },
+        data: { is_initial_plan: true },
+      }),
+    ]);
+    const updated = await prisma.quarterlyPlanSnapshot.findUnique({ where: { id: req.params.id } });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Delete a snapshot (admin or manager of that team)
 router.delete('/:id', requireAuth, async (req, res) => {
   try {

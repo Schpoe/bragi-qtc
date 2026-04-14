@@ -41,11 +41,6 @@ export function canManageTeamMembers(user, teamId) {
   return canManageTeam(user, teamId);
 }
 
-export function canCreateSprint(user) {
-  if (isViewer(user)) return false;
-  return isAdmin(user) || isTeamManager(user);
-}
-
 export function canCreateWorkArea(user) {
   if (isViewer(user)) return false;
   return isAdmin(user) || isTeamManager(user);
@@ -54,11 +49,6 @@ export function canCreateWorkArea(user) {
 export function canManageWorkAreaTypes(user) {
   if (isViewer(user)) return false;
   return isAdmin(user);
-}
-
-export function canManageSprints(user, teamId) {
-  if (isViewer(user)) return false;
-  return canManageTeam(user, teamId);
 }
 
 export function canManageAllocations(user, teamId) {

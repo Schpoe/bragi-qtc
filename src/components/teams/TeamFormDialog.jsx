@@ -15,13 +15,13 @@ function toHex(color) {
 }
 
 export default function TeamFormDialog({ open, onOpenChange, team, onSave }) {
-  const [form, setForm] = useState({ name: "", description: "", color: "#3b82f6" });
+  const [form, setForm] = useState({ name: "", description: "", color: "#3b82f6", jira_project_key: "" });
 
   useEffect(() => {
     if (team) {
-      setForm({ name: team.name, description: team.description || "", color: toHex(team.color) });
+      setForm({ name: team.name, description: team.description || "", color: toHex(team.color), jira_project_key: team.jira_project_key || "" });
     } else {
-      setForm({ name: "", description: "", color: "#3b82f6" });
+      setForm({ name: "", description: "", color: "#3b82f6", jira_project_key: "" });
     }
   }, [team, open]);
 
@@ -52,6 +52,15 @@ export default function TeamFormDialog({ open, onOpenChange, team, onSave }) {
               value={form.color}
               onChange={(c) => setForm({ ...form, color: c || "#3b82f6" })}
             />
+          </div>
+          <div className="space-y-2">
+            <Label>Jira Project Key</Label>
+            <Input
+              value={form.jira_project_key}
+              onChange={(e) => setForm({ ...form, jira_project_key: e.target.value.toUpperCase() })}
+              placeholder="e.g. MOBILE"
+            />
+            <p className="text-xs text-muted-foreground">Used to fetch quarterly actuals from Jira</p>
           </div>
         </div>
         <DialogFooter>

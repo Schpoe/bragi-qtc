@@ -22,14 +22,15 @@ model User {
 }
 
 model Team {
-  id          String   @id @default(uuid())
-  name        String
-  color       String?
-  description String?
-  lead_id     String?
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id               String   @id @default(uuid())
+  name             String
+  color            String?
+  description      String?
+  lead_id          String?
+  is_active        Boolean  @default(true)
+  jira_project_key String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
 }
 
 model TeamMember {
@@ -65,30 +66,6 @@ model WorkArea {
   linked_epic_keys    String[]
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
-}
-
-model Sprint {
-  id                     String    @id @default(uuid())
-  team_id                String?
-  name                   String
-  quarter                String
-  start_date             DateTime?
-  end_date               DateTime?
-  is_cross_team          Boolean   @default(false)
-  is_template            Boolean   @default(false)
-  relevant_work_area_ids String[]
-  created_at             DateTime  @default(now())
-  updated_at             DateTime  @updatedAt
-}
-
-model Allocation {
-  id             String   @id @default(uuid())
-  sprint_id      String
-  team_member_id String
-  work_area_id   String
-  days           Int
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
 }
 
 model QuarterlyAllocation {
@@ -144,6 +121,7 @@ model QuarterlyPlanSnapshot {
   team_name              String?
   label                  String
   note                   String?
+  is_initial_plan        Boolean  @default(false)
   created_by_email       String?
   created_at             DateTime @default(now())
   allocations            Json

@@ -16,8 +16,6 @@ const teamRoutes = require('./routes/teams');
 const teamMemberRoutes = require('./routes/team-members');
 const workAreaRoutes = require('./routes/work-areas');
 const workAreaTypeRoutes = require('./routes/work-area-types');
-const sprintRoutes = require('./routes/sprints');
-const allocationRoutes = require('./routes/allocations');
 const quarterlyAllocationRoutes = require('./routes/quarterly-allocations');
 const quarterlyWorkAreaSelectionRoutes = require('./routes/quarterly-work-area-selections');
 const quarterlyPlanHistoryRoutes = require('./routes/quarterly-plan-history');
@@ -31,7 +29,7 @@ const app = express();
 
 app.set('trust proxy', 1); // trust nginx reverse proxy
 app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost' }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -39,8 +37,6 @@ app.use('/api/teams', teamRoutes);
 app.use('/api/team-members', teamMemberRoutes);
 app.use('/api/work-areas', workAreaRoutes);
 app.use('/api/work-area-types', workAreaTypeRoutes);
-app.use('/api/sprints', sprintRoutes);
-app.use('/api/allocations', allocationRoutes);
 app.use('/api/quarterly-allocations', quarterlyAllocationRoutes);
 app.use('/api/quarterly-work-area-selections', quarterlyWorkAreaSelectionRoutes);
 app.use('/api/quarterly-plan-history', quarterlyPlanHistoryRoutes);

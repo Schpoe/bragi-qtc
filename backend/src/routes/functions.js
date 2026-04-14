@@ -24,79 +24,31 @@ router.post('/inviteUserWithTeams', requireAdmin, async (req, res) => {
   }
 });
 
-// Delete allocations referencing missing members/sprints/work areas
-router.post('/cleanupOrphanedAllocations', requireAdmin, async (_req, res) => {
-  try {
-    const [allocations, members, workAreas] = await Promise.all([
-      prisma.allocation.findMany(),
-      prisma.teamMember.findMany({ select: { id: true } }),
-      prisma.workArea.findMany({ select: { id: true } }),
-    ]);
-
-    const memberIds = new Set(members.map(m => m.id));
-    const workAreaIds = new Set(workAreas.map(w => w.id));
-
-    const orphaned = allocations.filter(
-      a => !memberIds.has(a.team_member_id) || !workAreaIds.has(a.work_area_id)
-    );
-
-    await Promise.all(orphaned.map(a => prisma.allocation.delete({ where: { id: a.id } })));
-
-    res.json({ data: { success: true, deletedCount: orphaned.length, message: `Deleted ${orphaned.length} orphaned allocations` } });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Comprehensive orphan cleanup
+// Orphan cleanup — removes members/work-areas with missing team references
 router.post('/cleanupAllOrphans', requireAdmin, async (_req, res) => {
   try {
     const summary = await prisma.$transaction(async (tx) => {
-      const [teams, teamMembers, sprints, allocations, workAreas] = await Promise.all([
+      const [teams, teamMembers, workAreas] = await Promise.all([
         tx.team.findMany({ select: { id: true } }),
         tx.teamMember.findMany(),
-        tx.sprint.findMany(),
-        tx.allocation.findMany(),
-        tx.workArea.findMany({ select: { id: true } }),
+        tx.workArea.findMany(),
       ]);
 
       const teamIds = new Set(teams.map(t => t.id));
-      const workAreaIds = new Set(workAreas.map(w => w.id));
-      const result = { orphanedMembers: 0, orphanedSprints: 0, orphanedAllocations: 0, orphanedWorkAreas: 0 };
+      const result = { orphanedMembers: 0, orphanedWorkAreas: 0 };
 
-      // 1. Orphaned team members
       const orphanedMembers = teamMembers.filter(m => m.team_id && !teamIds.has(m.team_id));
       await Promise.all(orphanedMembers.map(m => tx.teamMember.delete({ where: { id: m.id } })));
       result.orphanedMembers = orphanedMembers.length;
 
-      // 2. Orphaned sprints (non-cross-team with missing team)
-      const orphanedSprints = sprints.filter(s => !s.is_cross_team && s.team_id && !teamIds.has(s.team_id));
-      await Promise.all(orphanedSprints.map(s => tx.sprint.delete({ where: { id: s.id } })));
-      result.orphanedSprints = orphanedSprints.length;
-
-      const remainingMemberIds = new Set(orphanedMembers.map(m => m.id));
-      const remainingSprintIds = new Set(orphanedSprints.map(s => s.id));
-
-      // 3. Orphaned allocations
-      const orphanedAllocations = allocations.filter(
-        a => remainingMemberIds.has(a.team_member_id) ||
-             remainingSprintIds.has(a.sprint_id) ||
-             !workAreaIds.has(a.work_area_id)
-      );
-      await Promise.all(orphanedAllocations.map(a => tx.allocation.delete({ where: { id: a.id } })));
-      result.orphanedAllocations = orphanedAllocations.length;
-
-      // 4. Work areas with non-existent leading teams
-      const allWorkAreas = await tx.workArea.findMany();
-      const orphanedWorkAreas = allWorkAreas.filter(w => w.leading_team_id && !teamIds.has(w.leading_team_id));
+      const orphanedWorkAreas = workAreas.filter(w => w.leading_team_id && !teamIds.has(w.leading_team_id));
       await Promise.all(orphanedWorkAreas.map(w => tx.workArea.delete({ where: { id: w.id } })));
       result.orphanedWorkAreas = orphanedWorkAreas.length;
 
       return result;
     });
 
-    const totalDeleted = Object.values(summary).reduce((a, b) => a + b, 0);
-    res.json({ data: { success: true, totalDeleted, summary } });
+    res.json({ data: { success: true, totalDeleted: Object.values(summary).reduce((a, b) => a + b, 0), summary } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Cleanup failed' });
@@ -110,10 +62,11 @@ router.post('/testJiraConnection', requireAdmin, async (_req, res) => {
   }
   try {
     const fieldMap = await jira.fetchFieldMap();
-    const customFieldNames = Object.keys(fieldMap)
-      .filter(name => fieldMap[name].startsWith('customfield_'))
-      .sort();
-    return res.json({ data: { ok: true, fieldCount: Object.keys(fieldMap).length, baseUrl: process.env.JIRA_BASE_URL, customFieldNames } });
+    const customFields = Object.entries(fieldMap)
+      .filter(([, id]) => id.startsWith('customfield_'))
+      .map(([name, id]) => ({ name, id }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return res.json({ data: { ok: true, fieldCount: Object.keys(fieldMap).length, baseUrl: process.env.JIRA_BASE_URL, customFields } });
   } catch (err) {
     return res.json({ data: { ok: false, error: err.message } });
   }
@@ -140,6 +93,17 @@ router.post('/jiraSync', requireAdmin, async (req, res) => {
 
     const issues = await jira.searchJql(jql);
     logs.push(`JQL returned ${issues.length} issue(s)`);
+    if (issues.length === 0) {
+      // Try fetching one of the issues directly as a sanity check
+      const firstKey = jql.match(/[A-Z]+-\d+/)?.[0];
+      if (firstKey) {
+        const direct = await jira.fetchIssue(firstKey);
+        logs.push(direct
+          ? `Direct fetch of ${firstKey} succeeded (type: ${direct.fields?.issuetype?.name}) — search API may lack permission for this issue type`
+          : `Direct fetch of ${firstKey} also failed — check Jira credentials`
+        );
+      }
+    }
 
     const workAreaTypes = new Set();
     const teams = new Set();
@@ -374,6 +338,162 @@ router.post('/revertQuarterlyPlanSnapshot', requireAuth, async (req, res) => {
     const restoredCount = restorableAllocations.length;
     const skippedCount = normalisedAllocations.filter(a => a.days > 0).length - restoredCount;
     res.json({ data: { success: true, restored: restoredCount, skipped: skippedCount, label: snapshot.label } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Fetch quarterly Jira actuals for a team (completed + in-progress issues)
+router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
+  try {
+    if (!jira.isConfigured()) {
+      return res.status(400).json({ error: 'Jira not configured (JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN)' });
+    }
+    const { teamId, quarter } = req.body;
+    if (!teamId || !quarter) {
+      return res.status(400).json({ error: 'teamId and quarter are required' });
+    }
+
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
+    if (!team) return res.status(404).json({ error: 'Team not found' });
+    if (!team.jira_project_key) {
+      return res.status(400).json({ error: `Team "${team.name}" has no Jira project key. Set it on the Teams page.` });
+    }
+
+    const dateRange = jira.getQuarterDateRange(quarter);
+    if (!dateRange) return res.status(400).json({ error: `Cannot parse quarter: ${quarter}` });
+
+    const fieldMap = await jira.fetchFieldMap();
+    const spField = jira.detectStoryPointsField(fieldMap);
+    const project = team.jira_project_key;
+
+    // All issues touched during the quarter — classify by status on our side
+    const allJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" ORDER BY updated DESC`;
+
+    // customfield_10014 = Epic Link (old-style company-managed projects)
+    const spFields = ['summary', 'status', 'issuetype', 'parent', 'customfield_10014', spField];
+    const allIssues = await jira.searchJql(allJql, spFields);
+
+    const completedStatuses = new Set(['done', 'closed', 'resolved', 'released', 'complete', 'completed']);
+    const ignoredStatuses   = new Set(['to do', 'backlog', 'open', 'new', 'todo']);
+
+    const completedIssues  = allIssues.filter(i => completedStatuses.has((i.fields?.status?.name || '').toLowerCase()));
+    const inProgressIssues = allIssues.filter(i => {
+      const s = (i.fields?.status?.name || '').toLowerCase();
+      return !completedStatuses.has(s) && !ignoredStatuses.has(s);
+    });
+
+    const completedJql  = allJql;
+    const inProgressJql = allJql;
+
+    const getSP = (issue) => {
+      const val = issue.fields?.[spField];
+      if (typeof val === 'number') return val;
+      if (typeof val === 'string') { const n = parseFloat(val); return isNaN(n) ? 0 : n; }
+      return 0;
+    };
+
+    const getEpicKey = (issue) =>
+      issue.fields?.parent?.key || issue.fields?.customfield_10014 || null;
+
+    const mapIssue = (issue) => ({
+      key: issue.key,
+      summary: issue.fields?.summary,
+      status: issue.fields?.status?.name,
+      issueType: issue.fields?.issuetype?.name,
+      storyPoints: getSP(issue),
+      epicKey: getEpicKey(issue),
+      epicName: issue.fields?.parent?.fields?.summary || null,
+    });
+
+    const completed  = completedIssues.map(mapIssue);
+    const inProgress = inProgressIssues.map(mapIssue);
+
+    // Fetch unique epics to get their name, SP, and PROD parent
+    const epicKeys = [...new Set(allIssues.map(getEpicKey).filter(Boolean))];
+    const epicDetails = {};
+    await Promise.all(epicKeys.map(async (key) => {
+      try {
+        const epic = await jira.fetchIssue(key);
+        if (epic) {
+          epicDetails[key] = {
+            key,
+            name: epic.fields?.summary,
+            storyPoints: getSP(epic),
+            prodKey: epic.fields?.parent?.key || epic.fields?.customfield_10014 || null,
+            prodName: epic.fields?.parent?.fields?.summary || null,
+          };
+        }
+      } catch {}
+    }));
+
+    // Build breakdown: group by PROD → Epic
+    // SP is taken from the Epic (not individual issues) since that's where it's stored
+    const buildBreakdown = (issues) => {
+      const groups = {};
+      issues.forEach(issue => {
+        const epic     = issue.epicKey ? epicDetails[issue.epicKey] : null;
+        const epicKey  = issue.epicKey || null;
+        const epicName = epic?.name || issue.epicName || null;
+        const prodKey  = epic?.prodKey  || null;
+        const prodName = epic?.prodName || null;
+        const gKey     = prodKey || epicKey || '__none__';
+
+        if (!groups[gKey]) {
+          groups[gKey] = {
+            prodKey,
+            prodName: prodName || (epicKey && !prodKey ? epicName : null) || 'Not assigned to PROD',
+            epics: {},
+          };
+        }
+        const eKey = epicKey || '__none__';
+        if (!groups[gKey].epics[eKey]) {
+          const epicSP = epic ? epic.storyPoints : 0;
+          groups[gKey].epics[eKey] = {
+            epicKey,
+            epicName: epicName || 'No Epic',
+            count: 0,
+            // SP from epic counted once per epic (not summed per issue)
+            storyPoints: epicSP,
+          };
+        }
+        groups[gKey].epics[eKey].count++;
+      });
+
+      return Object.values(groups)
+        .map(g => ({ ...g, epics: Object.values(g.epics).sort((a, b) => b.storyPoints - a.storyPoints) }))
+        .sort((a, b) => {
+          if (a.prodName === 'Not assigned to PROD') return 1;
+          if (b.prodName === 'Not assigned to PROD') return -1;
+          return (a.prodName || '').localeCompare(b.prodName || '');
+        });
+    };
+
+    res.json({
+      data: {
+        quarter,
+        team: { id: team.id, name: team.name, jira_project_key: project },
+        dateRange,
+        storyPointsField: spField,
+        jql: { completed: completedJql, inProgress: inProgressJql },
+        // epicDetails: epicKey → { key, name, storyPoints, prodKey, prodName }
+        // Used by the frontend to map Bragi work areas (via jira_key/linked_epic_keys) to PRODs
+        epicDetails,
+        completed: {
+          count: completed.length,
+          storyPoints: completed.reduce((sum, i) => sum + i.storyPoints, 0),
+          issues: completed,
+          byProd: buildBreakdown(completed),
+        },
+        inProgress: {
+          count: inProgress.length,
+          storyPoints: inProgress.reduce((sum, i) => sum + i.storyPoints, 0),
+          issues: inProgress,
+          byProd: buildBreakdown(inProgress),
+        },
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
