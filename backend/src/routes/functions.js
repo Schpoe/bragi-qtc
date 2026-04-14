@@ -403,10 +403,10 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     const fieldMap = await jira.fetchFieldMap();
     const spField = jira.detectStoryPointsField(fieldMap);
     const project = team.jira_project_key;
+    console.log(`[jira] using SP field: ${spField}, project: ${project}, range: ${dateRange.start} → ${dateRange.end}`);
 
     // All issues touched during the quarter — classify by status on our side
     const allJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" ORDER BY updated DESC`;
-
 
     const allIssues = await jira.searchJql(allJql);
     console.log(`[jira] fetchQuarterlyJiraActuals: ${allIssues.length} issues for ${project} in ${quarter}`);
