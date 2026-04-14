@@ -409,6 +409,8 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
 
     const diagIssues = await jira.searchJql(`project = "${project}" ORDER BY updated DESC`);
     console.log(`[jira] diagnostic — total issues in project ${project}: ${diagIssues.length}`);
+    const diagAny = await jira.searchJql(`ORDER BY updated DESC`);
+    console.log(`[jira] diagnostic — any issues visible to API user: ${diagAny.length}`);
 
     const allIssues = await jira.searchJql(allJql);
     console.log(`[jira] fetchQuarterlyJiraActuals: ${allIssues.length} issues for ${project} in ${quarter}`);
