@@ -624,6 +624,78 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
   );
 }
 
+// ── PROD → Epic breakdown ─────────────────────────────────────────────────────
+
+function ProdEpicBreakdown({ completed, inProgress }) {
+  // Merge completed and in-progress byProd into one combined structure
+  const merged = useMemo(() => {
+    const prods = {};
+
+    const addGroup = (byProd, type) => {
+      (byProd || []).forEach(prod => {
+        const pk = prod.prodKey || prod.prodName || '__none__';
+        if (!prods[pk]) prods[pk] = { prodName: prod.prodName, epics: {} };
+        prod.epics.forEach(epic => {
+          const ek = epic.epicKey || '__none__';
+          if (!prods[pk].epics[ek]) {
+            prods[pk].epics[ek] = { epicKey: epic.epicKey, epicName: epic.epicName, completedCount: 0, completedSP: 0, inProgressCount: 0, inProgressSP: 0 };
+          }
+          if (type === 'completed') {
+            prods[pk].epics[ek].completedCount += epic.count;
+            prods[pk].epics[ek].completedSP    += epic.storyPoints;
+          } else {
+            prods[pk].epics[ek].inProgressCount += epic.count;
+            prods[pk].epics[ek].inProgressSP    += epic.storyPoints;
+          }
+        });
+      });
+    };
+
+    addGroup(completed.byProd, 'completed');
+    addGroup(inProgress.byProd, 'inProgress');
+
+    return Object.values(prods)
+      .map(p => ({ ...p, epics: Object.values(p.epics).sort((a, b) => (b.completedSP + b.inProgressSP) - (a.completedSP + a.inProgressSP)) }))
+      .sort((a, b) => {
+        if (a.prodName === 'Not assigned') return 1;
+        if (b.prodName === 'Not assigned') return -1;
+        return (a.prodName || '').localeCompare(b.prodName || '');
+      });
+  }, [completed, inProgress]);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">By PROD → Epic</p>
+      {merged.map((prod, pi) => (
+        <div key={pi} className="rounded-lg border border-border overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border">
+            <span className="text-xs font-semibold truncate">{prod.prodName || 'Not assigned to PROD'}</span>
+            <div className="flex items-center gap-3 shrink-0 text-xs">
+              <span className="text-green-700 font-medium">{prod.epics.reduce((s, e) => s + e.completedSP, 0)} SP done</span>
+              <span className="text-blue-700 font-medium">{prod.epics.reduce((s, e) => s + e.inProgressSP, 0)} SP in progress</span>
+            </div>
+          </div>
+          <div className="divide-y divide-border/50">
+            {prod.epics.map((epic, ei) => (
+              <div key={ei} className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted/20">
+                <span className="flex-1 truncate text-muted-foreground">{epic.epicName || 'No Epic'}</span>
+                <span className="shrink-0 text-green-700">
+                  {epic.completedCount} done {epic.completedSP > 0 && <span className="text-green-600/70">({epic.completedSP} SP)</span>}
+                </span>
+                {epic.inProgressCount > 0 && (
+                  <span className="shrink-0 text-blue-700">
+                    · {epic.inProgressCount} in progress {epic.inProgressSP > 0 && <span className="text-blue-600/70">({epic.inProgressSP} SP)</span>}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Actuals tab ───────────────────────────────────────────────────────────────
 
 function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarterlyAllocations }) {
@@ -767,39 +839,9 @@ function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarte
               </div>
             )}
 
-            {/* Issue lists */}
-            {actuals.completed.issues.length > 0 && (
-              <details className="text-xs">
-                <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground py-1">
-                  {actuals.completed.count} completed issues
-                </summary>
-                <div className="mt-1.5 space-y-1 max-h-48 overflow-y-auto border rounded p-2">
-                  {actuals.completed.issues.map(issue => (
-                    <div key={issue.key} className="flex items-center gap-2">
-                      <span className="font-mono text-muted-foreground shrink-0">{issue.key}</span>
-                      <span className="truncate flex-1">{issue.summary}</span>
-                      {issue.storyPoints > 0 && <span className="shrink-0 text-muted-foreground">{issue.storyPoints} SP</span>}
-                    </div>
-                  ))}
-                </div>
-              </details>
-            )}
-            {actuals.inProgress.issues.length > 0 && (
-              <details className="text-xs">
-                <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground py-1">
-                  {actuals.inProgress.count} in-progress issues
-                </summary>
-                <div className="mt-1.5 space-y-1 max-h-48 overflow-y-auto border rounded p-2">
-                  {actuals.inProgress.issues.map(issue => (
-                    <div key={issue.key} className="flex items-center gap-2">
-                      <span className="font-mono text-muted-foreground shrink-0">{issue.key}</span>
-                      <span className="truncate flex-1">{issue.summary}</span>
-                      <span className="shrink-0 text-muted-foreground/60">{issue.status}</span>
-                      {issue.storyPoints > 0 && <span className="shrink-0 text-muted-foreground">{issue.storyPoints} SP</span>}
-                    </div>
-                  ))}
-                </div>
-              </details>
+            {/* PROD → Epic breakdown */}
+            {(actuals.completed.byProd?.length > 0 || actuals.inProgress.byProd?.length > 0) && (
+              <ProdEpicBreakdown completed={actuals.completed} inProgress={actuals.inProgress} />
             )}
           </div>
         )}
