@@ -68,30 +68,6 @@ model WorkArea {
   updated_at          DateTime  @updatedAt
 }
 
-model Sprint {
-  id                     String    @id @default(uuid())
-  team_id                String?
-  name                   String
-  quarter                String
-  start_date             DateTime?
-  end_date               DateTime?
-  is_cross_team          Boolean   @default(false)
-  is_template            Boolean   @default(false)
-  relevant_work_area_ids String[]
-  created_at             DateTime  @default(now())
-  updated_at             DateTime  @updatedAt
-}
-
-model Allocation {
-  id             String   @id @default(uuid())
-  sprint_id      String
-  team_member_id String
-  work_area_id   String
-  days           Int
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
-}
-
 model QuarterlyAllocation {
   id             String   @id @default(uuid())
   quarter        String
