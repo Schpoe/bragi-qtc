@@ -12,6 +12,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - proxy_net
 
   backend:
     build: ./backend
@@ -29,6 +31,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - proxy_net
     command: sh -c "until node -e \"require('net').createConnection(5432,'db').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))\"; do echo 'waiting for db...'; sleep 2; done && node prisma/prepare-schema.js; npx prisma db push --accept-data-loss && node prisma/seed.js && node src/index.js"
 
   frontend:
@@ -38,7 +42,6 @@ services:
     depends_on:
       - backend
     networks:
-      - default
       - proxy_net
 
 networks:
