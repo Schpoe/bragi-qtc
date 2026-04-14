@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, getTeamColor, getDisciplineColor } from "@/lib/utils";
+import QuarterlyTopicBreakdown from "./QuarterlyTopicBreakdown";
 
 function UtilBar({ value, color }) {
   const capped = Math.min(value, 100);
@@ -59,26 +60,12 @@ export default function QuarterlyTeamsSummary({
         return { discipline: disc, util };
       }).sort((a, b) => b.util - a.util);
 
-      // Top 5 work items
-      const waAllocTotals = {};
-      teamAllocs.forEach((a) => {
-        if (!a.work_area_id) return;
-        waAllocTotals[a.work_area_id] = (waAllocTotals[a.work_area_id] || 0) + (a.days || 0);
-      });
-      const topWorkItems = Object.entries(waAllocTotals)
-        .map(([waId, total]) => {
-          const wa = workAreas.find((w) => w.id === waId);
-          return { name: wa?.name ?? "Unknown", color: wa?.color, total };
-        })
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 5);
-
       return {
         team,
+        teamMembers,
         memberCount: teamMembers.length,
         overallUtil,
         disciplineBreakdown,
-        topWorkItems,
       };
     });
   }, [teams, members, workAreas, quarterAllocations, capacityMap]);
@@ -145,7 +132,7 @@ export default function QuarterlyTeamsSummary({
 
       {/* ── Per-team cards ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {teamData.map(({ team, memberCount, overallUtil, disciplineBreakdown, topWorkItems }) => {
+        {teamData.map(({ team, teamMembers, memberCount, overallUtil, disciplineBreakdown }) => {
           const teamColor = getTeamColor(team);
           const isOver = overallUtil > 100;
           return (
@@ -198,25 +185,16 @@ export default function QuarterlyTeamsSummary({
                   )}
                 </div>
 
-                {/* Top work items */}
+                {/* Topic breakdown with % */}
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Top Work Items</p>
-                  {topWorkItems.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No allocations yet</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {topWorkItems.map(({ name, color, total }, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <div
-                            className="w-2 h-2 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: color || "#6b7280" }}
-                          />
-                          <span className="text-xs truncate flex-1" title={name}>{name}</span>
-                          <span className="text-xs font-semibold tabular-nums text-muted-foreground">{total}d</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">By Topic</p>
+                  <QuarterlyTopicBreakdown
+                    members={teamMembers}
+                    quarterlyAllocations={quarterAllocations}
+                    workAreas={workAreas}
+                    quarter={selectedQuarter}
+                    capacityMap={capacityMap}
+                  />
                 </div>
               </CardContent>
             </Card>
