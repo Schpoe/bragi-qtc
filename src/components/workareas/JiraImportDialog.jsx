@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { bragiQTC } from "@/api/bragiQTCClient";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
-import { Loader2, RefreshCw, CheckCircle2, AlertCircle, Wifi } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, AlertCircle, Wifi, WifiOff } from "lucide-react";
 
 function LogPane({ entries }) {
   if (entries.length === 0) return null;
@@ -31,10 +30,7 @@ function LogPane({ entries }) {
 }
 
 export default function JiraImportDialog({ open, onOpenChange, teams: existingTeams = [] }) {
-  const [jql, setJql] = useState('');
-  const [leadingTeamFieldName, setLeadingTeamFieldName] = useState('');
-  const [contributingTeamsFieldName, setContributingTeamsFieldName] = useState('');
-  const [availableCustomFields, setAvailableCustomFields] = useState([]);
+  const [jql, setJql] = useState('project = PROD');
   const [syncResult, setSyncResult] = useState(null);
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState(null);
@@ -81,10 +77,6 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
       if (d.ok) {
         addLog(`Connected to ${d.baseUrl}`, 'success');
         addLog(`Fetched ${d.fieldCount} Jira fields`, 'success');
-        if (d.customFieldNames?.length) {
-          setAvailableCustomFields(d.customFieldNames);
-          addLog(`Custom fields: ${d.customFieldNames.slice(0, 8).join(', ')}${d.customFieldNames.length > 8 ? '…' : ''}`, 'info');
-        }
       } else {
         addLog(d.error, 'error');
         setError(d.error);
@@ -107,9 +99,7 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
     try {
       addLog(`Executing JQL: ${jql.trim()}`);
       const response = await bragiQTC.functions.invoke('jiraSync', {
-        jql: jql.trim(),
-        leadingTeamFieldName: leadingTeamFieldName.trim() || undefined,
-        contributingTeamsFieldName: contributingTeamsFieldName.trim() || undefined,
+        jql: jql.trim()
       });
 
       if (response.data.error) {
@@ -264,7 +254,7 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
     setSyncResult(null);
     setError(null);
     setLogs([]);
-    setJql('');
+    setJql('project = PROD');
     onOpenChange(false);
   };
 
@@ -290,42 +280,6 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
             </Button>
             <span className="text-xs text-muted-foreground">Verify Jira credentials before fetching</span>
           </div>
-
-          {/* Field name configuration */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="leadingField" className="text-xs">Leading Team field name</Label>
-              <Input
-                id="leadingField"
-                placeholder="e.g. Leading Team"
-                value={leadingTeamFieldName}
-                onChange={e => setLeadingTeamFieldName(e.target.value)}
-                disabled={importing || fetching}
-                className="h-8 text-sm"
-                list="custom-fields"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="contributingField" className="text-xs">Contributing Teams field name</Label>
-              <Input
-                id="contributingField"
-                placeholder="e.g. Contributing Teams"
-                value={contributingTeamsFieldName}
-                onChange={e => setContributingTeamsFieldName(e.target.value)}
-                disabled={importing || fetching}
-                className="h-8 text-sm"
-                list="custom-fields"
-              />
-            </div>
-          </div>
-          {availableCustomFields.length > 0 && (
-            <datalist id="custom-fields">
-              {availableCustomFields.map(f => <option key={f} value={f} />)}
-            </datalist>
-          )}
-          <p className="text-xs text-muted-foreground -mt-2">
-            Leave blank to use defaults from .env. Run "Test Connection" to see available custom field names.
-          </p>
 
           <div className="space-y-2">
             <Label htmlFor="jql">JQL Query</Label>
