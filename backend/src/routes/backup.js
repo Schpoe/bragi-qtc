@@ -25,6 +25,7 @@ router.get('/', requireAdmin, async (_req, res) => {
   try {
     const data = {};
     for (const table of TABLES) {
+      if (!prisma[table]) { throw new Error(`prisma.${table} is undefined`); }
       data[table] = await prisma[table].findMany();
     }
     const payload = JSON.stringify({ version: 1, exported_at: new Date().toISOString(), data }, null, 2);
