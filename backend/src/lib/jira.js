@@ -41,19 +41,14 @@ async function fetchFieldMap() {
 }
 
 async function searchJql(jql) {
-  const url = `${process.env.JIRA_BASE_URL}/rest/api/3/search/jql`;
+  const baseUrl = `${process.env.JIRA_BASE_URL}/rest/api/3/search`;
   let allIssues = [];
-  let nextPageToken = null;
+  let startAt = 0;
+  const maxResults = 100;
 
   do {
-    const body = { jql, maxResults: 100, fields: ['*all'] };
-    if (nextPageToken) body.nextPageToken = nextPageToken;
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: getJiraHeaders(),
-      body: JSON.stringify(body),
-    });
+    const params = new URLSearchParams({ jql, maxResults, startAt, fields: '*all' });
+    const res = await fetch(`${baseUrl}?${params}`, { headers: getJiraHeaders() });
 
     if (!res.ok) {
       const text = await res.text();
@@ -66,11 +61,13 @@ async function searchJql(jql) {
     }
 
     const data = await res.json();
-    const page = data.issues || data.values || [];
-    console.log(`[jira] searchJql page: ${page.length} issues, keys: ${Object.keys(data).join(', ')}`);
+    const page = data.issues || [];
+    console.log(`[jira] searchJql startAt=${startAt} page=${page.length} total=${data.total}`);
     allIssues = allIssues.concat(page);
-    nextPageToken = data.nextPageToken || null;
-  } while (nextPageToken);
+    startAt += page.length;
+
+    if (page.length < maxResults || allIssues.length >= data.total) break;
+  } while (true);
 
   return allIssues;
 }

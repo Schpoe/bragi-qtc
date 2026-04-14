@@ -407,7 +407,6 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     // All issues touched during the quarter — classify by status on our side
     const allJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" ORDER BY updated DESC`;
 
-    // Diagnostic: count all issues in project regardless of date
     const diagIssues = await jira.searchJql(`project = "${project}" ORDER BY updated DESC`);
     console.log(`[jira] diagnostic — total issues in project ${project}: ${diagIssues.length}`);
 
