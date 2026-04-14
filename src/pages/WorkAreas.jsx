@@ -294,7 +294,9 @@ export default function WorkAreas() {
   // Step 2: filter by search — this is the pool shown in the pie chart
   const filteredBySearch = filteredByRole.filter(wa =>
     wa.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (wa.type || "").toLowerCase().includes(searchQuery.toLowerCase())
+    (wa.type || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (wa.jira_key || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (wa.prod_id || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Step 3: filter by type (applied after pie chart, so pie always shows full distribution)
