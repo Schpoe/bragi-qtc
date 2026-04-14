@@ -404,10 +404,10 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     const spField = jira.detectStoryPointsField(fieldMap);
     const project = team.jira_project_key;
 
-    // Issues completed during the quarter
-    const completedJql = `project = "${project}" AND status changed to Done DURING ("${dateRange.start}", "${dateRange.end}") ORDER BY updated DESC`;
-    // Issues worked on (status moved out of backlog/todo) but not completed
-    const inProgressJql = `project = "${project}" AND status was not in ("To Do", "Backlog", "Open") DURING ("${dateRange.start}", "${dateRange.end}") AND status != Done ORDER BY updated DESC`;
+    // Issues resolved/closed during the quarter (uses resolutiondate — more reliable than status change history)
+    const completedJql = `project = "${project}" AND resolutiondate >= "${dateRange.start}" AND resolutiondate <= "${dateRange.end}" ORDER BY resolutiondate DESC`;
+    // Issues updated during the quarter that are not yet resolved
+    const inProgressJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" AND resolution is EMPTY AND status != "To Do" AND status != "Backlog" AND status != "Open" ORDER BY updated DESC`;
 
     const [completedIssues, inProgressIssues] = await Promise.all([
       jira.searchJql(completedJql),
@@ -437,6 +437,7 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
         team: { id: team.id, name: team.name, jira_project_key: project },
         dateRange,
         storyPointsField: spField,
+        jql: { completed: completedJql, inProgress: inProgressJql },
         completed: {
           count: completed.length,
           storyPoints: completed.reduce((sum, i) => sum + i.storyPoints, 0),
