@@ -512,7 +512,10 @@ export default function WorkAreas() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium text-sm">{wa.name}</p>
-                              {wa.jira_key && (
+                              {wa.prod_id && (
+                                <Badge variant="outline" className="text-xs">{wa.prod_id}</Badge>
+                              )}
+                              {wa.jira_key && wa.jira_key !== wa.prod_id && (
                                 <Badge variant="outline" className="text-xs">{wa.jira_key}</Badge>
                               )}
                             </div>
