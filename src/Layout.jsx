@@ -14,7 +14,7 @@ import logo from "@/bragi-qtc-new.png";
 
 const navItems = [
   { name: "Overview", page: "Dashboard", icon: LayoutDashboard },
-  { name: "Capacity Planning", page: "SprintPlanning", icon: CalendarRange },
+  { name: "Quarterly Planning", page: "QuarterlyPlanning", icon: CalendarRange },
   { name: "Teams", page: "Teams", icon: Users },
   { name: "Work Items", page: "WorkAreas", icon: FolderKanban },
   { name: "Work Item Types", page: "WorkAreaTypes", icon: FolderKanban, adminOnly: true },

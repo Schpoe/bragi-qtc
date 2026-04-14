@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { History, ChevronDown, ChevronRight, ArrowRight, TrendingUp, TrendingDown, Minus, Download, Save, RotateCcw, Trash2, BookMarked } from "lucide-react";
+import { History, ChevronDown, ChevronRight, ArrowRight, TrendingUp, TrendingDown, Minus, Download, Save, RotateCcw, Trash2, BookMarked, Star, RefreshCw, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -90,9 +90,18 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [labelInput, setLabelInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
-  const [revertTarget, setRevertTarget] = useState(null); // snapshot to confirm revert
+  const [revertTarget, setRevertTarget] = useState(null);
 
   const canManage = canManageAllocations(user, teamId);
+
+  const setInitialPlan = useMutation({
+    mutationFn: (id) => bragiQTC.entities.QuarterlyPlanSnapshot.setInitialPlan(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quarterlyPlanSnapshots", quarter, teamId] });
+      toast.success("Initial plan set");
+    },
+    onError: (err) => toast.error(err.message || "Failed to set initial plan"),
+  });
 
   const { data: snapshots = [], isLoading } = useQuery({
     queryKey: ["quarterlyPlanSnapshots", quarter, teamId],
@@ -242,16 +251,23 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
         </div>
       ) : (
         <div className="space-y-2">
-          {snapshots.map(snap => {
+          {[...snapshots].sort((a, b) => (b.is_initial_plan ? 1 : 0) - (a.is_initial_plan ? 1 : 0)).map(snap => {
             const allocs = Array.isArray(snap.allocations) ? snap.allocations : [];
             const nonZero = allocs.filter(a => (a.days ?? a.percent ?? 0) > 0).length;
-            const canDelete = canManage;
             return (
-              <div key={snap.id} className="rounded-lg border border-border bg-background p-3 flex items-start gap-3">
-                <BookMarked className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div key={snap.id} className={cn("rounded-lg border bg-background p-3 flex items-start gap-3", snap.is_initial_plan ? "border-amber-400/60 bg-amber-50/40 dark:bg-amber-950/20" : "border-border")}>
+                {snap.is_initial_plan
+                  ? <Star className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  : <BookMarked className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                }
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-sm truncate">{snap.label}</span>
+                    {snap.is_initial_plan && (
+                      <Badge className="text-xs bg-amber-100 text-amber-800 border border-amber-300 gap-1">
+                        <Star className="w-2.5 h-2.5" /> Initial Plan
+                      </Badge>
+                    )}
                     <Badge variant="secondary" className="text-xs">{nonZero} allocation{nonZero !== 1 ? "s" : ""}</Badge>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
@@ -263,6 +279,18 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  {canManage && !snap.is_initial_plan && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => setInitialPlan.mutate(snap.id)}
+                      disabled={setInitialPlan.isPending}
+                      title="Mark as initial plan"
+                    >
+                      <Star className="w-3 h-3" /> Set Initial
+                    </Button>
+                  )}
                   {canManage && (
                     <Button
                       variant="outline"
@@ -273,7 +301,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
                       <RotateCcw className="w-3 h-3" /> Revert
                     </Button>
                   )}
-                  {canDelete && (
+                  {canManage && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -321,7 +349,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations, workAreaSelections }) {
+export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations, workAreaSelections, jiraProjectKey }) {
   const [open, setOpen] = useState(false);
 
   const { data: allHistory = [], isLoading } = useQuery({
@@ -418,6 +446,10 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
                   <TabsTrigger value="log">
                     Audit Log
                     <Badge variant="secondary" className="ml-2 text-xs">{history.length}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="actuals">
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                    Actuals
                   </TabsTrigger>
                 </TabsList>
                 <Button
@@ -575,10 +607,413 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
                   </div>
                 )}
               </TabsContent>
+              {/* ── Actuals tab ─────────────────────────────────────────── */}
+              <ActualsTab
+                quarter={quarter}
+                teamId={teamId}
+                teamName={teamName}
+                jiraProjectKey={jiraProjectKey}
+                members={members}
+                quarterlyAllocations={quarterlyAllocations}
+                workAreas={workAreas}
+              />
             </Tabs>
           </CardContent>
         </Card>
       )}
     </div>
+  );
+}
+
+// ── PROD → Epic breakdown ─────────────────────────────────────────────────────
+
+function ProdEpicBreakdown({ completed, inProgress }) {
+  // Merge completed and in-progress byProd into one combined structure
+  const merged = useMemo(() => {
+    const prods = {};
+
+    const addGroup = (byProd, type) => {
+      (byProd || []).forEach(prod => {
+        const pk = prod.prodKey || prod.prodName || '__none__';
+        if (!prods[pk]) prods[pk] = { prodName: prod.prodName, epics: {} };
+        prod.epics.forEach(epic => {
+          const ek = epic.epicKey || '__none__';
+          if (!prods[pk].epics[ek]) {
+            prods[pk].epics[ek] = { epicKey: epic.epicKey, epicName: epic.epicName, completedCount: 0, completedSP: 0, inProgressCount: 0, inProgressSP: 0 };
+          }
+          if (type === 'completed') {
+            prods[pk].epics[ek].completedCount += epic.count;
+            prods[pk].epics[ek].completedSP    += epic.storyPoints;
+          } else {
+            prods[pk].epics[ek].inProgressCount += epic.count;
+            prods[pk].epics[ek].inProgressSP    += epic.storyPoints;
+          }
+        });
+      });
+    };
+
+    addGroup(completed.byProd, 'completed');
+    addGroup(inProgress.byProd, 'inProgress');
+
+    return Object.values(prods)
+      .map(p => ({ ...p, epics: Object.values(p.epics).sort((a, b) => (b.completedSP + b.inProgressSP) - (a.completedSP + a.inProgressSP)) }))
+      .sort((a, b) => {
+        if (a.prodName === 'Not assigned') return 1;
+        if (b.prodName === 'Not assigned') return -1;
+        return (a.prodName || '').localeCompare(b.prodName || '');
+      });
+  }, [completed, inProgress]);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">By PROD → Epic</p>
+      {merged.map((prod, pi) => (
+        <div key={pi} className="rounded-lg border border-border overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border">
+            <span className="text-xs font-semibold truncate">{prod.prodName || 'Not assigned to PROD'}</span>
+            <div className="flex items-center gap-3 shrink-0 text-xs">
+              <span className="text-green-700 font-medium">{prod.epics.reduce((s, e) => s + e.completedSP, 0)} SP done</span>
+              <span className="text-blue-700 font-medium">{prod.epics.reduce((s, e) => s + e.inProgressSP, 0)} SP in progress</span>
+            </div>
+          </div>
+          <div className="divide-y divide-border/50">
+            {prod.epics.map((epic, ei) => (
+              <div key={ei} className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted/20">
+                <span className="flex-1 truncate text-muted-foreground">{epic.epicName || 'No Epic'}</span>
+                <span className="shrink-0 text-green-700">
+                  {epic.completedCount} done {epic.completedSP > 0 && <span className="text-green-600/70">({epic.completedSP} SP)</span>}
+                </span>
+                {epic.inProgressCount > 0 && (
+                  <span className="shrink-0 text-blue-700">
+                    · {epic.inProgressCount} in progress {epic.inProgressSP > 0 && <span className="text-blue-600/70">({epic.inProgressSP} SP)</span>}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Plan vs Actuals comparison table ─────────────────────────────────────────
+
+function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocations, workAreas, quarter }) {
+  const rows = useMemo(() => {
+    if (!actuals) return [];
+
+    const memberIds = new Set(members.map(m => m.id));
+    const epicDetails = actuals.epicDetails || {};
+
+    // Build two lookups from epicDetails:
+    // 1. epicKey → { prodKey, prodName }  (work area has an epic key)
+    // 2. prodKey → prodName               (work area has the PROD key directly)
+    const epicToProd = {};
+    const prodNames  = {};
+    Object.values(epicDetails).forEach(e => {
+      epicToProd[e.key] = { prodKey: e.prodKey || e.key, prodName: e.prodName || e.name };
+      if (e.prodKey) prodNames[e.prodKey] = e.prodName;
+    });
+
+    // Build workAreaId → { prodKey, prodName } using jira_key and linked_epic_keys
+    // Work areas may reference either an Epic key OR a PROD key directly
+    const waToProd = {};
+    workAreas.forEach(wa => {
+      const keys = [wa.jira_key, ...(wa.linked_epic_keys || [])].filter(Boolean);
+      for (const k of keys) {
+        if (epicToProd[k]) {
+          // k is an Epic key → resolve to its PROD
+          waToProd[wa.id] = epicToProd[k];
+          break;
+        }
+        if (prodNames[k] !== undefined) {
+          // k is a PROD key referenced directly
+          waToProd[wa.id] = { prodKey: k, prodName: prodNames[k] };
+          break;
+        }
+      }
+    });
+
+    // Sum days per prodKey for initial and current plan
+    const sumByProd = (allocations) => {
+      const map = {};
+      (Array.isArray(allocations) ? allocations : [])
+        .filter(a => memberIds.has(a.team_member_id))
+        .forEach(a => {
+          const prod = waToProd[a.work_area_id];
+          const key  = prod?.prodKey  || `__wa:${a.work_area_id}`;
+          const name = prod?.prodName || workAreas.find(w => w.id === a.work_area_id)?.name || 'Unlinked';
+          if (!map[key]) map[key] = { prodKey: key, prodName: name, days: 0, linked: !!prod };
+          map[key].days += (a.days || 0);
+        });
+      return map;
+    };
+
+    const initialByProd  = sumByProd(initialPlan?.allocations || []);
+    const currentByProd  = sumByProd(quarterlyAllocations.filter(a => a.quarter === quarter));
+
+    // Build Jira actuals per prodKey
+    const jiraByProd = {};
+    const addJira = (byProd, field) => {
+      (byProd || []).forEach(p => {
+        const key  = p.prodKey  || p.prodName || '__none__';
+        const name = p.prodName || 'Not assigned to PROD';
+        if (!jiraByProd[key]) jiraByProd[key] = { prodKey: key, prodName: name, completedSP: 0, inProgressSP: 0, completedCount: 0, inProgressCount: 0 };
+        p.epics.forEach(e => {
+          jiraByProd[key][field === 'completed' ? 'completedSP' : 'inProgressSP']    += e.storyPoints;
+          jiraByProd[key][field === 'completed' ? 'completedCount' : 'inProgressCount'] += e.count;
+        });
+      });
+    };
+    addJira(actuals.completed.byProd, 'completed');
+    addJira(actuals.inProgress.byProd, 'inProgress');
+
+    // Merge all prod keys
+    const allKeys = new Set([...Object.keys(initialByProd), ...Object.keys(currentByProd), ...Object.keys(jiraByProd)]);
+
+    return Array.from(allKeys).map(key => ({
+      prodKey:        key,
+      prodName:       initialByProd[key]?.prodName || currentByProd[key]?.prodName || jiraByProd[key]?.prodName || key,
+      initialDays:    initialByProd[key]?.days  ?? null,
+      currentDays:    currentByProd[key]?.days  ?? null,
+      completedSP:    jiraByProd[key]?.completedSP    ?? null,
+      inProgressSP:   jiraByProd[key]?.inProgressSP   ?? null,
+      completedCount: jiraByProd[key]?.completedCount ?? 0,
+      inProgressCount:jiraByProd[key]?.inProgressCount ?? 0,
+      linked:         initialByProd[key]?.linked || currentByProd[key]?.linked || key.startsWith('__wa:') === false,
+    })).sort((a, b) => {
+      if (a.prodName === 'Not assigned to PROD' || a.prodName === 'Unlinked') return 1;
+      if (b.prodName === 'Not assigned to PROD' || b.prodName === 'Unlinked') return -1;
+      return (b.currentDays ?? 0) - (a.currentDays ?? 0);
+    });
+  }, [actuals, initialPlan, members, quarterlyAllocations, workAreas, quarter]);
+
+  if (rows.length === 0) return null;
+
+  const hasInitial = rows.some(r => r.initialDays !== null);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan vs Actuals by PROD</p>
+      <div className="overflow-x-auto rounded-lg border border-border text-xs">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-muted/40 border-b border-border">
+              <th className="text-left py-2 px-3 font-semibold">PROD / Topic</th>
+              {hasInitial && <th className="text-center py-2 px-3 font-semibold text-amber-700">Initial Plan</th>}
+              <th className="text-center py-2 px-3 font-semibold">Current Plan</th>
+              {hasInitial && <th className="text-center py-2 px-3 font-semibold text-muted-foreground">Δ</th>}
+              <th className="text-center py-2 px-3 font-semibold text-green-700">Done SP</th>
+              <th className="text-center py-2 px-3 font-semibold text-blue-700">In Progress SP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(row => {
+              const delta = (row.currentDays !== null && row.initialDays !== null) ? row.currentDays - row.initialDays : null;
+              return (
+                <tr key={row.prodKey} className="border-b border-border/50 hover:bg-muted/20">
+                  <td className="py-2 px-3 font-medium max-w-[200px] truncate" title={row.prodName}>
+                    {row.prodName}
+                    {!row.linked && row.completedSP === null && row.inProgressSP === null && (
+                      <span className="ml-1 text-muted-foreground/50 text-[10px]">(no Jira link)</span>
+                    )}
+                  </td>
+                  {hasInitial && (
+                    <td className="text-center py-2 px-3 tabular-nums text-amber-700">
+                      {row.initialDays !== null ? `${row.initialDays}d` : '—'}
+                    </td>
+                  )}
+                  <td className="text-center py-2 px-3 tabular-nums font-medium">
+                    {row.currentDays !== null ? `${row.currentDays}d` : '—'}
+                  </td>
+                  {hasInitial && (
+                    <td className={cn("text-center py-2 px-3 tabular-nums font-medium", delta > 0 ? "text-amber-600" : delta < 0 ? "text-blue-600" : "text-muted-foreground")}>
+                      {delta === null ? '—' : delta === 0 ? '=' : delta > 0 ? `+${delta}d` : `${delta}d`}
+                    </td>
+                  )}
+                  <td className="text-center py-2 px-3 tabular-nums text-green-700">
+                    {row.completedSP !== null ? `${row.completedSP} SP` : '—'}
+                    {row.completedCount > 0 && <span className="text-muted-foreground ml-1">({row.completedCount})</span>}
+                  </td>
+                  <td className="text-center py-2 px-3 tabular-nums text-blue-700">
+                    {row.inProgressSP !== null ? `${row.inProgressSP} SP` : '—'}
+                    {row.inProgressCount > 0 && <span className="text-muted-foreground ml-1">({row.inProgressCount})</span>}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {!hasInitial && (
+        <p className="text-xs text-muted-foreground">Mark a snapshot as "Initial Plan" in the Versions tab to see the initial vs current comparison.</p>
+      )}
+    </div>
+  );
+}
+
+// ── Actuals tab ───────────────────────────────────────────────────────────────
+
+function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarterlyAllocations, workAreas = [] }) {
+  const [actuals, setActuals] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const { data: snapshots = [] } = useQuery({
+    queryKey: ["quarterlyPlanSnapshots", quarter, teamId],
+    queryFn: () => bragiQTC.entities.QuarterlyPlanSnapshot.filter({ quarter, team_id: teamId }),
+    enabled: !!(quarter && teamId),
+  });
+  const initialPlan = snapshots.find(s => s.is_initial_plan);
+
+  const plannedDays = useMemo(() => {
+    if (!initialPlan) return null;
+    const allocs = Array.isArray(initialPlan.allocations) ? initialPlan.allocations : [];
+    const teamMemberIds = new Set(members.map(m => m.id));
+    return allocs.filter(a => teamMemberIds.has(a.team_member_id)).reduce((sum, a) => sum + (a.days || 0), 0);
+  }, [initialPlan, members]);
+
+  const currentDays = useMemo(() => {
+    const teamMemberIds = new Set(members.map(m => m.id));
+    return quarterlyAllocations
+      .filter(a => a.quarter === quarter && teamMemberIds.has(a.team_member_id))
+      .reduce((sum, a) => sum + (a.days || 0), 0);
+  }, [quarterlyAllocations, quarter, members]);
+
+  const fetchActuals = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await bragiQTC.functions.invoke("fetchQuarterlyJiraActuals", { teamId, quarter });
+      setActuals(result.data);
+    } catch (err) {
+      setError(err.message || "Failed to fetch Jira actuals");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <TabsContent value="actuals" className="mt-0 space-y-4">
+      {/* Initial plan summary */}
+      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Planned Capacity</p>
+        {initialPlan ? (
+          <div className="flex items-center gap-4 flex-wrap">
+            <div>
+              <span className="text-sm font-semibold">{plannedDays}d</span>
+              <span className="text-xs text-muted-foreground ml-1">initial plan ({initialPlan.label})</span>
+            </div>
+            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+            <div>
+              <span className="text-sm font-semibold">{currentDays}d</span>
+              <span className="text-xs text-muted-foreground ml-1">current plan</span>
+              {plannedDays !== null && currentDays !== plannedDays && (
+                <span className={cn("ml-1.5 text-xs font-medium", currentDays > plannedDays ? "text-amber-600" : "text-blue-600")}>
+                  ({currentDays > plannedDays ? "+" : ""}{currentDays - plannedDays}d vs initial)
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5" />
+            No initial plan set. Mark a version as "Initial Plan" in the Versions tab first.
+          </p>
+        )}
+      </div>
+
+      {/* Jira actuals fetch */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Jira Actuals</p>
+          {jiraProjectKey ? (
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={fetchActuals} disabled={loading}>
+              <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
+              {loading ? "Fetching…" : actuals ? "Refresh" : `Fetch from ${jiraProjectKey}`}
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground">Set a Jira project key for {teamName} on the Teams page</span>
+          )}
+        </div>
+
+        {error && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive flex items-start gap-2">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            {error}
+          </div>
+        )}
+
+        {actuals && (
+          <div className="space-y-3">
+            <div className="text-xs text-muted-foreground">{actuals.dateRange.start} → {actuals.dateRange.end} · SP field: <code>{actuals.storyPointsField}</code></div>
+            {actuals.jql && (
+              <details className="text-xs">
+                <summary className="cursor-pointer text-muted-foreground hover:text-foreground py-0.5">Show JQL queries</summary>
+                <div className="mt-1.5 space-y-1.5">
+                  <div className="font-mono bg-muted rounded p-2 break-all">{actuals.jql.completed}</div>
+                  <div className="font-mono bg-muted rounded p-2 break-all">{actuals.jql.inProgress}</div>
+                </div>
+              </details>
+            )}
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-green-200 bg-green-50/50 dark:bg-green-950/20 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                  <span className="text-xs font-semibold text-green-800 dark:text-green-300">Completed</span>
+                </div>
+                <div className="text-2xl font-bold text-green-700 dark:text-green-300">{actuals.completed.count}</div>
+                <div className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                  {actuals.completed.storyPoints > 0 ? `${actuals.completed.storyPoints} story points` : "no story points recorded"}
+                </div>
+              </div>
+              <div className="rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Clock className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="text-xs font-semibold text-blue-800 dark:text-blue-300">In Progress</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{actuals.inProgress.count}</div>
+                <div className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                  {actuals.inProgress.storyPoints > 0 ? `${actuals.inProgress.storyPoints} story points` : "no story points recorded"}
+                </div>
+              </div>
+            </div>
+
+            {/* Comparison row */}
+            {plannedDays !== null && (actuals.completed.storyPoints > 0 || actuals.inProgress.storyPoints > 0) && (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1.5">
+                <p className="font-semibold text-muted-foreground uppercase tracking-wide">Plan vs Actuals</p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span><span className="font-semibold">{plannedDays}d</span> planned (initial)</span>
+                  <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                  <span><span className="font-semibold text-green-700">{actuals.completed.storyPoints} SP</span> completed</span>
+                  <span className="text-muted-foreground">+</span>
+                  <span><span className="font-semibold text-blue-700">{actuals.inProgress.storyPoints} SP</span> in progress</span>
+                </div>
+              </div>
+            )}
+
+            {/* Full plan vs actuals comparison by PROD */}
+            <PlanVsActualsTable
+              actuals={actuals}
+              initialPlan={initialPlan}
+              members={members}
+              quarterlyAllocations={quarterlyAllocations}
+              workAreas={workAreas}
+              quarter={quarter}
+            />
+          </div>
+        )}
+
+        {!actuals && !loading && !error && jiraProjectKey && (
+          <p className="text-xs text-muted-foreground text-center py-4">
+            Click "Fetch" to pull completed and in-progress issues from Jira project <strong>{jiraProjectKey}</strong> for {quarter}.
+          </p>
+        )}
+      </div>
+    </TabsContent>
   );
 }

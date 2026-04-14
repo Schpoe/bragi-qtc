@@ -31,6 +31,7 @@ function LogPane({ entries }) {
 
 export default function JiraImportDialog({ open, onOpenChange, teams: existingTeams = [] }) {
   const [jql, setJql] = useState('project = PROD');
+  const [forceUpdate, setForceUpdate] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState(null);
@@ -76,7 +77,8 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
       const d = response.data;
       if (d.ok) {
         addLog(`Connected to ${d.baseUrl}`, 'success');
-        addLog(`Fetched ${d.fieldCount} Jira fields`, 'success');
+        addLog(`${d.fieldCount} fields — custom fields:`, 'success');
+        (d.customFields || []).forEach(f => addLog(`  ${f.name}  →  ${f.id}`, 'info'));
       } else {
         addLog(d.error, 'error');
         setError(d.error);
@@ -222,7 +224,7 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
               existingWA.type !== newData.type ||
               existingWA.leading_team_id !== newData.leading_team_id ||
               JSON.stringify(existingWA.supporting_team_ids || []) !== JSON.stringify(supportingTeamIds);
-            if (hasChanged) {
+            if (hasChanged || forceUpdate) {
               await updateWorkArea.mutateAsync({ id: existingWA.id, workAreaData: newData });
               stats.workAreasUpdated++;
             } else {
@@ -362,13 +364,24 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
           )}
 
           {syncResult && !syncResult.importStats && (
-            <Button onClick={importData} disabled={importing} className="w-full">
-              {importing ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importing...</>
-              ) : (
-                'Import to Database'
-              )}
-            </Button>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={forceUpdate}
+                  onChange={e => setForceUpdate(e.target.checked)}
+                  className="rounded"
+                />
+                Force update existing items (overwrite even if unchanged)
+              </label>
+              <Button onClick={importData} disabled={importing} className="w-full">
+                {importing ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importing...</>
+                ) : (
+                  'Import to Database'
+                )}
+              </Button>
+            </div>
           )}
 
           {syncResult && syncResult.importStats && (

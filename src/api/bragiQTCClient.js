@@ -70,12 +70,13 @@ export const bragiQTC = {
     TeamMemberCapacity:         makeEntityClient('/api/team-member-capacities'),
     WorkArea:                   makeEntityClient('/api/work-areas'),
     WorkAreaType:               makeEntityClient('/api/work-area-types'),
-    Sprint:                     makeEntityClient('/api/sprints'),
-    Allocation:                 makeEntityClient('/api/allocations'),
     QuarterlyAllocation:        makeEntityClient('/api/quarterly-allocations'),
     QuarterlyWorkAreaSelection: makeEntityClient('/api/quarterly-work-area-selections'),
     QuarterlyPlanHistory:       makeEntityClient('/api/quarterly-plan-history'),
-    QuarterlyPlanSnapshot:      makeEntityClient('/api/quarterly-plan-snapshots'),
+    QuarterlyPlanSnapshot: {
+      ...makeEntityClient('/api/quarterly-plan-snapshots'),
+      setInitialPlan: (id) => apiFetch(`/api/quarterly-plan-snapshots/${id}/set-initial-plan`, { method: 'PATCH' }),
+    },
     JiraSyncHistory:            makeEntityClient('/api/jira-sync-history'),
   },
 
