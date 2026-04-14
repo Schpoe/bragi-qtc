@@ -66,7 +66,9 @@ async function searchJql(jql) {
     }
 
     const data = await res.json();
-    allIssues = allIssues.concat(data.issues || []);
+    const page = data.issues || data.values || [];
+    console.log(`[jira] searchJql page: ${page.length} issues, keys: ${Object.keys(data).join(', ')}`);
+    allIssues = allIssues.concat(page);
     nextPageToken = data.nextPageToken || null;
   } while (nextPageToken);
 
