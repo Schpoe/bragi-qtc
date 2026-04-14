@@ -14,6 +14,7 @@ import QuarterlyTeamsSummary from "../components/dashboard/QuarterlyTeamsSummary
 import QuarterlyExportButtons from "../components/dashboard/QuarterlyExportButtons";
 import QuarterlyWorkItemSummary from "../components/dashboard/QuarterlyWorkItemSummary";
 import QuarterlyDisciplineSummary from "../components/dashboard/QuarterlyDisciplineSummary";
+import QuarterlyTopicBreakdown from "../components/dashboard/QuarterlyTopicBreakdown";
 
 export default function Dashboard() {
   const [selectedQuarter, setSelectedQuarter] = useSelectedQuarter();
@@ -234,6 +235,20 @@ export default function Dashboard() {
                         quarterlyAllocations={quarterlyAllocations}
                         selectedQuarter={selectedQuarter}
                         selectedTeamId={selectedTeamId}
+                        capacityMap={capacityMap}
+                      />
+                    </CardContent>
+                  </Card>
+                  <Card className="border-border/60">
+                    <CardHeader className="pb-3 border-b">
+                      <CardTitle className="text-base font-bold text-foreground">Capacity by Topic — {selectedQuarter}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-4">
+                      <QuarterlyTopicBreakdown
+                        members={quarterlyTabMembers}
+                        quarterlyAllocations={quarterlyAllocations}
+                        workAreas={workAreas}
+                        quarter={selectedQuarter}
                         capacityMap={capacityMap}
                       />
                     </CardContent>

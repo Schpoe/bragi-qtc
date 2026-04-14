@@ -13,6 +13,7 @@ import EmptyState from "../components/shared/EmptyState";
 import FilterBar from "../components/shared/FilterBar";
 import QuarterlyAllocationTable from "../components/sprint/QuarterlyAllocationTable";
 import QuarterlyPlanHistoryPanel from "../components/sprint/QuarterlyPlanHistoryPanel";
+import QuarterlyTopicBreakdown from "../components/dashboard/QuarterlyTopicBreakdown";
 
 export default function SprintPlanning() {
   const { user } = useAuth();
@@ -47,6 +48,18 @@ export default function SprintPlanning() {
     queryKey: ["workAreaSelections"],
     queryFn: () => bragiQTC.entities.QuarterlyWorkAreaSelection.list(),
   });
+
+  const { data: memberCapacities = [] } = useQuery({
+    queryKey: ["teamMemberCapacities", selectedQuarter],
+    queryFn: () => bragiQTC.entities.TeamMemberCapacity.filter({ quarter: selectedQuarter }),
+    enabled: !!selectedQuarter,
+  });
+
+  const capacityMap = useMemo(() => {
+    const map = {};
+    memberCapacities.forEach(c => { map[c.team_member_id] = c.working_days; });
+    return map;
+  }, [memberCapacities]);
 
   const isViewingAllTeams = !selectedTeamId || selectedTeamId === "all";
   const effectiveTeamId = selectedTeamId && selectedTeamId !== "all" ? selectedTeamId : "";
@@ -265,6 +278,20 @@ export default function SprintPlanning() {
                   selectedTeamId={effectiveTeamId}
                   onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: effectiveTeamId, quarter: selectedQuarter, workAreaIds })}
                   initialSelectedWorkAreaIds={manuallySelectedIds.size > 0 ? manuallySelectedIds : workAreasWithAllocations}
+                />
+              </CardContent>
+            </Card>
+            <Card className="border-border/60">
+              <CardHeader className="pb-3 border-b">
+                <CardTitle className="text-base font-bold text-foreground">Capacity by Topic — {selectedQuarter}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <QuarterlyTopicBreakdown
+                  members={teamMembers}
+                  quarterlyAllocations={quarterlyAllocations}
+                  workAreas={workAreas}
+                  quarter={selectedQuarter}
+                  capacityMap={capacityMap}
                 />
               </CardContent>
             </Card>
