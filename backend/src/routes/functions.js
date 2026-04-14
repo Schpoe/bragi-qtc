@@ -465,6 +465,9 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
         dateRange,
         storyPointsField: spField,
         jql: { completed: completedJql, inProgress: inProgressJql },
+        // epicDetails: epicKey → { key, name, storyPoints, prodKey, prodName }
+        // Used by the frontend to map Bragi work areas (via jira_key/linked_epic_keys) to PRODs
+        epicDetails,
         completed: {
           count: completed.length,
           storyPoints: completed.reduce((sum, i) => sum + i.storyPoints, 0),
