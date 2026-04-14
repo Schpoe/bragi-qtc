@@ -408,15 +408,10 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     // All issues touched during the quarter — classify by status on our side
     const allJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" ORDER BY updated DESC`;
 
-    const spFields = ['summary', 'status', 'issuetype', 'parent', spField];
+    // customfield_10014 = Epic Link (old-style company-managed projects)
+    const spFields = ['summary', 'status', 'issuetype', 'parent', 'customfield_10014', spField];
     const allIssues = await jira.searchJql(allJql, spFields);
     console.log(`[jira] fetchQuarterlyJiraActuals: ${allIssues.length} issues for ${project} in ${quarter}`);
-    if (allIssues.length > 0) {
-      const sample = allIssues[0];
-      console.log(`[jira] sample issue fields: ${Object.keys(sample.fields || {}).join(', ')}`);
-      console.log(`[jira] sample parent: ${JSON.stringify(sample.fields?.parent)}`);
-      console.log(`[jira] sample SP (${spField}): ${sample.fields?.[spField]}`);
-    }
 
     const completedStatuses = new Set(['done', 'closed', 'resolved', 'released', 'complete', 'completed']);
     const ignoredStatuses   = new Set(['to do', 'backlog', 'open', 'new', 'todo']);
@@ -437,21 +432,25 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
       return 0;
     };
 
+    const getEpicKey = (issue) =>
+      issue.fields?.parent?.key || issue.fields?.customfield_10014 || null;
+
     const mapIssue = (issue) => ({
       key: issue.key,
       summary: issue.fields?.summary,
       status: issue.fields?.status?.name,
       issueType: issue.fields?.issuetype?.name,
       storyPoints: getSP(issue),
-      epicKey: issue.fields?.parent?.key || null,
+      epicKey: getEpicKey(issue),
       epicName: issue.fields?.parent?.fields?.summary || null,
     });
 
     const completed  = completedIssues.map(mapIssue);
     const inProgress = inProgressIssues.map(mapIssue);
 
-    // Fetch unique epics to resolve their PROD parent (one level above epics)
-    const epicKeys = [...new Set(allIssues.map(i => i.fields?.parent?.key).filter(Boolean))];
+    // Fetch unique epics to get their name, SP, and PROD parent
+    const epicKeys = [...new Set(allIssues.map(getEpicKey).filter(Boolean))];
+    console.log(`[jira] fetching ${epicKeys.length} unique epics for PROD/SP resolution`);
     const epicDetails = {};
     await Promise.all(epicKeys.map(async (key) => {
       try {
@@ -460,47 +459,54 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
           epicDetails[key] = {
             key,
             name: epic.fields?.summary,
-            prodKey: epic.fields?.parent?.key || null,
+            storyPoints: getSP(epic),
+            prodKey: epic.fields?.parent?.key || epic.fields?.customfield_10014 || null,
             prodName: epic.fields?.parent?.fields?.summary || null,
           };
         }
       } catch {}
     }));
+    console.log(`[jira] resolved ${Object.keys(epicDetails).length} epics`);
 
     // Build breakdown: group by PROD → Epic
+    // SP is taken from the Epic (not individual issues) since that's where it's stored
     const buildBreakdown = (issues) => {
       const groups = {};
       issues.forEach(issue => {
-        const epic = issue.epicKey ? epicDetails[issue.epicKey] : null;
-        const prodKey  = epic?.prodKey  || null;
-        const prodName = epic?.prodName || (issue.epicKey ? null : null);
-        const epicKey  = issue.epicKey  || null;
+        const epic     = issue.epicKey ? epicDetails[issue.epicKey] : null;
+        const epicKey  = issue.epicKey || null;
         const epicName = epic?.name || issue.epicName || null;
-        const gKey = prodKey || epicKey || '__none__';
+        const prodKey  = epic?.prodKey  || null;
+        const prodName = epic?.prodName || null;
+        const gKey     = prodKey || epicKey || '__none__';
 
         if (!groups[gKey]) {
           groups[gKey] = {
             prodKey,
-            prodName: prodName || (epicKey && !prodKey ? epicName : null) || 'Not assigned',
+            prodName: prodName || (epicKey && !prodKey ? epicName : null) || 'Not assigned to PROD',
             epics: {},
           };
         }
         const eKey = epicKey || '__none__';
         if (!groups[gKey].epics[eKey]) {
-          groups[gKey].epics[eKey] = { epicKey, epicName: epicName || 'No Epic', count: 0, storyPoints: 0 };
+          const epicSP = epic ? epic.storyPoints : 0;
+          groups[gKey].epics[eKey] = {
+            epicKey,
+            epicName: epicName || 'No Epic',
+            count: 0,
+            // SP from epic counted once per epic (not summed per issue)
+            storyPoints: epicSP,
+          };
         }
         groups[gKey].epics[eKey].count++;
-        groups[gKey].epics[eKey].storyPoints += issue.storyPoints;
       });
 
       return Object.values(groups)
         .map(g => ({ ...g, epics: Object.values(g.epics).sort((a, b) => b.storyPoints - a.storyPoints) }))
         .sort((a, b) => {
-          const aName = a.prodName || '';
-          const bName = b.prodName || '';
-          if (aName === 'Not assigned') return 1;
-          if (bName === 'Not assigned') return -1;
-          return aName.localeCompare(bName);
+          if (a.prodName === 'Not assigned to PROD') return 1;
+          if (b.prodName === 'Not assigned to PROD') return -1;
+          return (a.prodName || '').localeCompare(b.prodName || '');
         });
     };
 
