@@ -83,20 +83,14 @@ router.post('/jiraSync', requireAdmin, async (req, res) => {
     const logs = [];
 
     const fieldMap = await jira.fetchFieldMap();
-    const leadingTeamField = fieldMap[leadingTeamFieldName || process.env.JIRA_LEADING_TEAM_FIELD || 'Leading Team'];
-    const contributingTeamsField = fieldMap[contributingTeamsFieldName || process.env.JIRA_CONTRIBUTING_TEAMS_FIELD || 'Contributing Teams'];
+    const leadingTeamField = fieldMap[leadingTeamFieldName || 'Leading Team'];
+    const contributingTeamsField = fieldMap[contributingTeamsFieldName || 'Contributing Teams'];
     const typeField = fieldMap['Type'];
 
     logs.push(`Connected to ${process.env.JIRA_BASE_URL} — fetched ${Object.keys(fieldMap).length} fields`);
     logs.push(`Field mapping: Leading Team → ${leadingTeamField || '(not found)'}, Contributing Teams → ${contributingTeamsField || '(not found)'}, Type → ${typeField || '(not found)'}`);
 
-    // Always request the custom fields we need, plus standard ones
-    const fieldsToFetch = ['summary', 'issuetype', 'status', 'parent'];
-    if (leadingTeamField)      fieldsToFetch.push(leadingTeamField);
-    if (contributingTeamsField) fieldsToFetch.push(contributingTeamsField);
-    if (typeField)              fieldsToFetch.push(typeField);
-
-    const issues = await jira.searchJql(jql, fieldsToFetch);
+    const issues = await jira.searchJql(jql);
     logs.push(`JQL returned ${issues.length} issue(s)`);
 
     const workAreaTypes = new Set();
