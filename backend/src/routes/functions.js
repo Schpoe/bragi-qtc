@@ -404,15 +404,23 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     const spField = jira.detectStoryPointsField(fieldMap);
     const project = team.jira_project_key;
 
-    // Issues resolved/closed during the quarter (uses resolutiondate — more reliable than status change history)
-    const completedJql = `project = "${project}" AND resolutiondate >= "${dateRange.start}" AND resolutiondate <= "${dateRange.end}" ORDER BY resolutiondate DESC`;
-    // Issues updated during the quarter that are not yet resolved
-    const inProgressJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" AND resolution is EMPTY AND status != "To Do" AND status != "Backlog" AND status != "Open" ORDER BY updated DESC`;
+    // All issues touched during the quarter — classify by status on our side
+    const allJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" ORDER BY updated DESC`;
 
-    const [completedIssues, inProgressIssues] = await Promise.all([
-      jira.searchJql(completedJql),
-      jira.searchJql(inProgressJql),
-    ]);
+    const allIssues = await jira.searchJql(allJql);
+    console.log(`[jira] fetchQuarterlyJiraActuals: ${allIssues.length} issues for ${project} in ${quarter}`);
+
+    const completedStatuses = new Set(['done', 'closed', 'resolved', 'released', 'complete', 'completed']);
+    const ignoredStatuses   = new Set(['to do', 'backlog', 'open', 'new', 'todo']);
+
+    const completedIssues  = allIssues.filter(i => completedStatuses.has((i.fields?.status?.name || '').toLowerCase()));
+    const inProgressIssues = allIssues.filter(i => {
+      const s = (i.fields?.status?.name || '').toLowerCase();
+      return !completedStatuses.has(s) && !ignoredStatuses.has(s);
+    });
+
+    const completedJql  = allJql;
+    const inProgressJql = allJql;
 
     const getSP = (issue) => {
       const val = issue.fields?.[spField];
