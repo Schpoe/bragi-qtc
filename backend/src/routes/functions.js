@@ -403,7 +403,6 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     const fieldMap = await jira.fetchFieldMap();
     const spField = jira.detectStoryPointsField(fieldMap);
     const project = team.jira_project_key;
-    console.log(`[jira] using SP field: ${spField}, project: ${project}, range: ${dateRange.start} → ${dateRange.end}`);
 
     // All issues touched during the quarter — classify by status on our side
     const allJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" ORDER BY updated DESC`;
@@ -411,7 +410,6 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     // customfield_10014 = Epic Link (old-style company-managed projects)
     const spFields = ['summary', 'status', 'issuetype', 'parent', 'customfield_10014', spField];
     const allIssues = await jira.searchJql(allJql, spFields);
-    console.log(`[jira] fetchQuarterlyJiraActuals: ${allIssues.length} issues for ${project} in ${quarter}`);
 
     const completedStatuses = new Set(['done', 'closed', 'resolved', 'released', 'complete', 'completed']);
     const ignoredStatuses   = new Set(['to do', 'backlog', 'open', 'new', 'todo']);
@@ -450,7 +448,6 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
 
     // Fetch unique epics to get their name, SP, and PROD parent
     const epicKeys = [...new Set(allIssues.map(getEpicKey).filter(Boolean))];
-    console.log(`[jira] fetching ${epicKeys.length} unique epics for PROD/SP resolution`);
     const epicDetails = {};
     await Promise.all(epicKeys.map(async (key) => {
       try {
@@ -466,7 +463,6 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
         }
       } catch {}
     }));
-    console.log(`[jira] resolved ${Object.keys(epicDetails).length} epics`);
 
     // Build breakdown: group by PROD → Epic
     // SP is taken from the Epic (not individual issues) since that's where it's stored
