@@ -409,8 +409,8 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
 
     // Who is the API token authenticated as?
     const myselfRes = await fetch(`${process.env.JIRA_BASE_URL}/rest/api/3/myself`, { headers: jira.getJiraHeaders() });
-    const myself = await myselfRes.json();
-    console.log(`[jira] API token authenticated as: ${myself.emailAddress} (${myself.displayName})`);
+    const myselfText = await myselfRes.text();
+    console.log(`[jira] /myself HTTP ${myselfRes.status}: ${myselfText.slice(0, 120)}`);
     const diagIssues = await jira.searchJql(`project = "${project}" ORDER BY updated DESC`);
     console.log(`[jira] diagnostic — issues in ${project}: ${diagIssues.length}`);
 
