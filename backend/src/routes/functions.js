@@ -425,7 +425,9 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
 
     const getSP = (issue) => {
       const val = issue.fields?.[spField];
-      return typeof val === 'number' ? val : 0;
+      if (typeof val === 'number') return val;
+      if (typeof val === 'string') { const n = parseFloat(val); return isNaN(n) ? 0 : n; }
+      return 0;
     };
 
     const mapIssue = (issue) => ({
@@ -435,10 +437,65 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
       issueType: issue.fields?.issuetype?.name,
       storyPoints: getSP(issue),
       epicKey: issue.fields?.parent?.key || null,
+      epicName: issue.fields?.parent?.fields?.summary || null,
     });
 
-    const completed = completedIssues.map(mapIssue);
+    const completed  = completedIssues.map(mapIssue);
     const inProgress = inProgressIssues.map(mapIssue);
+
+    // Fetch unique epics to resolve their PROD parent (one level above epics)
+    const epicKeys = [...new Set(allIssues.map(i => i.fields?.parent?.key).filter(Boolean))];
+    const epicDetails = {};
+    await Promise.all(epicKeys.map(async (key) => {
+      try {
+        const epic = await jira.fetchIssue(key);
+        if (epic) {
+          epicDetails[key] = {
+            key,
+            name: epic.fields?.summary,
+            prodKey: epic.fields?.parent?.key || null,
+            prodName: epic.fields?.parent?.fields?.summary || null,
+          };
+        }
+      } catch {}
+    }));
+
+    // Build breakdown: group by PROD → Epic
+    const buildBreakdown = (issues) => {
+      const groups = {};
+      issues.forEach(issue => {
+        const epic = issue.epicKey ? epicDetails[issue.epicKey] : null;
+        const prodKey  = epic?.prodKey  || null;
+        const prodName = epic?.prodName || (issue.epicKey ? null : null);
+        const epicKey  = issue.epicKey  || null;
+        const epicName = epic?.name || issue.epicName || null;
+        const gKey = prodKey || epicKey || '__none__';
+
+        if (!groups[gKey]) {
+          groups[gKey] = {
+            prodKey,
+            prodName: prodName || (epicKey && !prodKey ? epicName : null) || 'Not assigned',
+            epics: {},
+          };
+        }
+        const eKey = epicKey || '__none__';
+        if (!groups[gKey].epics[eKey]) {
+          groups[gKey].epics[eKey] = { epicKey, epicName: epicName || 'No Epic', count: 0, storyPoints: 0 };
+        }
+        groups[gKey].epics[eKey].count++;
+        groups[gKey].epics[eKey].storyPoints += issue.storyPoints;
+      });
+
+      return Object.values(groups)
+        .map(g => ({ ...g, epics: Object.values(g.epics).sort((a, b) => b.storyPoints - a.storyPoints) }))
+        .sort((a, b) => {
+          const aName = a.prodName || '';
+          const bName = b.prodName || '';
+          if (aName === 'Not assigned') return 1;
+          if (bName === 'Not assigned') return -1;
+          return aName.localeCompare(bName);
+        });
+    };
 
     res.json({
       data: {
@@ -451,11 +508,13 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
           count: completed.length,
           storyPoints: completed.reduce((sum, i) => sum + i.storyPoints, 0),
           issues: completed,
+          byProd: buildBreakdown(completed),
         },
         inProgress: {
           count: inProgress.length,
           storyPoints: inProgress.reduce((sum, i) => sum + i.storyPoints, 0),
           issues: inProgress,
+          byProd: buildBreakdown(inProgress),
         },
       },
     });
