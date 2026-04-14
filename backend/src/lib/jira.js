@@ -96,4 +96,4 @@ function detectStoryPointsField(fieldMap) {
   return 'customfield_10016'; // most common fallback
 }
 
-module.exports = { isConfigured, fetchIssue, fetchFieldMap, searchJql, mapStatusToProgress, getQuarterDateRange, detectStoryPointsField };
+module.exports = { isConfigured, fetchIssue, fetchFieldMap, searchJql, mapStatusToProgress, getQuarterDateRange, detectStoryPointsField, getJiraHeaders };
