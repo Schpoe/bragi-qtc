@@ -407,12 +407,6 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     // All issues touched during the quarter — classify by status on our side
     const allJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" ORDER BY updated DESC`;
 
-    // Who is the API token authenticated as?
-    const myselfRes = await fetch(`${process.env.JIRA_BASE_URL}/rest/api/3/myself`, { headers: jira.getJiraHeaders() });
-    const myselfText = await myselfRes.text();
-    console.log(`[jira] /myself HTTP ${myselfRes.status}: ${myselfText.slice(0, 120)}`);
-    const diagIssues = await jira.searchJql(`project = "${project}" ORDER BY updated DESC`);
-    console.log(`[jira] diagnostic — issues in ${project}: ${diagIssues.length}`);
 
     const allIssues = await jira.searchJql(allJql);
     console.log(`[jira] fetchQuarterlyJiraActuals: ${allIssues.length} issues for ${project} in ${quarter}`);

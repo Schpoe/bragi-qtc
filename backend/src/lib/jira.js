@@ -87,8 +87,9 @@ function getQuarterDateRange(quarter) {
   return { start: `${year}-${start}`, end: `${year}-${end}` };
 }
 
-// Find the story points field ID from a Jira field map
+// Find the story points field ID — env var takes priority, then auto-detect, then fallback
 function detectStoryPointsField(fieldMap) {
+  if (process.env.JIRA_STORY_POINTS_FIELD) return process.env.JIRA_STORY_POINTS_FIELD;
   const candidates = ['Story Points', 'Story point estimate', 'Story points', 'SP', 'Story Point'];
   for (const name of candidates) {
     if (fieldMap[name]) return fieldMap[name];
