@@ -712,6 +712,12 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
       epicToProd[e.key] = { prodKey: e.prodKey || e.key, prodName: e.prodName || e.name };
     });
 
+    console.log('[PlanVsActuals] epicDetails keys:', Object.keys(epicDetails).slice(0, 5));
+    console.log('[PlanVsActuals] sample epicToProd entry:', Object.entries(epicToProd)[0]);
+    console.log('[PlanVsActuals] sample workArea jira_key/linked_epic_keys:',
+      workAreas.slice(0, 3).map(w => ({ name: w.name, jira_key: w.jira_key, linked_epic_keys: w.linked_epic_keys }))
+    );
+
     // Build workAreaId → prodKey lookup using jira_key and linked_epic_keys
     const waToProd = {};
     workAreas.forEach(wa => {
@@ -720,6 +726,7 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
         if (epicToProd[ek]) { waToProd[wa.id] = epicToProd[ek]; break; }
       }
     });
+    console.log('[PlanVsActuals] waToProd matches:', Object.keys(waToProd).length, '/', workAreas.length);
 
     // Sum days per prodKey for initial and current plan
     const sumByProd = (allocations) => {
