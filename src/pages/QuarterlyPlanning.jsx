@@ -15,7 +15,7 @@ import QuarterlyAllocationTable from "../components/sprint/QuarterlyAllocationTa
 import QuarterlyPlanHistoryPanel from "../components/sprint/QuarterlyPlanHistoryPanel";
 import QuarterlyTopicBreakdown from "../components/dashboard/QuarterlyTopicBreakdown";
 
-export default function SprintPlanning() {
+export default function QuarterlyPlanning() {
   const { user } = useAuth();
   const [selectedQuarter, setSelectedQuarter] = useSelectedQuarter();
   const defaultTeamId = isTeamManager(user) && user?.managed_team_ids?.length > 0
