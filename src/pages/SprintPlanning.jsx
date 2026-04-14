@@ -2,47 +2,26 @@ import React, { useState, useRef, useMemo } from "react";
 import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
-import { canManageSprints, canManageAllocations, canCreateSprint, isTeamManager } from "@/lib/permissions";
-import { Plus, CalendarRange, Pencil, Trash2, Copy } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { canManageAllocations, isTeamManager } from "@/lib/permissions";
+import { CalendarRange } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
 import { useSelectedQuarter, useSelectedTeam } from "@/lib/useSelectedQuarter";
 import { useQuarters } from "@/lib/useQuarters";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import FilterBar from "../components/shared/FilterBar";
-import SprintFormDialog from "../components/sprint/SprintFormDialog";
-import SprintAllocationTable from "../components/sprint/SprintAllocationTable";
 import QuarterlyAllocationTable from "../components/sprint/QuarterlyAllocationTable";
 import QuarterlyPlanHistoryPanel from "../components/sprint/QuarterlyPlanHistoryPanel";
-import ConfirmDeleteDialog from "../components/shared/ConfirmDeleteDialog";
 
 export default function SprintPlanning() {
   const { user } = useAuth();
-  const [sprintDialogOpen, setSprintDialogOpen] = useState(false);
-  const [editingSprint, setEditingSprint] = useState(null);
   const [selectedQuarter, setSelectedQuarter] = useSelectedQuarter();
   const defaultTeamId = isTeamManager(user) && user?.managed_team_ids?.length > 0
     ? user.managed_team_ids[0]
     : "all";
   const [selectedTeamId, setSelectedTeamId] = useSelectedTeam(defaultTeamId);
-  const [teamSelectDialogOpen, setTeamSelectDialogOpen] = useState(false);
-  const [teamSelectValue, setTeamSelectValue] = useState("");
-  const [sprintToCopy, setSprintToCopy] = useState(null);
-   const [isCopyOperation, setIsCopyOperation] = useState(false);
-   const [copiedToTeamName, setCopiedToTeamName] = useState("");
-   const [deleteSprintId, setDeleteSprintId] = useState(null);
-   const queryClient = useQueryClient();
-
-  const { data: sprints = [], isLoading: sprintsLoading } = useQuery({
-    queryKey: ["sprints"],
-    queryFn: () => bragiQTC.entities.Sprint.list(),
-  });
+  const queryClient = useQueryClient();
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ["teams"],
@@ -59,69 +38,18 @@ export default function SprintPlanning() {
     queryFn: () => bragiQTC.entities.WorkArea.list(),
   });
 
-  const { data: allocations = [] } = useQuery({
-    queryKey: ["allocations"],
-    queryFn: () => bragiQTC.entities.Allocation.list(),
+  const { data: quarterlyAllocations = [] } = useQuery({
+    queryKey: ["quarterlyAllocations"],
+    queryFn: () => bragiQTC.entities.QuarterlyAllocation.list(),
   });
 
-  const { data: quarterlyAllocations = [] } = useQuery({
-     queryKey: ["quarterlyAllocations"],
-     queryFn: () => bragiQTC.entities.QuarterlyAllocation.list(),
-   });
+  const { data: workAreaSelections = [] } = useQuery({
+    queryKey: ["workAreaSelections"],
+    queryFn: () => bragiQTC.entities.QuarterlyWorkAreaSelection.list(),
+  });
 
-   const { data: workAreaSelections = [] } = useQuery({
-     queryKey: ["workAreaSelections"],
-     queryFn: () => bragiQTC.entities.QuarterlyWorkAreaSelection.list(),
-   });
-
-  // For quarterly plan, require explicit team selection - don't auto-select
   const isViewingAllTeams = !selectedTeamId || selectedTeamId === "all";
   const effectiveTeamId = selectedTeamId && selectedTeamId !== "all" ? selectedTeamId : "";
-  
-  // For sprint planning tabs, use first team for display if "all" is selected
-  const sprintPlanningTeamId = selectedTeamId && selectedTeamId !== "all" ? selectedTeamId : (teams.length > 0 && isViewingAllTeams ? teams[0].id : "");
-
-  const createSprint = useMutation({
-    mutationFn: (data) => bragiQTC.entities.Sprint.create(data),
-    onSuccess: (newSprint) => {
-      queryClient.invalidateQueries({ queryKey: ["sprints"] });
-      // If this was a copied sprint, show success and navigate to that team
-      if (isCopyOperation && newSprint.team_id) {
-         toast.success(`Sprint copied to ${copiedToTeamName} and switched to this team`);
-         setSelectedTeamId(newSprint.team_id);
-         setIsCopyOperation(false);
-         setCopiedToTeamName("");
-       }
-      setSprintToCopy(null);
-      setTeamSelectDialogOpen(false);
-      setTeamSelectValue("");
-    },
-  });
-
-  const updateSprint = useMutation({
-    mutationFn: ({ id, data }) => bragiQTC.entities.Sprint.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sprints"] }),
-  });
-
-  const deleteSprint = useMutation({
-    mutationFn: (id) => bragiQTC.entities.Sprint.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sprints"] }),
-  });
-
-  const createAllocation = useMutation({
-    mutationFn: (data) => bragiQTC.entities.Allocation.create(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allocations"] }),
-  });
-
-  const updateAllocation = useMutation({
-    mutationFn: ({ id, data }) => bragiQTC.entities.Allocation.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allocations"] }),
-  });
-
-  const deleteAllocation = useMutation({
-    mutationFn: (id) => bragiQTC.entities.Allocation.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allocations"] }),
-  });
 
   const createQuarterlyAllocation = useMutation({
     mutationFn: (data) => bragiQTC.entities.QuarterlyAllocation.create(data),
@@ -138,13 +66,10 @@ export default function SprintPlanning() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] }),
   });
 
-  // Fire-and-forget history log — silently no-ops if the entity doesn't exist yet
   const logQuarterlyHistory = (entry) => {
     try {
       bragiQTC.entities.QuarterlyPlanHistory?.create(entry)?.catch(() => {});
-    } catch {
-      // Entity not yet created in base44 — ignore
-    }
+    } catch {}
   };
 
   const updateWorkAreaSelection = useMutation({
@@ -152,42 +77,31 @@ export default function SprintPlanning() {
       const existing = workAreaSelections.find(s => s.team_id === teamId && s.quarter === quarter);
       const oldIds = new Set(existing?.work_area_ids || []);
       const newIds = new Set(workAreaIds);
-      
-      // Find removed work items
-      const removedIds = Array.from(oldIds).filter(id => !newIds.has(id));
-      
+
       // Delete allocations for removed work items
+      const removedIds = Array.from(oldIds).filter(id => !newIds.has(id));
       if (removedIds.length > 0) {
         const allocationsToDelete = quarterlyAllocations.filter(a =>
           a.quarter === quarter &&
           removedIds.includes(a.work_area_id) &&
           members.some(m => m.id === a.team_member_id && m.team_id === teamId)
         );
-
         const team = teams.find(t => t.id === teamId);
         for (const alloc of allocationsToDelete) {
           await bragiQTC.entities.QuarterlyAllocation.delete(alloc.id);
           const m  = members.find(x => x.id === alloc.team_member_id);
           const wa = workAreas.find(x => x.id === alloc.work_area_id);
           logQuarterlyHistory({
-            quarter,
-            team_id:           teamId,
-            team_name:         team?.name,
-            team_member_id:    alloc.team_member_id,
-            member_name:       m?.name,
-            member_discipline: m?.discipline,
-            work_area_id:      alloc.work_area_id,
-            work_area_name:    wa?.name,
-            work_area_type:    wa?.type,
-            action:            "removed",
-            old_days:       alloc.days,
-            new_days:       null,
-            changed_at:        new Date().toISOString(),
+            quarter, team_id: teamId, team_name: team?.name,
+            team_member_id: alloc.team_member_id, member_name: m?.name,
+            member_discipline: m?.discipline, work_area_id: alloc.work_area_id,
+            work_area_name: wa?.name, work_area_type: wa?.type,
+            action: "removed", old_days: alloc.days, new_days: null,
+            changed_at: new Date().toISOString(),
           });
         }
       }
-      
-      // Update selection
+
       if (existing) {
         return bragiQTC.entities.QuarterlyWorkAreaSelection.update(existing.id, { work_area_ids: workAreaIds });
       } else {
@@ -200,69 +114,11 @@ export default function SprintPlanning() {
     },
   });
 
-  const handleSaveSprint = async (data) => {
-    if (editingSprint) {
-      // When updating a sprint, clean up allocations for removed work items
-      const oldWorkAreaIds = new Set(editingSprint.relevant_work_area_ids || []);
-      const newWorkAreaIds = new Set(data.relevant_work_area_ids || []);
-      
-      // Find work items that were removed
-      for (const waId of oldWorkAreaIds) {
-        if (!newWorkAreaIds.has(waId)) {
-          // Delete allocations for this work item in this sprint
-          const allocationsToDelete = allocations.filter(
-            a => a.sprint_id === editingSprint.id && a.work_area_id === waId
-          );
-          for (const alloc of allocationsToDelete) {
-            await bragiQTC.entities.Allocation.delete(alloc.id);
-          }
-        }
-      }
-      queryClient.invalidateQueries({ queryKey: ["allocations"] });
-      updateSprint.mutate({ id: editingSprint.id, data });
-    } else {
-      createSprint.mutate(data);
-    }
-    setEditingSprint(null);
-  };
-
-  const allocationTimeoutRef = useRef({});
-
-  const handleAllocationChange = (memberId, sprintId, workAreaId, value) => {
-    const sprint = sprints.find(s => s.id === sprintId);
-    if (!sprint || !canManageAllocations(user, sprint.team_id)) {
-      return;
-    }
-    
-    const key = `${memberId}-${sprintId}-${workAreaId}`;
-    if (allocationTimeoutRef.current[key]) {
-      clearTimeout(allocationTimeoutRef.current[key]);
-    }
-
-    allocationTimeoutRef.current[key] = setTimeout(() => {
-      const existing = allocations.find(
-        a => a.team_member_id === memberId && a.sprint_id === sprintId && a.work_area_id === workAreaId
-      );
-      if (existing) {
-        if (value === 0) {
-          deleteAllocation.mutate(existing.id);
-        } else {
-          updateAllocation.mutate({ id: existing.id, data: { days: value } });
-        }
-      } else if (value > 0) {
-        createAllocation.mutate({ team_member_id: memberId, sprint_id: sprintId, work_area_id: workAreaId, days: value });
-      }
-      delete allocationTimeoutRef.current[key];
-    }, 300);
-  };
-
   const quarterlyAllocationTimeoutRef = useRef({});
 
   const handleQuarterlyAllocationChange = (data) => {
     const member = members.find(m => m.id === data.team_member_id);
-    if (!member || !canManageAllocations(user, member.team_id)) {
-      return;
-    }
+    if (!member || !canManageAllocations(user, member.team_id)) return;
 
     const key = `${data.team_member_id}-${data.quarter}-${data.work_area_id}`;
     if (quarterlyAllocationTimeoutRef.current[key]) {
@@ -270,28 +126,21 @@ export default function SprintPlanning() {
     }
 
     quarterlyAllocationTimeoutRef.current[key] = setTimeout(() => {
-      // Use the provided allocationId if available, otherwise search for it
       const existing = data.allocationId
         ? quarterlyAllocations.find(a => a.id === data.allocationId)
         : quarterlyAllocations.find(
             a => a.team_member_id === data.team_member_id && a.quarter === data.quarter && a.work_area_id === data.work_area_id
           );
 
-      // Build history context (denormalize names so the log is readable even if records are later deleted)
-      const histMember  = members.find(m => m.id === data.team_member_id);
-      const histWA      = workAreas.find(w => w.id === data.work_area_id);
-      const histTeam    = teams.find(t => t.id === histMember?.team_id);
-      const histBase    = {
-        quarter:           data.quarter,
-        team_id:           histMember?.team_id,
-        team_name:         histTeam?.name,
-        team_member_id:    data.team_member_id,
-        member_name:       histMember?.name,
-        member_discipline: histMember?.discipline,
-        work_area_id:      data.work_area_id,
-        work_area_name:    histWA?.name,
-        work_area_type:    histWA?.type,
-        changed_at:        new Date().toISOString(),
+      const histMember = members.find(m => m.id === data.team_member_id);
+      const histWA     = workAreas.find(w => w.id === data.work_area_id);
+      const histTeam   = teams.find(t => t.id === histMember?.team_id);
+      const histBase   = {
+        quarter: data.quarter, team_id: histMember?.team_id, team_name: histTeam?.name,
+        team_member_id: data.team_member_id, member_name: histMember?.name,
+        member_discipline: histMember?.discipline, work_area_id: data.work_area_id,
+        work_area_name: histWA?.name, work_area_type: histWA?.type,
+        changed_at: new Date().toISOString(),
       };
 
       if (existing) {
@@ -304,10 +153,8 @@ export default function SprintPlanning() {
         }
       } else if (data.days > 0) {
         createQuarterlyAllocation.mutate({
-          team_member_id: data.team_member_id,
-          quarter: data.quarter,
-          work_area_id: data.work_area_id,
-          days: data.days
+          team_member_id: data.team_member_id, quarter: data.quarter,
+          work_area_id: data.work_area_id, days: data.days,
         });
         logQuarterlyHistory({ ...histBase, action: "set", old_days: null, new_days: data.days });
       }
@@ -315,385 +162,126 @@ export default function SprintPlanning() {
     }, 300);
   };
 
-  const handleCopyCrossTeamSprint = (crossTeamSprint) => {
-    // If viewing "All Teams", prompt for team selection
-    if (isViewingAllTeams) {
-      setSprintToCopy(crossTeamSprint);
-      setTeamSelectValue("");
-      setIsCopyOperation(true);
-      setTeamSelectDialogOpen(true);
-      return;
-    }
+  const teamMembers = members.filter(m => m.team_id === effectiveTeamId);
 
-    // Copy to currently selected team
-    const teamSpecificSprints = sprints.filter(s => s.quarter === selectedQuarter && s.team_id === selectedTeamId);
-    const team = teams.find(t => t.id === selectedTeamId);
-    const teamName = team ? team.name : "";
-    const newSprint = {
-      name: teamName ? `${teamName} - ${crossTeamSprint.name}` : crossTeamSprint.name,
-      quarter: crossTeamSprint.quarter,
-      team_id: selectedTeamId,
-      is_cross_team: false,
-      start_date: crossTeamSprint.start_date || "",
-      end_date: crossTeamSprint.end_date || "",
-      order: teamSpecificSprints.length + 1,
-      relevant_work_area_ids: crossTeamSprint.relevant_work_area_ids || [],
-    };
-    setIsCopyOperation(true);
-    createSprint.mutate(newSprint);
-  };
+  const teamMemberIds = useMemo(() => new Set(teamMembers.map(m => m.id)), [teamMembers]);
+  const workAreasWithAllocations = useMemo(() => new Set(
+    quarterlyAllocations
+      .filter(a => teamMemberIds.has(a.team_member_id) && a.quarter === selectedQuarter)
+      .map(a => a.work_area_id)
+  ), [quarterlyAllocations, teamMemberIds, selectedQuarter]);
 
-  const handleConfirmTeamSelect = () => {
-    if (!teamSelectValue || !sprintToCopy) return;
+  const currentSelection = workAreaSelections.find(s => s.team_id === effectiveTeamId && s.quarter === selectedQuarter);
+  const manuallySelectedIds = useMemo(() => new Set(currentSelection?.work_area_ids || []), [currentSelection]);
 
-    const teamSpecificSprints = sprints.filter(s => s.quarter === selectedQuarter && s.team_id === teamSelectValue);
-    const team = teams.find(t => t.id === teamSelectValue);
-    const teamName = team ? team.name : "";
-    setCopiedToTeamName(teamName);
-    const newSprint = {
-      name: teamName ? `${teamName} - ${sprintToCopy.name}` : sprintToCopy.name,
-      quarter: sprintToCopy.quarter,
-      team_id: teamSelectValue,
-      is_cross_team: false,
-      start_date: sprintToCopy.start_date || "",
-      end_date: sprintToCopy.end_date || "",
-      order: teamSpecificSprints.length + 1,
-      relevant_work_area_ids: sprintToCopy.relevant_work_area_ids || [],
-    };
-    createSprint.mutate(newSprint);
-    setTeamSelectDialogOpen(false);
-    setSprintToCopy(null);
-    setTeamSelectValue("");
-  };
+  const quarterlyWorkAreas = effectiveTeamId ? workAreas.filter(wa =>
+    wa.leading_team_id === effectiveTeamId ||
+    (wa.supporting_team_ids || []).includes(effectiveTeamId) ||
+    workAreasWithAllocations.has(wa.id) ||
+    manuallySelectedIds.has(wa.id)
+  ) : [];
 
-  // Filter sprints: only show team-specific sprints for the selected team
-  const quarterSprints = sprints
-    .filter(s => s.quarter === selectedQuarter && !s.is_cross_team && s.team_id === sprintPlanningTeamId)
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-  // Get cross-team sprints for current quarter
-  const crossTeamSprints = sprints.filter(s => s.quarter === selectedQuarter && s.is_cross_team);
-
-  const teamMembers = members.filter(m => m.team_id === sprintPlanningTeamId);
-
-   // Work items for Quarterly Plan tab — based solely on team assignment,
-   // quarterly allocations, and manual quarterly selection. Sprint work items
-   // do NOT bleed into this pool.
-   const teamMemberIds = useMemo(() => new Set(teamMembers.map(m => m.id)), [teamMembers]);
-   const workAreasWithAllocations = useMemo(() => new Set(
-     quarterlyAllocations
-       .filter(a => teamMemberIds.has(a.team_member_id) && a.quarter === selectedQuarter)
-       .map(a => a.work_area_id)
-   ), [quarterlyAllocations, teamMemberIds, selectedQuarter]);
-
-   const currentSelection = workAreaSelections.find(s => s.team_id === effectiveTeamId && s.quarter === selectedQuarter);
-   const manuallySelectedIds = useMemo(() => new Set(currentSelection?.work_area_ids || []), [currentSelection]);
-
-   const quarterlyWorkAreas = effectiveTeamId ? workAreas.filter(wa =>
-     wa.is_cross_team ||
-     wa.leading_team_id === effectiveTeamId ||
-     (wa.supporting_team_ids || []).includes(effectiveTeamId) ||
-     workAreasWithAllocations.has(wa.id) ||
-     manuallySelectedIds.has(wa.id)
-   ) : [];
-
-  const quarters = useQuarters(sprints, { includeRange: true }).filter(q => !q.includes('2025'));
+  // Derive extra quarters from existing allocations so past quarters are always selectable
+  const extraQuarters = useMemo(
+    () => [...new Set(quarterlyAllocations.map(a => a.quarter).filter(Boolean))],
+    [quarterlyAllocations]
+  );
+  const quarters = useQuarters(extraQuarters);
 
   return (
-    <>
     <div>
-      <PageHeader title="Capacity Planning" subtitle="Manage team capacity allocations" />
+      <PageHeader title="Quarterly Planning" subtitle="Manage team capacity allocations per quarter" />
 
       <FilterBar
-         quarter={selectedQuarter}
-         onQuarterChange={setSelectedQuarter}
-         team={selectedTeamId}
-         onTeamChange={setSelectedTeamId}
-         teams={teams}
-         quarters={quarters}
-         showTeamFilter={true}
-       />
+        quarter={selectedQuarter}
+        onQuarterChange={setSelectedQuarter}
+        team={selectedTeamId}
+        onTeamChange={setSelectedTeamId}
+        teams={teams}
+        quarters={quarters}
+        showTeamFilter={true}
+      />
 
       <div className="mb-6">
-          {teamsLoading || sprintsLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-64 rounded-xl" />
-            </div>
-          ) : teams.length === 0 ? (
-            <EmptyState icon={CalendarRange} title="No teams yet" description="First create a team under 'Teams'." />
-          ) : isViewingAllTeams ? (
-            <div className="space-y-6">
-              {teams.filter(t => t.is_active !== false).map(team => {
-                const tMembers = members.filter(m => m.team_id === team.id);
-                if (tMembers.length === 0) return null;
-                const tMemberIds = new Set(tMembers.map(m => m.id));
-                const tAllocatedWaIds = new Set(
-                  quarterlyAllocations
-                    .filter(a => tMemberIds.has(a.team_member_id) && a.quarter === selectedQuarter)
-                    .map(a => a.work_area_id)
-                );
-                const tSelection = workAreaSelections.find(s => s.team_id === team.id && s.quarter === selectedQuarter);
-                const tManualIds = new Set(tSelection?.work_area_ids || []);
-                const tWorkAreas = workAreas.filter(wa =>
-                  wa.is_cross_team ||
-                  wa.leading_team_id === team.id ||
-                  (wa.supporting_team_ids || []).includes(team.id) ||
-                  tAllocatedWaIds.has(wa.id) ||
-                  tManualIds.has(wa.id)
-                );
-                return (
-                  <Card key={team.id} className="border-primary/20">
-                    <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
-                      <CardTitle className="text-base font-bold text-foreground">{team.name} — {selectedQuarter}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <QuarterlyAllocationTable
-                        members={tMembers}
-                        workAreas={tWorkAreas}
-                        allocations={quarterlyAllocations}
-                        quarter={selectedQuarter}
-                        onAllocationChange={handleQuarterlyAllocationChange}
-                        selectedTeamId={team.id}
-                        onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: team.id, quarter: selectedQuarter, workAreaIds })}
-                        initialSelectedWorkAreaIds={tManualIds.size > 0 ? tManualIds : tAllocatedWaIds}
-                      />
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <>
-              <Card className="border-primary/20">
-                <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
-                  <CardTitle className="text-base font-bold text-foreground">Quarterly Plan — {selectedQuarter}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <QuarterlyAllocationTable
-                    members={teamMembers}
-                    workAreas={quarterlyWorkAreas}
-                    allocations={quarterlyAllocations}
-                    quarter={selectedQuarter}
-                    onAllocationChange={handleQuarterlyAllocationChange}
-                    selectedTeamId={effectiveTeamId}
-                    onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: effectiveTeamId, quarter: selectedQuarter, workAreaIds: workAreaIds })}
-                    initialSelectedWorkAreaIds={manuallySelectedIds.size > 0 ? manuallySelectedIds : workAreasWithAllocations}
-                  />
-                </CardContent>
-              </Card>
-              <QuarterlyPlanHistoryPanel
-                quarter={selectedQuarter}
-                teamId={effectiveTeamId}
-                teamName={teams.find(t => t.id === effectiveTeamId)?.name ?? ""}
-                jiraProjectKey={teams.find(t => t.id === effectiveTeamId)?.jira_project_key ?? null}
-                user={user}
-                members={teamMembers}
-                workAreas={quarterlyWorkAreas}
-                quarterlyAllocations={quarterlyAllocations}
-                workAreaSelections={workAreaSelections}
-              />
-            </>
-          )}
-        </div>
-
-        {/* Sprint Plan tab hidden — kept for future use */}
-        {false && <div>
-      {teamsLoading || sprintsLoading ? (
-        <div className="space-y-4">
-          {[1, 2].map(i => <Skeleton key={i} className="h-48 rounded-xl" />)}
-        </div>
-      ) : teams.length === 0 ? (
-        <EmptyState icon={CalendarRange} title="No teams yet" description="First create a team under 'Teams'." />
-      ) : quarterSprints.length === 0 && crossTeamSprints.length === 0 ? (
-        <EmptyState
-          icon={CalendarRange}
-          title="No sprints for this team & quarter"
-          description="Create sprints for this team to start capacity planning."
-        >
-          {canCreateSprint(user) && (
-            <Button onClick={() => setSprintDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" /> Create Sprint
-            </Button>
-          )}
-        </EmptyState>
-      ) : quarterSprints.length === 0 && crossTeamSprints.length > 0 && !effectiveTeamId ? (
-        <div className="space-y-6">
-          <EmptyState
-            icon={CalendarRange}
-            title="No team-specific sprints yet"
-            description="Copy a sprint template or create a new sprint for this team."
-          >
-            {canCreateSprint(user) && (
-              <Button onClick={() => setSprintDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" /> New Sprint
-              </Button>
-            )}
-          </EmptyState>
-
-          {/* Show available sprint templates to copy */}
-          <div>
-            <h3 className="text-sm font-semibold mb-3">Available Sprint Templates</h3>
-            <div className="space-y-3">
-              {crossTeamSprints.map(sprint => (
-                <Card key={sprint.id} className="border-border/60">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base font-semibold">
-                        {sprint.name}
-                        <span className="ml-2 text-xs font-normal text-muted-foreground">(Template)</span>
-                      </CardTitle>
-                      {canCreateSprint(user) && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleCopyCrossTeamSprint(sprint)}
-                        >
-                          <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy to Team
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+        {teamsLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-64 rounded-xl" />
           </div>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {quarterSprints.map(sprint => {
-            // Sprint work areas are resolved purely from the sprint's own relevant_work_area_ids,
-            // with no dependency on the quarterly plan's work area pool.
-            const sprintWorkAreas = (sprint.relevant_work_area_ids || [])
-              .map(id => workAreas.find(wa => wa.id === id))
-              .filter(Boolean);
-
-            return (
-            <Card key={sprint.id} className="border-primary/20 hover:border-primary/40 transition-colors">
-              <CardHeader className="pb-3 border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <CardTitle className="text-base font-bold text-foreground">
-                    {sprint.name}
-                    {sprint.is_cross_team && <span className="ml-2 text-xs font-normal text-muted-foreground bg-muted px-2 py-1 rounded">(Template)</span>}
-                  </CardTitle>
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {sprint.start_date && sprint.end_date && (
-                      <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded mr-3">
-                        {sprint.start_date} — {sprint.end_date}
-                      </span>
-                    )}
-                    {sprint.is_cross_team && canCreateSprint(user) && canManageSprints(user, effectiveTeamId) && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-7 w-7" 
-                        title="Copy this sprint to team"
-                        onClick={() => handleCopyCrossTeamSprint(sprint)}
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </Button>
-                    )}
-                    {canManageSprints(user, sprint.team_id || effectiveTeamId) && (
-                      <>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingSprint(sprint); setSprintDialogOpen(true); }}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteSprintId(sprint.id)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
+        ) : teams.length === 0 ? (
+          <EmptyState icon={CalendarRange} title="No teams yet" description="First create a team under 'Teams'." />
+        ) : isViewingAllTeams ? (
+          <div className="space-y-6">
+            {teams.filter(t => t.is_active !== false).map(team => {
+              const tMembers = members.filter(m => m.team_id === team.id);
+              if (tMembers.length === 0) return null;
+              const tMemberIds = new Set(tMembers.map(m => m.id));
+              const tAllocatedWaIds = new Set(
+                quarterlyAllocations
+                  .filter(a => tMemberIds.has(a.team_member_id) && a.quarter === selectedQuarter)
+                  .map(a => a.work_area_id)
+              );
+              const tSelection = workAreaSelections.find(s => s.team_id === team.id && s.quarter === selectedQuarter);
+              const tManualIds = new Set(tSelection?.work_area_ids || []);
+              const tWorkAreas = workAreas.filter(wa =>
+                wa.leading_team_id === team.id ||
+                (wa.supporting_team_ids || []).includes(team.id) ||
+                tAllocatedWaIds.has(wa.id) ||
+                tManualIds.has(wa.id)
+              );
+              return (
+                <Card key={team.id} className="border-primary/20">
+                  <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
+                    <CardTitle className="text-base font-bold text-foreground">{team.name} — {selectedQuarter}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <QuarterlyAllocationTable
+                      members={tMembers}
+                      workAreas={tWorkAreas}
+                      allocations={quarterlyAllocations}
+                      quarter={selectedQuarter}
+                      onAllocationChange={handleQuarterlyAllocationChange}
+                      selectedTeamId={team.id}
+                      onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: team.id, quarter: selectedQuarter, workAreaIds })}
+                      initialSelectedWorkAreaIds={tManualIds.size > 0 ? tManualIds : tAllocatedWaIds}
+                    />
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <>
+            <Card className="border-primary/20">
+              <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
+                <CardTitle className="text-base font-bold text-foreground">Quarterly Plan — {selectedQuarter}</CardTitle>
               </CardHeader>
-              <CardContent>
-                {sprint.is_cross_team ? (
-                  <div className="text-center py-8 text-sm text-muted-foreground">
-                    <p className="mb-3">This is a sprint template. Copy it to a team to create a team-specific sprint.</p>
-                    {canCreateSprint(user) && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleCopyCrossTeamSprint(sprint)}
-                      >
-                        <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy to Team
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <SprintAllocationTable
-                    sprint={sprint}
-                    members={teamMembers}
-                    workAreas={sprintWorkAreas}
-                    allocations={allocations}
-                    teams={teams}
-                    onAllocationChange={handleAllocationChange}
-                  />
-                )}
+              <CardContent className="pt-6">
+                <QuarterlyAllocationTable
+                  members={teamMembers}
+                  workAreas={quarterlyWorkAreas}
+                  allocations={quarterlyAllocations}
+                  quarter={selectedQuarter}
+                  onAllocationChange={handleQuarterlyAllocationChange}
+                  selectedTeamId={effectiveTeamId}
+                  onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: effectiveTeamId, quarter: selectedQuarter, workAreaIds })}
+                  initialSelectedWorkAreaIds={manuallySelectedIds.size > 0 ? manuallySelectedIds : workAreasWithAllocations}
+                />
               </CardContent>
             </Card>
-            );
-          })}
-        </div>
-      )}
-       </div>}
-
-      <SprintFormDialog
-        open={sprintDialogOpen}
-        onOpenChange={setSprintDialogOpen}
-        sprint={editingSprint}
-        existingSprints={quarterSprints}
-        teams={teams}
-        defaultTeamId={sprintPlanningTeamId}
-        defaultQuarter={selectedQuarter}
-        onSave={handleSaveSprint}
-      />
-
-      <Dialog open={teamSelectDialogOpen} onOpenChange={setTeamSelectDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select Team to Copy Sprint</DialogTitle>
-            <DialogDescription>Choose which team to copy this sprint to.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Team</Label>
-              <Select value={teamSelectValue} onValueChange={setTeamSelectValue}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a team" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teams.filter(t => t.is_active !== false).map(team => (
-                    <SelectItem key={team.id} value={team.id}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTeamSelectDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmTeamSelect} disabled={!teamSelectValue}>
-              Copy Sprint
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <ConfirmDeleteDialog
-        open={deleteSprintId !== null}
-        title="Delete Sprint?"
-        description="Are you sure you want to delete this sprint? This action cannot be undone."
-        onConfirm={() => {
-          deleteSprint.mutate(deleteSprintId);
-          setDeleteSprintId(null);
-        }}
-        onCancel={() => setDeleteSprintId(null)}
-        isLoading={deleteSprint.isPending}
-      />
-
+            <QuarterlyPlanHistoryPanel
+              quarter={selectedQuarter}
+              teamId={effectiveTeamId}
+              teamName={teams.find(t => t.id === effectiveTeamId)?.name ?? ""}
+              jiraProjectKey={teams.find(t => t.id === effectiveTeamId)?.jira_project_key ?? null}
+              user={user}
+              members={teamMembers}
+              workAreas={quarterlyWorkAreas}
+              quarterlyAllocations={quarterlyAllocations}
+              workAreaSelections={workAreaSelections}
+            />
+          </>
+        )}
       </div>
-      </>
-      );
-      }
+    </div>
+  );
+}

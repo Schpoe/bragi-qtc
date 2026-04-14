@@ -24,79 +24,31 @@ router.post('/inviteUserWithTeams', requireAdmin, async (req, res) => {
   }
 });
 
-// Delete allocations referencing missing members/sprints/work areas
-router.post('/cleanupOrphanedAllocations', requireAdmin, async (_req, res) => {
-  try {
-    const [allocations, members, workAreas] = await Promise.all([
-      prisma.allocation.findMany(),
-      prisma.teamMember.findMany({ select: { id: true } }),
-      prisma.workArea.findMany({ select: { id: true } }),
-    ]);
-
-    const memberIds = new Set(members.map(m => m.id));
-    const workAreaIds = new Set(workAreas.map(w => w.id));
-
-    const orphaned = allocations.filter(
-      a => !memberIds.has(a.team_member_id) || !workAreaIds.has(a.work_area_id)
-    );
-
-    await Promise.all(orphaned.map(a => prisma.allocation.delete({ where: { id: a.id } })));
-
-    res.json({ data: { success: true, deletedCount: orphaned.length, message: `Deleted ${orphaned.length} orphaned allocations` } });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Comprehensive orphan cleanup
+// Orphan cleanup — removes members/work-areas with missing team references
 router.post('/cleanupAllOrphans', requireAdmin, async (_req, res) => {
   try {
     const summary = await prisma.$transaction(async (tx) => {
-      const [teams, teamMembers, sprints, allocations, workAreas] = await Promise.all([
+      const [teams, teamMembers, workAreas] = await Promise.all([
         tx.team.findMany({ select: { id: true } }),
         tx.teamMember.findMany(),
-        tx.sprint.findMany(),
-        tx.allocation.findMany(),
-        tx.workArea.findMany({ select: { id: true } }),
+        tx.workArea.findMany(),
       ]);
 
       const teamIds = new Set(teams.map(t => t.id));
-      const workAreaIds = new Set(workAreas.map(w => w.id));
-      const result = { orphanedMembers: 0, orphanedSprints: 0, orphanedAllocations: 0, orphanedWorkAreas: 0 };
+      const result = { orphanedMembers: 0, orphanedWorkAreas: 0 };
 
-      // 1. Orphaned team members
       const orphanedMembers = teamMembers.filter(m => m.team_id && !teamIds.has(m.team_id));
       await Promise.all(orphanedMembers.map(m => tx.teamMember.delete({ where: { id: m.id } })));
       result.orphanedMembers = orphanedMembers.length;
 
-      // 2. Orphaned sprints (non-cross-team with missing team)
-      const orphanedSprints = sprints.filter(s => !s.is_cross_team && s.team_id && !teamIds.has(s.team_id));
-      await Promise.all(orphanedSprints.map(s => tx.sprint.delete({ where: { id: s.id } })));
-      result.orphanedSprints = orphanedSprints.length;
-
-      const remainingMemberIds = new Set(orphanedMembers.map(m => m.id));
-      const remainingSprintIds = new Set(orphanedSprints.map(s => s.id));
-
-      // 3. Orphaned allocations
-      const orphanedAllocations = allocations.filter(
-        a => remainingMemberIds.has(a.team_member_id) ||
-             remainingSprintIds.has(a.sprint_id) ||
-             !workAreaIds.has(a.work_area_id)
-      );
-      await Promise.all(orphanedAllocations.map(a => tx.allocation.delete({ where: { id: a.id } })));
-      result.orphanedAllocations = orphanedAllocations.length;
-
-      // 4. Work areas with non-existent leading teams
-      const allWorkAreas = await tx.workArea.findMany();
-      const orphanedWorkAreas = allWorkAreas.filter(w => w.leading_team_id && !teamIds.has(w.leading_team_id));
+      const orphanedWorkAreas = workAreas.filter(w => w.leading_team_id && !teamIds.has(w.leading_team_id));
       await Promise.all(orphanedWorkAreas.map(w => tx.workArea.delete({ where: { id: w.id } })));
       result.orphanedWorkAreas = orphanedWorkAreas.length;
 
       return result;
     });
 
-    const totalDeleted = Object.values(summary).reduce((a, b) => a + b, 0);
-    res.json({ data: { success: true, totalDeleted, summary } });
+    res.json({ data: { success: true, totalDeleted: Object.values(summary).reduce((a, b) => a + b, 0), summary } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Cleanup failed' });

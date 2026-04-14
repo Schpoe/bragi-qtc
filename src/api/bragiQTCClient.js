@@ -70,8 +70,6 @@ export const bragiQTC = {
     TeamMemberCapacity:         makeEntityClient('/api/team-member-capacities'),
     WorkArea:                   makeEntityClient('/api/work-areas'),
     WorkAreaType:               makeEntityClient('/api/work-area-types'),
-    Sprint:                     makeEntityClient('/api/sprints'),
-    Allocation:                 makeEntityClient('/api/allocations'),
     QuarterlyAllocation:        makeEntityClient('/api/quarterly-allocations'),
     QuarterlyWorkAreaSelection: makeEntityClient('/api/quarterly-work-area-selections'),
     QuarterlyPlanHistory:       makeEntityClient('/api/quarterly-plan-history'),
