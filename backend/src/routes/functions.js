@@ -62,10 +62,11 @@ router.post('/testJiraConnection', requireAdmin, async (_req, res) => {
   }
   try {
     const fieldMap = await jira.fetchFieldMap();
-    const customFieldNames = Object.keys(fieldMap)
-      .filter(name => fieldMap[name].startsWith('customfield_'))
-      .sort();
-    return res.json({ data: { ok: true, fieldCount: Object.keys(fieldMap).length, baseUrl: process.env.JIRA_BASE_URL, customFieldNames } });
+    const customFields = Object.entries(fieldMap)
+      .filter(([, id]) => id.startsWith('customfield_'))
+      .map(([name, id]) => ({ name, id }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return res.json({ data: { ok: true, fieldCount: Object.keys(fieldMap).length, baseUrl: process.env.JIRA_BASE_URL, customFields } });
   } catch (err) {
     return res.json({ data: { ok: false, error: err.message } });
   }

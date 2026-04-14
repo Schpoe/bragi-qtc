@@ -76,7 +76,8 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
       const d = response.data;
       if (d.ok) {
         addLog(`Connected to ${d.baseUrl}`, 'success');
-        addLog(`Fetched ${d.fieldCount} Jira fields`, 'success');
+        addLog(`${d.fieldCount} fields — custom fields:`, 'success');
+        (d.customFields || []).forEach(f => addLog(`  ${f.name}  →  ${f.id}`, 'info'));
       } else {
         addLog(d.error, 'error');
         setError(d.error);
