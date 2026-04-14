@@ -408,8 +408,15 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     // All issues touched during the quarter — classify by status on our side
     const allJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" ORDER BY updated DESC`;
 
-    const allIssues = await jira.searchJql(allJql);
+    const spFields = ['summary', 'status', 'issuetype', 'parent', spField];
+    const allIssues = await jira.searchJql(allJql, spFields);
     console.log(`[jira] fetchQuarterlyJiraActuals: ${allIssues.length} issues for ${project} in ${quarter}`);
+    if (allIssues.length > 0) {
+      const sample = allIssues[0];
+      console.log(`[jira] sample issue fields: ${Object.keys(sample.fields || {}).join(', ')}`);
+      console.log(`[jira] sample parent: ${JSON.stringify(sample.fields?.parent)}`);
+      console.log(`[jira] sample SP (${spField}): ${sample.fields?.[spField]}`);
+    }
 
     const completedStatuses = new Set(['done', 'closed', 'resolved', 'released', 'complete', 'completed']);
     const ignoredStatuses   = new Set(['to do', 'backlog', 'open', 'new', 'todo']);

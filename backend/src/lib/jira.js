@@ -40,13 +40,13 @@ async function fetchFieldMap() {
   return map;
 }
 
-async function searchJql(jql) {
+async function searchJql(jql, fields = ['summary', 'status', 'issuetype', 'parent', 'customfield_10016', 'customfield_10024', 'customfield_10028']) {
   const url = `${process.env.JIRA_BASE_URL}/rest/api/3/search/jql`;
   let allIssues = [];
   let nextPageToken = undefined;
 
   do {
-    const body = { jql, maxResults: 50 };
+    const body = { jql, maxResults: 50, fields };
     if (nextPageToken) body.nextPageToken = nextPageToken;
 
     const res = await fetch(url, {
