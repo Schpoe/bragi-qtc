@@ -706,27 +706,34 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
     const memberIds = new Set(members.map(m => m.id));
     const epicDetails = actuals.epicDetails || {};
 
-    // Build epicKey → { prodKey, prodName } lookup
+    // Build two lookups from epicDetails:
+    // 1. epicKey → { prodKey, prodName }  (work area has an epic key)
+    // 2. prodKey → prodName               (work area has the PROD key directly)
     const epicToProd = {};
+    const prodNames  = {};
     Object.values(epicDetails).forEach(e => {
       epicToProd[e.key] = { prodKey: e.prodKey || e.key, prodName: e.prodName || e.name };
+      if (e.prodKey) prodNames[e.prodKey] = e.prodName;
     });
 
-    console.log('[PlanVsActuals] epicDetails keys:', Object.keys(epicDetails).slice(0, 5));
-    console.log('[PlanVsActuals] sample epicToProd entry:', Object.entries(epicToProd)[0]);
-    console.log('[PlanVsActuals] sample workArea jira_key/linked_epic_keys:',
-      workAreas.slice(0, 3).map(w => ({ name: w.name, jira_key: w.jira_key, linked_epic_keys: w.linked_epic_keys }))
-    );
-
-    // Build workAreaId → prodKey lookup using jira_key and linked_epic_keys
+    // Build workAreaId → { prodKey, prodName } using jira_key and linked_epic_keys
+    // Work areas may reference either an Epic key OR a PROD key directly
     const waToProd = {};
     workAreas.forEach(wa => {
-      const epicKeys = [wa.jira_key, ...(wa.linked_epic_keys || [])].filter(Boolean);
-      for (const ek of epicKeys) {
-        if (epicToProd[ek]) { waToProd[wa.id] = epicToProd[ek]; break; }
+      const keys = [wa.jira_key, ...(wa.linked_epic_keys || [])].filter(Boolean);
+      for (const k of keys) {
+        if (epicToProd[k]) {
+          // k is an Epic key → resolve to its PROD
+          waToProd[wa.id] = epicToProd[k];
+          break;
+        }
+        if (prodNames[k] !== undefined) {
+          // k is a PROD key referenced directly
+          waToProd[wa.id] = { prodKey: k, prodName: prodNames[k] };
+          break;
+        }
       }
     });
-    console.log('[PlanVsActuals] waToProd matches:', Object.keys(waToProd).length, '/', workAreas.length);
 
     // Sum days per prodKey for initial and current plan
     const sumByProd = (allocations) => {
