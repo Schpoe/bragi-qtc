@@ -11,8 +11,6 @@ const TABLES = [
   'teamMemberCapacity',
   'workAreaType',
   'workArea',
-  'sprint',
-  'allocation',
   'quarterlyAllocation',
   'quarterlyWorkAreaSelection',
   'quarterlyPlanHistory',
