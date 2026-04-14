@@ -34,6 +34,28 @@ export default function QuarterlyAllocationTable({
   const relevantTeamId = selectedTeamId === "all" ? members[0]?.team_id : selectedTeamId;
   const canEdit = relevantTeamId && canManageAllocations(user, relevantTeamId);
 
+  // Load initial plan snapshot for diff view
+  const { data: snapshots = [] } = useQuery({
+    queryKey: ["quarterlyPlanSnapshots", quarter, relevantTeamId],
+    queryFn: () => bragiQTC.entities.QuarterlyPlanSnapshot.filter({ quarter, team_id: relevantTeamId }),
+    enabled: !!(quarter && relevantTeamId),
+  });
+  const initialPlanAllocations = useMemo(() => {
+    const snap = snapshots.find(s => s.is_initial_plan);
+    return snap ? (Array.isArray(snap.allocations) ? snap.allocations : []) : null;
+  }, [snapshots]);
+
+  // Build lookup: { memberId: { workAreaId: days } }
+  const initialPlanMap = useMemo(() => {
+    if (!initialPlanAllocations) return null;
+    const map = {};
+    initialPlanAllocations.forEach(a => {
+      if (!map[a.team_member_id]) map[a.team_member_id] = {};
+      map[a.team_member_id][a.work_area_id] = a.days || 0;
+    });
+    return map;
+  }, [initialPlanAllocations]);
+
   // Sync local state when parent updates initialSelectedWorkAreaIds
   useEffect(() => {
     setSelectedWorkAreaIds(new Set(initialSelectedWorkAreaIds));
@@ -209,14 +231,20 @@ export default function QuarterlyAllocationTable({
               {!hasGroups && <TableHead className="sticky left-0 z-20 bg-white font-semibold text-primary min-w-[180px] border-r">Team Member</TableHead>}
               {!hasGroups && <TableHead className="text-xs text-center font-semibold text-primary min-w-[70px] sticky left-[180px] z-20 bg-white border-r">Capacity</TableHead>}
               {!hasGroups && <TableHead className="text-xs text-center font-semibold text-primary min-w-[110px] sticky left-[250px] z-20 bg-white border-r">Allocated</TableHead>}
-              {groupedWAs.map(wa => (
-                <TableHead key={wa.id} className={cn("text-xs text-center font-semibold text-primary min-w-[130px] max-w-[180px]", getGroupBorder(wa))}>
-                  <div className="flex items-start justify-center gap-1.5 px-1">
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: getWorkAreaColor(wa) }} />
-                    <span className="line-clamp-2 text-left leading-tight" title={wa.name}>{wa.name}</span>
-                  </div>
-                </TableHead>
-              ))}
+              {groupedWAs.map(wa => {
+                const isNew = initialPlanAllocations && !initialPlanAllocations.some(a => a.work_area_id === wa.id);
+                return (
+                  <TableHead key={wa.id} className={cn("text-xs text-center font-semibold text-primary min-w-[130px] max-w-[180px]", getGroupBorder(wa))}>
+                    <div className="flex flex-col items-center gap-0.5 px-1">
+                      <div className="flex items-start justify-center gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: getWorkAreaColor(wa) }} />
+                        <span className="line-clamp-2 text-left leading-tight" title={wa.name}>{wa.name}</span>
+                      </div>
+                      {isNew && <span className="text-[10px] font-semibold text-amber-600 bg-amber-100 rounded px-1">NEW</span>}
+                    </div>
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -262,6 +290,16 @@ export default function QuarterlyAllocationTable({
                         style={{ width: `${Math.min(totalPercent, 100)}%` }}
                       />
                     </div>
+                    {initialPlanMap && (() => {
+                      const initialTotal = Object.values(initialPlanMap[member.id] || {}).reduce((s, d) => s + d, 0);
+                      const delta = totalDays - initialTotal;
+                      if (delta === 0) return null;
+                      return (
+                        <span className={cn("text-xs font-medium tabular-nums", delta > 0 ? "text-amber-600" : "text-blue-600")}>
+                          {delta > 0 ? "↑" : "↓"}{delta > 0 ? "+" : ""}{delta}d vs plan
+                        </span>
+                      );
+                    })()}
                   </div>
                 </TableCell>
                 {groupedWAs.map(wa => {

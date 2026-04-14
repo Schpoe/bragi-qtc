@@ -380,4 +380,79 @@ router.post('/revertQuarterlyPlanSnapshot', requireAuth, async (req, res) => {
   }
 });
 
+// Fetch quarterly Jira actuals for a team (completed + in-progress issues)
+router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
+  try {
+    if (!jira.isConfigured()) {
+      return res.status(400).json({ error: 'Jira not configured (JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN)' });
+    }
+    const { teamId, quarter } = req.body;
+    if (!teamId || !quarter) {
+      return res.status(400).json({ error: 'teamId and quarter are required' });
+    }
+
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
+    if (!team) return res.status(404).json({ error: 'Team not found' });
+    if (!team.jira_project_key) {
+      return res.status(400).json({ error: `Team "${team.name}" has no Jira project key. Set it on the Teams page.` });
+    }
+
+    const dateRange = jira.getQuarterDateRange(quarter);
+    if (!dateRange) return res.status(400).json({ error: `Cannot parse quarter: ${quarter}` });
+
+    const fieldMap = await jira.fetchFieldMap();
+    const spField = jira.detectStoryPointsField(fieldMap);
+    const project = team.jira_project_key;
+
+    // Issues completed during the quarter
+    const completedJql = `project = "${project}" AND status changed to Done DURING ("${dateRange.start}", "${dateRange.end}") ORDER BY updated DESC`;
+    // Issues worked on (status moved out of backlog/todo) but not completed
+    const inProgressJql = `project = "${project}" AND status was not in ("To Do", "Backlog", "Open") DURING ("${dateRange.start}", "${dateRange.end}") AND status != Done ORDER BY updated DESC`;
+
+    const [completedIssues, inProgressIssues] = await Promise.all([
+      jira.searchJql(completedJql),
+      jira.searchJql(inProgressJql),
+    ]);
+
+    const getSP = (issue) => {
+      const val = issue.fields?.[spField];
+      return typeof val === 'number' ? val : 0;
+    };
+
+    const mapIssue = (issue) => ({
+      key: issue.key,
+      summary: issue.fields?.summary,
+      status: issue.fields?.status?.name,
+      issueType: issue.fields?.issuetype?.name,
+      storyPoints: getSP(issue),
+      epicKey: issue.fields?.parent?.key || null,
+    });
+
+    const completed = completedIssues.map(mapIssue);
+    const inProgress = inProgressIssues.map(mapIssue);
+
+    res.json({
+      data: {
+        quarter,
+        team: { id: team.id, name: team.name, jira_project_key: project },
+        dateRange,
+        storyPointsField: spField,
+        completed: {
+          count: completed.length,
+          storyPoints: completed.reduce((sum, i) => sum + i.storyPoints, 0),
+          issues: completed,
+        },
+        inProgress: {
+          count: inProgress.length,
+          storyPoints: inProgress.reduce((sum, i) => sum + i.storyPoints, 0),
+          issues: inProgress,
+        },
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -22,14 +22,15 @@ model User {
 }
 
 model Team {
-  id          String   @id @default(uuid())
-  name        String
-  color       String?
-  description String?
-  lead_id     String?
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  id               String   @id @default(uuid())
+  name             String
+  color            String?
+  description      String?
+  lead_id          String?
+  is_active        Boolean  @default(true)
+  jira_project_key String?
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
 }
 
 model TeamMember {
@@ -144,6 +145,7 @@ model QuarterlyPlanSnapshot {
   team_name              String?
   label                  String
   note                   String?
+  is_initial_plan        Boolean  @default(false)
   created_by_email       String?
   created_at             DateTime @default(now())
   allocations            Json

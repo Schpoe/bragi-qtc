@@ -73,4 +73,25 @@ async function searchJql(jql) {
   return allIssues;
 }
 
-module.exports = { isConfigured, fetchIssue, fetchFieldMap, searchJql, mapStatusToProgress };
+// Parse "Q2 2025" → { start: "2025-04-01", end: "2025-06-30" }
+function getQuarterDateRange(quarter) {
+  const match = quarter.match(/Q(\d)\s+(\d{4})/i);
+  if (!match) return null;
+  const q = parseInt(match[1]);
+  const year = parseInt(match[2]);
+  const ranges = { 1: ['01-01', '03-31'], 2: ['04-01', '06-30'], 3: ['07-01', '09-30'], 4: ['10-01', '12-31'] };
+  const [start, end] = ranges[q] || [];
+  if (!start) return null;
+  return { start: `${year}-${start}`, end: `${year}-${end}` };
+}
+
+// Find the story points field ID from a Jira field map
+function detectStoryPointsField(fieldMap) {
+  const candidates = ['Story Points', 'Story point estimate', 'Story points', 'SP', 'Story Point'];
+  for (const name of candidates) {
+    if (fieldMap[name]) return fieldMap[name];
+  }
+  return 'customfield_10016'; // most common fallback
+}
+
+module.exports = { isConfigured, fetchIssue, fetchFieldMap, searchJql, mapStatusToProgress, getQuarterDateRange, detectStoryPointsField };

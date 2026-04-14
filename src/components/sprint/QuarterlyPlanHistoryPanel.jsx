@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { History, ChevronDown, ChevronRight, ArrowRight, TrendingUp, TrendingDown, Minus, Download, Save, RotateCcw, Trash2, BookMarked } from "lucide-react";
+import { History, ChevronDown, ChevronRight, ArrowRight, TrendingUp, TrendingDown, Minus, Download, Save, RotateCcw, Trash2, BookMarked, Star, RefreshCw, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -90,9 +90,18 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
   const [showSaveForm, setShowSaveForm] = useState(false);
   const [labelInput, setLabelInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
-  const [revertTarget, setRevertTarget] = useState(null); // snapshot to confirm revert
+  const [revertTarget, setRevertTarget] = useState(null);
 
   const canManage = canManageAllocations(user, teamId);
+
+  const setInitialPlan = useMutation({
+    mutationFn: (id) => bragiQTC.entities.QuarterlyPlanSnapshot.setInitialPlan(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["quarterlyPlanSnapshots", quarter, teamId] });
+      toast.success("Initial plan set");
+    },
+    onError: (err) => toast.error(err.message || "Failed to set initial plan"),
+  });
 
   const { data: snapshots = [], isLoading } = useQuery({
     queryKey: ["quarterlyPlanSnapshots", quarter, teamId],
@@ -242,16 +251,23 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
         </div>
       ) : (
         <div className="space-y-2">
-          {snapshots.map(snap => {
+          {[...snapshots].sort((a, b) => (b.is_initial_plan ? 1 : 0) - (a.is_initial_plan ? 1 : 0)).map(snap => {
             const allocs = Array.isArray(snap.allocations) ? snap.allocations : [];
             const nonZero = allocs.filter(a => (a.days ?? a.percent ?? 0) > 0).length;
-            const canDelete = canManage;
             return (
-              <div key={snap.id} className="rounded-lg border border-border bg-background p-3 flex items-start gap-3">
-                <BookMarked className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div key={snap.id} className={cn("rounded-lg border bg-background p-3 flex items-start gap-3", snap.is_initial_plan ? "border-amber-400/60 bg-amber-50/40 dark:bg-amber-950/20" : "border-border")}>
+                {snap.is_initial_plan
+                  ? <Star className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  : <BookMarked className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                }
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-sm truncate">{snap.label}</span>
+                    {snap.is_initial_plan && (
+                      <Badge className="text-xs bg-amber-100 text-amber-800 border border-amber-300 gap-1">
+                        <Star className="w-2.5 h-2.5" /> Initial Plan
+                      </Badge>
+                    )}
                     <Badge variant="secondary" className="text-xs">{nonZero} allocation{nonZero !== 1 ? "s" : ""}</Badge>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
@@ -263,6 +279,18 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  {canManage && !snap.is_initial_plan && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => setInitialPlan.mutate(snap.id)}
+                      disabled={setInitialPlan.isPending}
+                      title="Mark as initial plan"
+                    >
+                      <Star className="w-3 h-3" /> Set Initial
+                    </Button>
+                  )}
                   {canManage && (
                     <Button
                       variant="outline"
@@ -273,7 +301,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
                       <RotateCcw className="w-3 h-3" /> Revert
                     </Button>
                   )}
-                  {canDelete && (
+                  {canManage && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -321,7 +349,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations, workAreaSelections }) {
+export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations, workAreaSelections, jiraProjectKey }) {
   const [open, setOpen] = useState(false);
 
   const { data: allHistory = [], isLoading } = useQuery({
@@ -418,6 +446,10 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
                   <TabsTrigger value="log">
                     Audit Log
                     <Badge variant="secondary" className="ml-2 text-xs">{history.length}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="actuals">
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                    Actuals
                   </TabsTrigger>
                 </TabsList>
                 <Button
@@ -575,10 +607,200 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
                   </div>
                 )}
               </TabsContent>
+              {/* ── Actuals tab ─────────────────────────────────────────── */}
+              <ActualsTab
+                quarter={quarter}
+                teamId={teamId}
+                teamName={teamName}
+                jiraProjectKey={jiraProjectKey}
+                members={members}
+                quarterlyAllocations={quarterlyAllocations}
+              />
             </Tabs>
           </CardContent>
         </Card>
       )}
     </div>
+  );
+}
+
+// ── Actuals tab ───────────────────────────────────────────────────────────────
+
+function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarterlyAllocations }) {
+  const [actuals, setActuals] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const { data: snapshots = [] } = useQuery({
+    queryKey: ["quarterlyPlanSnapshots", quarter, teamId],
+    queryFn: () => bragiQTC.entities.QuarterlyPlanSnapshot.filter({ quarter, team_id: teamId }),
+    enabled: !!(quarter && teamId),
+  });
+  const initialPlan = snapshots.find(s => s.is_initial_plan);
+
+  const plannedDays = useMemo(() => {
+    if (!initialPlan) return null;
+    const allocs = Array.isArray(initialPlan.allocations) ? initialPlan.allocations : [];
+    const teamMemberIds = new Set(members.map(m => m.id));
+    return allocs.filter(a => teamMemberIds.has(a.team_member_id)).reduce((sum, a) => sum + (a.days || 0), 0);
+  }, [initialPlan, members]);
+
+  const currentDays = useMemo(() => {
+    const teamMemberIds = new Set(members.map(m => m.id));
+    return quarterlyAllocations
+      .filter(a => a.quarter === quarter && teamMemberIds.has(a.team_member_id))
+      .reduce((sum, a) => sum + (a.days || 0), 0);
+  }, [quarterlyAllocations, quarter, members]);
+
+  const fetchActuals = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await bragiQTC.functions.invoke("fetchQuarterlyJiraActuals", { teamId, quarter });
+      setActuals(result.data);
+    } catch (err) {
+      setError(err.message || "Failed to fetch Jira actuals");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <TabsContent value="actuals" className="mt-0 space-y-4">
+      {/* Initial plan summary */}
+      <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Planned Capacity</p>
+        {initialPlan ? (
+          <div className="flex items-center gap-4 flex-wrap">
+            <div>
+              <span className="text-sm font-semibold">{plannedDays}d</span>
+              <span className="text-xs text-muted-foreground ml-1">initial plan ({initialPlan.label})</span>
+            </div>
+            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+            <div>
+              <span className="text-sm font-semibold">{currentDays}d</span>
+              <span className="text-xs text-muted-foreground ml-1">current plan</span>
+              {plannedDays !== null && currentDays !== plannedDays && (
+                <span className={cn("ml-1.5 text-xs font-medium", currentDays > plannedDays ? "text-amber-600" : "text-blue-600")}>
+                  ({currentDays > plannedDays ? "+" : ""}{currentDays - plannedDays}d vs initial)
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5" />
+            No initial plan set. Mark a version as "Initial Plan" in the Versions tab first.
+          </p>
+        )}
+      </div>
+
+      {/* Jira actuals fetch */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Jira Actuals</p>
+          {jiraProjectKey ? (
+            <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={fetchActuals} disabled={loading}>
+              <RefreshCw className={cn("w-3 h-3", loading && "animate-spin")} />
+              {loading ? "Fetching…" : actuals ? "Refresh" : `Fetch from ${jiraProjectKey}`}
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground">Set a Jira project key for {teamName} on the Teams page</span>
+          )}
+        </div>
+
+        {error && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive flex items-start gap-2">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            {error}
+          </div>
+        )}
+
+        {actuals && (
+          <div className="space-y-3">
+            <div className="text-xs text-muted-foreground">{actuals.dateRange.start} → {actuals.dateRange.end}</div>
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-green-200 bg-green-50/50 dark:bg-green-950/20 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                  <span className="text-xs font-semibold text-green-800 dark:text-green-300">Completed</span>
+                </div>
+                <div className="text-2xl font-bold text-green-700 dark:text-green-300">{actuals.completed.count}</div>
+                <div className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                  {actuals.completed.storyPoints > 0 ? `${actuals.completed.storyPoints} story points` : "no story points recorded"}
+                </div>
+              </div>
+              <div className="rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Clock className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="text-xs font-semibold text-blue-800 dark:text-blue-300">In Progress</span>
+                </div>
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{actuals.inProgress.count}</div>
+                <div className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                  {actuals.inProgress.storyPoints > 0 ? `${actuals.inProgress.storyPoints} story points` : "no story points recorded"}
+                </div>
+              </div>
+            </div>
+
+            {/* Comparison row */}
+            {plannedDays !== null && (actuals.completed.storyPoints > 0 || actuals.inProgress.storyPoints > 0) && (
+              <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1.5">
+                <p className="font-semibold text-muted-foreground uppercase tracking-wide">Plan vs Actuals</p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span><span className="font-semibold">{plannedDays}d</span> planned (initial)</span>
+                  <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                  <span><span className="font-semibold text-green-700">{actuals.completed.storyPoints} SP</span> completed</span>
+                  <span className="text-muted-foreground">+</span>
+                  <span><span className="font-semibold text-blue-700">{actuals.inProgress.storyPoints} SP</span> in progress</span>
+                </div>
+              </div>
+            )}
+
+            {/* Issue lists */}
+            {actuals.completed.issues.length > 0 && (
+              <details className="text-xs">
+                <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground py-1">
+                  {actuals.completed.count} completed issues
+                </summary>
+                <div className="mt-1.5 space-y-1 max-h-48 overflow-y-auto border rounded p-2">
+                  {actuals.completed.issues.map(issue => (
+                    <div key={issue.key} className="flex items-center gap-2">
+                      <span className="font-mono text-muted-foreground shrink-0">{issue.key}</span>
+                      <span className="truncate flex-1">{issue.summary}</span>
+                      {issue.storyPoints > 0 && <span className="shrink-0 text-muted-foreground">{issue.storyPoints} SP</span>}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+            {actuals.inProgress.issues.length > 0 && (
+              <details className="text-xs">
+                <summary className="cursor-pointer font-medium text-muted-foreground hover:text-foreground py-1">
+                  {actuals.inProgress.count} in-progress issues
+                </summary>
+                <div className="mt-1.5 space-y-1 max-h-48 overflow-y-auto border rounded p-2">
+                  {actuals.inProgress.issues.map(issue => (
+                    <div key={issue.key} className="flex items-center gap-2">
+                      <span className="font-mono text-muted-foreground shrink-0">{issue.key}</span>
+                      <span className="truncate flex-1">{issue.summary}</span>
+                      <span className="shrink-0 text-muted-foreground/60">{issue.status}</span>
+                      {issue.storyPoints > 0 && <span className="shrink-0 text-muted-foreground">{issue.storyPoints} SP</span>}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
+        )}
+
+        {!actuals && !loading && !error && jiraProjectKey && (
+          <p className="text-xs text-muted-foreground text-center py-4">
+            Click "Fetch" to pull completed and in-progress issues from Jira project <strong>{jiraProjectKey}</strong> for {quarter}.
+          </p>
+        )}
+      </div>
+    </TabsContent>
   );
 }

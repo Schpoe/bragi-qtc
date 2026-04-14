@@ -485,6 +485,7 @@ export default function SprintPlanning() {
                 quarter={selectedQuarter}
                 teamId={effectiveTeamId}
                 teamName={teams.find(t => t.id === effectiveTeamId)?.name ?? ""}
+                jiraProjectKey={teams.find(t => t.id === effectiveTeamId)?.jira_project_key ?? null}
                 user={user}
                 members={teamMembers}
                 workAreas={quarterlyWorkAreas}
