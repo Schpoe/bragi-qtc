@@ -457,6 +457,8 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
 
         if (!groups[gKey]) {
           groups[gKey] = {
+            groupKey: gKey,
+            isProd: !!prodKey,
             prodKey,
             prodName: prodName || (epicKey && !prodKey ? epicName : null) || 'Not assigned to PROD',
             epics: {},

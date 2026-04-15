@@ -757,13 +757,13 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
     const initialByProd  = sumByProd(initialPlan?.allocations || []);
     const currentByProd  = sumByProd(quarterlyAllocations.filter(a => a.quarter === quarter));
 
-    // Build Jira actuals per prodKey
+    // Build Jira actuals per groupKey
     const jiraByProd = {};
     const addJira = (byProd, field) => {
       (byProd || []).forEach(p => {
-        const key  = p.prodKey  || p.prodName || '__none__';
+        const key  = p.groupKey || p.prodKey || p.prodName || '__none__';
         const name = p.prodName || 'Not assigned to PROD';
-        if (!jiraByProd[key]) jiraByProd[key] = { prodKey: key, prodName: name, completedSP: 0, inProgressSP: 0, completedCount: 0, inProgressCount: 0 };
+        if (!jiraByProd[key]) jiraByProd[key] = { prodKey: p.prodKey || null, prodName: name, isProd: !!p.isProd, completedSP: 0, inProgressSP: 0, completedCount: 0, inProgressCount: 0 };
         p.epics.forEach(e => {
           jiraByProd[key][field === 'completed' ? 'completedSP' : 'inProgressSP']    += e.storyPoints;
           jiraByProd[key][field === 'completed' ? 'completedCount' : 'inProgressCount'] += e.count;
@@ -773,29 +773,45 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
     addJira(actuals.completed.byProd, 'completed');
     addJira(actuals.inProgress.byProd, 'inProgress');
 
-    // Merge all prod keys
+    // Merge all keys
     const allKeys = new Set([...Object.keys(initialByProd), ...Object.keys(currentByProd), ...Object.keys(jiraByProd)]);
 
-    return Array.from(allKeys).map(key => ({
-      prodKey:        key,
-      prodName:       initialByProd[key]?.prodName || currentByProd[key]?.prodName || jiraByProd[key]?.prodName || key,
-      initialDays:    initialByProd[key]?.days  ?? null,
-      currentDays:    currentByProd[key]?.days  ?? null,
-      completedSP:    jiraByProd[key]?.completedSP    ?? null,
-      inProgressSP:   jiraByProd[key]?.inProgressSP   ?? null,
-      completedCount: jiraByProd[key]?.completedCount ?? 0,
-      inProgressCount:jiraByProd[key]?.inProgressCount ?? 0,
-      linked:         initialByProd[key]?.linked || currentByProd[key]?.linked || key.startsWith('__wa:') === false,
-    })).sort((a, b) => {
-      if (a.prodName === 'Not assigned to PROD' || a.prodName === 'Unlinked') return 1;
-      if (b.prodName === 'Not assigned to PROD' || b.prodName === 'Unlinked') return -1;
+    return Array.from(allKeys).map(key => {
+      const inPlan    = initialByProd[key] != null;
+      const jira      = jiraByProd[key];
+      const isProd    = !key.startsWith('__') && (jira?.isProd !== false);
+      const prodKey   = (!key.startsWith('__') ? key : null) || jira?.prodKey || null;
+      const prodName  = initialByProd[key]?.prodName || currentByProd[key]?.prodName || jira?.prodName || key;
+
+      // Category determines visual treatment
+      let category;
+      if (key.startsWith('__wa:'))   category = 'planned-no-prod';   // in plan, no PROD link
+      else if (!isProd)              category = 'epic-only';          // Jira Epic without PROD
+      else if (inPlan)               category = 'planned';            // in initial plan + has PROD
+      else                           category = 'unplanned';          // PROD in actuals but not planned
+
+      return {
+        key,
+        prodKey,
+        prodName,
+        category,
+        initialDays:    initialByProd[key]?.days  ?? null,
+        currentDays:    currentByProd[key]?.days  ?? null,
+        completedSP:    jira?.completedSP    ?? null,
+        inProgressSP:   jira?.inProgressSP   ?? null,
+        completedCount: jira?.completedCount ?? 0,
+        inProgressCount:jira?.inProgressCount ?? 0,
+      };
+    }).sort((a, b) => {
+      const order = { planned: 0, 'unplanned': 1, 'epic-only': 2, 'planned-no-prod': 3 };
+      if (order[a.category] !== order[b.category]) return order[a.category] - order[b.category];
       return (b.currentDays ?? 0) - (a.currentDays ?? 0);
     });
   }, [actuals, initialPlan, members, quarterlyAllocations, workAreas, quarter]);
 
   if (rows.length === 0) return null;
 
-  const hasInitial = rows.some(r => r.initialDays !== null);
+  const hasInitial = rows.some(r => r.category === 'planned');
 
   return (
     <div className="space-y-2">
@@ -815,16 +831,22 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
           <tbody>
             {rows.map(row => {
               const delta = (row.currentDays !== null && row.initialDays !== null) ? row.currentDays - row.initialDays : null;
+              const categoryBadge = {
+                'planned':          <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Planned</span>,
+                'unplanned':        <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Unplanned</span>,
+                'epic-only':        <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Epic</span>,
+                'planned-no-prod':  <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-muted text-muted-foreground">No PROD link</span>,
+              }[row.category];
               return (
-                <tr key={row.prodKey} className="border-b border-border/50 hover:bg-muted/20">
-                  <td className="py-2 px-3 font-medium max-w-[240px]" title={`${row.prodKey}: ${row.prodName}`}>
-                    {row.prodKey && !row.prodKey.startsWith('__') && (
-                      <span className="text-muted-foreground font-mono text-[10px] mr-1">{row.prodKey}</span>
-                    )}
-                    <span className="truncate">{row.prodName}</span>
-                    {!row.linked && row.completedSP === null && row.inProgressSP === null && (
-                      <span className="ml-1 text-muted-foreground/50 text-[10px]">(no Jira link)</span>
-                    )}
+                <tr key={row.key} className="border-b border-border/50 hover:bg-muted/20">
+                  <td className="py-2 px-3 max-w-[260px]">
+                    <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
+                      {row.prodKey && (
+                        <span className="font-mono text-[10px] text-muted-foreground shrink-0">{row.prodKey}</span>
+                      )}
+                      <span className="font-medium truncate">{row.prodName}</span>
+                      {categoryBadge}
+                    </div>
                   </td>
                   {hasInitial && (
                     <td className="text-center py-2 px-3 tabular-nums text-amber-700">
