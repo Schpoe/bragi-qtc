@@ -706,31 +706,35 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
     const memberIds = new Set(members.map(m => m.id));
     const epicDetails = actuals.epicDetails || {};
 
-    // Build two lookups from epicDetails:
-    // 1. epicKey → { prodKey, prodName }  (work area has an epic key)
-    // 2. prodKey → prodName               (work area has the PROD key directly)
+    // Build epicKey → { prodKey, prodName } from epicDetails
     const epicToProd = {};
     const prodNames  = {};
     Object.values(epicDetails).forEach(e => {
       epicToProd[e.key] = { prodKey: e.prodKey || e.key, prodName: e.prodName || e.name };
       if (e.prodKey) prodNames[e.prodKey] = e.prodName;
     });
+    // Also populate prodNames from actuals byProd (so prod_id can resolve its display name)
+    [...(actuals.completed.byProd || []), ...(actuals.inProgress.byProd || [])].forEach(p => {
+      if (p.prodKey && p.prodName && p.prodName !== 'Not assigned to PROD') prodNames[p.prodKey] = p.prodName;
+    });
 
-    // Build workAreaId → { prodKey, prodName } using jira_key and linked_epic_keys
-    // Work areas may reference either an Epic key OR a PROD key directly
+    // Build workAreaId → { prodKey, prodName }
+    // Priority: prod_id (direct PROD key) → epic lookup via jira_key/linked_epic_keys
     const waToProd = {};
     workAreas.forEach(wa => {
+      if (wa.prod_id) {
+        waToProd[wa.id] = { prodKey: wa.prod_id, prodName: prodNames[wa.prod_id] || wa.prod_id };
+        return;
+      }
       const keys = [wa.jira_key, ...(wa.linked_epic_keys || [])].filter(Boolean);
       for (const k of keys) {
         if (epicToProd[k]) {
-          // k is an Epic key → resolve to its PROD
           waToProd[wa.id] = epicToProd[k];
-          break;
+          return;
         }
         if (prodNames[k] !== undefined) {
-          // k is a PROD key referenced directly
           waToProd[wa.id] = { prodKey: k, prodName: prodNames[k] };
-          break;
+          return;
         }
       }
     });
