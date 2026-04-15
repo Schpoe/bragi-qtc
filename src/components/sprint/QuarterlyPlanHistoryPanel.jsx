@@ -713,10 +713,11 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
       epicToProd[e.key] = { prodKey: e.prodKey || e.key, prodName: e.prodName || e.name };
       if (e.prodKey) prodNames[e.prodKey] = e.prodName;
     });
-    // Also populate prodNames from actuals byProd (so prod_id can resolve its display name)
+    // Populate prodNames from actuals byProd and from directly resolved PROD keys
     [...(actuals.completed.byProd || []), ...(actuals.inProgress.byProd || [])].forEach(p => {
       if (p.prodKey && p.prodName && p.prodName !== 'Not assigned to PROD') prodNames[p.prodKey] = p.prodName;
     });
+    Object.entries(actuals.resolvedProdKeys || {}).forEach(([k, v]) => { prodNames[k] = v; });
 
     // Build workAreaId → { prodKey, prodName }
     // Priority: prod_id (direct PROD key) → epic lookup via jira_key/linked_epic_keys
@@ -914,7 +915,8 @@ function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarte
     setLoading(true);
     setError(null);
     try {
-      const result = await bragiQTC.functions.invoke("fetchQuarterlyJiraActuals", { teamId, quarter });
+      const prodKeys = [...new Set(workAreas.map(wa => wa.prod_id).filter(Boolean))];
+      const result = await bragiQTC.functions.invoke("fetchQuarterlyJiraActuals", { teamId, quarter, prodKeys });
       setActuals(result.data);
     } catch (err) {
       setError(err.message || "Failed to fetch Jira actuals");

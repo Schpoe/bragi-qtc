@@ -350,7 +350,7 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     if (!jira.isConfigured()) {
       return res.status(400).json({ error: 'Jira not configured (JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN)' });
     }
-    const { teamId, quarter } = req.body;
+    const { teamId, quarter, prodKeys = [] } = req.body;
     if (!teamId || !quarter) {
       return res.status(400).json({ error: 'teamId and quarter are required' });
     }
@@ -486,6 +486,17 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
         });
     };
 
+    // Fetch names for any planned PROD keys not already resolved via epic details
+    const resolvedProdKeys = {};
+    const knownProdKeys = new Set(Object.values(epicDetails).map(e => e.prodKey).filter(Boolean));
+    const unknownProdKeys = (Array.isArray(prodKeys) ? prodKeys : []).filter(k => k && !knownProdKeys.has(k));
+    await Promise.all(unknownProdKeys.map(async (key) => {
+      try {
+        const issue = await jira.fetchIssue(key);
+        if (issue) resolvedProdKeys[key] = issue.fields?.summary || key;
+      } catch {}
+    }));
+
     res.json({
       data: {
         quarter,
@@ -493,9 +504,8 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
         dateRange,
         storyPointsField: spField,
         jql: { completed: completedJql, inProgress: inProgressJql },
-        // epicDetails: epicKey → { key, name, storyPoints, prodKey, prodName }
-        // Used by the frontend to map Bragi work areas (via jira_key/linked_epic_keys) to PRODs
         epicDetails,
+        resolvedProdKeys,
         completed: {
           count: completed.length,
           storyPoints: completed.reduce((sum, i) => sum + i.storyPoints, 0),
