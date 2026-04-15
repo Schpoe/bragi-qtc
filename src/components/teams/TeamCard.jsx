@@ -4,29 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Pencil, Trash2, EyeOff, Eye } from "lucide-react";
 import DisciplineBadge from "../shared/DisciplineBadge";
-
-const teamColors = {
-  blue: "bg-blue-500",
-  indigo: "bg-indigo-500",
-  purple: "bg-purple-500",
-  violet: "bg-violet-500",
-  fuchsia: "bg-fuchsia-500",
-  pink: "bg-pink-500",
-  rose: "bg-rose-500",
-  red: "bg-red-500",
-  orange: "bg-orange-500",
-  amber: "bg-amber-500",
-  yellow: "bg-yellow-500",
-  lime: "bg-lime-500",
-  green: "bg-emerald-500",
-  teal: "bg-teal-500",
-  cyan: "bg-cyan-500",
-  sky: "bg-sky-500",
-  slate: "bg-slate-500",
-  gray: "bg-gray-500",
-  zinc: "bg-zinc-500",
-  stone: "bg-stone-500",
-};
+import { getTeamColor } from "@/lib/utils";
 
 export default function TeamCard({ team, members, onEdit, onDelete, onToggleDisable, onClick }) {
   const disciplines = [...new Set(members.map(m => m.discipline))];
@@ -40,7 +18,7 @@ export default function TeamCard({ team, members, onEdit, onDelete, onToggleDisa
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-3 h-3 rounded-full ${teamColors[team.color] || "bg-primary"}`} />
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getTeamColor(team) }} />
             <h3 className="font-semibold text-foreground">{team.name}</h3>
             {isDisabled && <Badge variant="secondary" className="text-xs">Disabled</Badge>}
           </div>
