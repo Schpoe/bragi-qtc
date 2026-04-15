@@ -353,7 +353,7 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
   const [open, setOpen] = useState(false);
 
   const { data: allHistory = [], isLoading } = useQuery({
-    queryKey: ["quarterlyPlanHistory"],
+    queryKey: ["quarterlyPlanHistory", quarter, teamId],
     queryFn: () => bragiQTC.entities.QuarterlyPlanHistory.list(),
     enabled: open,
   });
@@ -889,6 +889,11 @@ function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarte
   const [actuals, setActuals] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setActuals(null);
+    setError(null);
+  }, [teamId, quarter]);
 
   const { data: snapshots = [] } = useQuery({
     queryKey: ["quarterlyPlanSnapshots", quarter, teamId],
