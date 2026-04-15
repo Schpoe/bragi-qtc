@@ -815,38 +815,20 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
 
   const hasInitial = rows.some(r => r.category === 'planned');
 
-  // Chart data — limit to top 15 by planned+actual size, 1 SP = 1 day
+  // Chart data — limit to top 15, 1 SP = 1 day
   const chartData = rows
     .filter(r => r.category !== 'planned-no-prod')
-    .filter(r => (r.initialDays ?? 0) + (r.completedSP ?? 0) + (r.inProgressSP ?? 0) > 0)
+    .filter(r => (r.initialDays ?? 0) + (r.currentDays ?? 0) + (r.completedSP ?? 0) + (r.inProgressSP ?? 0) > 0)
     .slice(0, 15)
     .map(r => ({
       name: r.prodKey && !r.prodKey.startsWith('__') ? r.prodKey : (r.prodName?.slice(0, 12) ?? '?'),
       fullName: r.prodName,
       planned: r.initialDays ?? 0,
+      current: r.currentDays ?? 0,
       done: r.completedSP ?? 0,
       inProgress: r.inProgressSP ?? 0,
       category: r.category,
     }));
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    const item = chartData.find(d => d.name === label);
-    return (
-      <div className="bg-background border border-border rounded-lg shadow-lg p-3 text-xs space-y-1.5 min-w-[160px]">
-        <p className="font-semibold text-foreground">{item?.fullName || label}</p>
-        {payload.map(p => (
-          <div key={p.dataKey} className="flex items-center justify-between gap-4">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: p.fill }} />
-              {p.name}
-            </span>
-            <span className="font-semibold tabular-nums">{p.value}d</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-4">
@@ -859,8 +841,8 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
             <p className="text-sm font-semibold">Planned vs Delivered</p>
             <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">1 SP = 1 day</span>
           </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 48 }} barCategoryGap="30%">
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 56 }} barCategoryGap="25%">
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis
                 dataKey="name"
@@ -868,23 +850,39 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
                 angle={-40}
                 textAnchor="end"
                 interval={0}
-                height={56}
+                height={60}
               />
               <YAxis
                 tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                 tickFormatter={v => `${v}d`}
                 width={36}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.5 }} />
-              <Legend
-                wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                formatter={(value) => <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>}
+              <Tooltip
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const item = chartData.find(d => d.name === label);
+                  return (
+                    <div style={{ background: "var(--background)", border: "1px solid hsl(var(--border))", borderRadius: 8, padding: "10px 14px", fontSize: 12, minWidth: 160 }}>
+                      <p style={{ fontWeight: 600, marginBottom: 6 }}>{item?.fullName || label}</p>
+                      {payload.map(p => (
+                        <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 2 }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ width: 10, height: 10, borderRadius: 2, background: p.fill, display: "inline-block" }} />
+                            {p.name}
+                          </span>
+                          <span style={{ fontWeight: 600 }}>{p.value}d</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }}
+                cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
               />
-              {hasInitial && (
-                <Bar dataKey="planned" name="Initial Plan" fill="#f59e0b" radius={[3, 3, 0, 0]} maxBarSize={32} />
-              )}
-              <Bar dataKey="done" name="Done" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={32} />
-              <Bar dataKey="inProgress" name="In Progress" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={32} />
+              <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
+              {hasInitial && <Bar dataKey="planned" name="Initial Plan" fill="#f59e0b" radius={[3, 3, 0, 0]} maxBarSize={28} />}
+              <Bar dataKey="current" name="Current Plan" fill="#a78bfa" radius={[3, 3, 0, 0]} maxBarSize={28} />
+              <Bar dataKey="done" name="Done" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={28} />
+              <Bar dataKey="inProgress" name="In Progress" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={28} />
             </BarChart>
           </ResponsiveContainer>
           {rows.length > 15 && (
