@@ -817,8 +817,11 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
               const delta = (row.currentDays !== null && row.initialDays !== null) ? row.currentDays - row.initialDays : null;
               return (
                 <tr key={row.prodKey} className="border-b border-border/50 hover:bg-muted/20">
-                  <td className="py-2 px-3 font-medium max-w-[200px] truncate" title={row.prodName}>
-                    {row.prodName}
+                  <td className="py-2 px-3 font-medium max-w-[240px]" title={`${row.prodKey}: ${row.prodName}`}>
+                    {row.prodKey && !row.prodKey.startsWith('__') && (
+                      <span className="text-muted-foreground font-mono text-[10px] mr-1">{row.prodKey}</span>
+                    )}
+                    <span className="truncate">{row.prodName}</span>
                     {!row.linked && row.completedSP === null && row.inProgressSP === null && (
                       <span className="ml-1 text-muted-foreground/50 text-[10px]">(no Jira link)</span>
                     )}

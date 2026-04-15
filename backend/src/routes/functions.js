@@ -449,16 +449,15 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
         }
         const eKey = epicKey || '__none__';
         if (!groups[gKey].epics[eKey]) {
-          const epicSP = epic ? epic.storyPoints : 0;
           groups[gKey].epics[eKey] = {
             epicKey,
             epicName: epicName || 'No Epic',
             count: 0,
-            // SP from epic counted once per epic (not summed per issue)
-            storyPoints: epicSP,
+            storyPoints: 0,
           };
         }
         groups[gKey].epics[eKey].count++;
+        groups[gKey].epics[eKey].storyPoints += issue.storyPoints;
       });
 
       return Object.values(groups)
