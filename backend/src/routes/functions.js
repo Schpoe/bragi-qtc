@@ -417,12 +417,27 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
       try {
         const epic = await jira.fetchIssue(key);
         if (epic) {
+          // Find PROD via "implements" issue link (outward from Epic → PROD)
+          // Falls back to parent-child for projects that use that structure
+          let prodKey = null, prodName = null;
+          const links = epic.fields?.issuelinks || [];
+          for (const link of links) {
+            if ((link.type?.outward || '').toLowerCase() === 'implements' && link.outwardIssue) {
+              prodKey  = link.outwardIssue.key;
+              prodName = link.outwardIssue.fields?.summary || null;
+              break;
+            }
+          }
+          if (!prodKey) {
+            prodKey  = epic.fields?.parent?.key || null;
+            prodName = epic.fields?.parent?.fields?.summary || null;
+          }
           epicDetails[key] = {
             key,
             name: epic.fields?.summary,
             storyPoints: getSP(epic),
-            prodKey: epic.fields?.parent?.key || epic.fields?.customfield_10014 || null,
-            prodName: epic.fields?.parent?.fields?.summary || null,
+            prodKey,
+            prodName,
           };
         }
       } catch {}
