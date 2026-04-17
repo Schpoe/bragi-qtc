@@ -18,20 +18,29 @@ The quarterly plan answers three questions:
 
 ### 1. Teams and members
 
-Each team must have at least one member. Go to **Teams**, create your teams and add members. Each member has a **sprint_days** value (their available days per sprint) which drives capacity defaults.
+Each team must have at least one member. Go to **Teams**, create your teams and add members. Each member has a **sprint_days** value (their available days per sprint) which drives capacity defaults. Team colors are set as hex values via the color picker.
 
 For Jira integration, set the **Jira Project Key** on the team (Teams → edit team → "Jira Project Key", e.g. `MOBILE`). This is used to pull actuals at the end of the quarter.
 
 ### 2. Work items
 
-Work items (epics, features, projects) are managed under **Work Items**. Each work item can have:
-- A **leading team** (primary owner)
-- **Supporting teams** (contributing teams)
-- A **Jira key** or **linked epic keys** for Jira sync
+Work items (features, projects, epics) are managed under **Work Items**. Each work item can have:
+
+| Field | Description |
+|-------|-------------|
+| **Leading team** | Primary owner of this work item |
+| **Supporting teams** | Teams contributing to this work item |
+| **PROD ID** (`prod_id`) | The Jira key of the PROD item (e.g. `PROD-123`). Used to match work items to Jira actuals. |
+| **Jira key** | An Epic key or PROD key for Jira sync (legacy / fallback) |
+| **Linked epic keys** | Additional Epic keys linked to this work item |
+
+The `prod_id` is the primary matching key between the capacity plan and Jira actuals. Both the PROD ID and its title are shown as a badge on each work item card.
 
 ### 3. Jira configuration (optional)
 
 Set `JIRA_BASE_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN` in your `.env` file to enable Jira sync and actuals fetching.
+
+The app automatically detects your Jira story points field by looking for common field names (`Story Points`, `Story point estimate`, etc.). You can override this with `JIRA_STORY_POINTS_FIELD` in `.env`.
 
 ---
 
@@ -39,7 +48,7 @@ Set `JIRA_BASE_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN` in your `.env` file to e
 
 ### Step 1 — Select the quarter and team
 
-Go to **Capacity Planning**. Use the filter bar at the top to select the quarter (e.g. `Q2 2025`) and a specific team.
+Go to **Quarterly Planning**. Use the filter bar at the top to select the quarter (e.g. `Q2 2025`) and a specific team.
 
 The quarter selector is sticky — your selection persists when navigating between pages.
 
@@ -53,7 +62,7 @@ Click **"Select Work Items"** in the allocation table. A dialog shows work items
 | **Supporting** | Work items where this team is a supporting team |
 | **Other** | All other work items |
 
-Check the items this team will work on this quarter. Already-selected items appear at the top. Click **Apply Selection** to confirm.
+Check the items this team will work on this quarter. Already-selected items appear at the top. You can search by work item name or Jira key. Click **Apply Selection** to confirm.
 
 ### Step 3 — Set allocations
 
@@ -61,7 +70,7 @@ The allocation table shows team members as rows and selected work items as colum
 
 - Click or type in any cell to set the number of days a member will spend on that work item
 - The **Capacity** column shows each member's total available days for the quarter (editable per-member per-quarter)
-- The **Allocated** column shows total allocated days and the utilisation percentage
+- The **Allocated** column shows total allocated days and the utilisation percentage:
   - Green: under 80%
   - Amber: 80–100%
   - Red: over-allocated
@@ -74,7 +83,7 @@ Once the plan is agreed, save it as the **initial plan**:
 1. Open **Quarterly Plan History** (below the allocation table)
 2. Go to the **Versions** tab
 3. Click **"Save Current Version"** — enter a label such as `Initial Plan Q2 2025`
-4. Click **"Set Initial"** on the saved snapshot
+4. Click the **flag icon** on the saved snapshot to mark it as the initial plan
 
 The snapshot is marked with a gold ★ badge. From this point, the allocation table shows deltas against the initial plan:
 
@@ -94,13 +103,14 @@ Open **Quarterly Plan History**:
 
 | Tab | What it shows |
 |-----|---------------|
-| **Versions** | Saved snapshots. Use "Revert" to restore any snapshot. |
+| **Versions** | Saved snapshots. Use the flag icon to set the initial plan, use "Revert" to restore any snapshot. |
 | **Changes** | Side-by-side comparison of initial vs current allocation per member/work item, with delta badges. |
 | **Audit Log** | Every individual change, timestamped, grouped by date. |
+| **Actuals** | Jira actuals fetched for the quarter, with plan vs delivery comparison. |
 
 ### Saving mid-quarter snapshots
 
-You can save additional snapshots at any point (e.g. after a planning review). These are versioned independently of the initial plan. Use "Set Initial" to re-designate a different snapshot as the reference if the team formally re-baselined the plan.
+You can save additional snapshots at any point (e.g. after a planning review). These are versioned independently of the initial plan. Use the flag icon to re-designate a different snapshot as the reference if the team formally re-baselined the plan.
 
 ### Reverting
 
@@ -120,65 +130,70 @@ At the end of the quarter, pull actual delivery data from Jira to compare agains
 ### Fetching actuals
 
 1. Open **Quarterly Plan History** → **Actuals** tab
-2. The panel shows the planned capacity from the initial plan (and current plan if it differs)
+2. The panel shows the planned capacity from the initial plan
 3. Click **"Fetch from \<PROJECT\>"**
 
 The panel fetches two sets of issues from Jira for the quarter's date range (e.g. 1 Apr – 30 Jun for Q2):
 
-| Section | JQL logic |
-|---------|-----------|
-| **Completed** | Issues where status changed to `Done` during the quarter |
-| **In Progress** | Issues that were worked on (moved out of backlog) but not completed |
+| Section | Logic |
+|---------|-------|
+| **Completed** | Issues with a completed status (Done, Closed, Resolved) |
+| **In Progress** | Issues started but not completed (excludes backlog/to-do) |
 
-For each section, the panel shows:
-- **Issue count**
-- **Story points** (auto-detected from your Jira field configuration)
+### Visual comparison — bar chart
 
-### Reading the comparison
+The actuals panel shows a **bar chart** comparing plan vs delivery per PROD item. Story points are translated to days at **1 SP = 1 day** so all bars use the same unit:
 
-Planned days and Jira story points are different units — the panel shows them side by side so you can interpret the ratio for your team:
+| Bar | Colour | Source |
+|-----|--------|--------|
+| Initial Plan | Amber | Days from the initial plan snapshot |
+| Current Plan | Purple | Days from the current allocation |
+| Done | Green | Completed story points (as days) |
+| In Progress | Blue | In-progress story points (as days) |
 
-```
-180d planned (initial)  →  47 SP completed  +  18 SP in progress
-```
+Up to 15 items are shown in the chart. All items appear in the table below it.
 
-Expand the issue lists to see individual issues with their key, summary, current status, and story points.
+### PROD-based breakdown table
 
-### Story points field detection
+Below the chart, a table groups all work by PROD item. Each row is labelled with its category:
 
-The app automatically detects your Jira story points field by looking for common field names (`Story Points`, `Story point estimate`, etc.). If your Jira uses a non-standard name, check the field name in your Jira field settings — the detected field ID is shown in the actuals panel.
+| Badge | Meaning |
+|-------|---------|
+| **Planned** (green) | In the initial quarterly plan, has a PROD link |
+| **Unplanned** (amber) | Appeared in Jira actuals but was not planned |
+| **Epic** (blue) | Jira Epic with no parent PROD item |
+| **No PROD link** (gray) | In the plan but work item has no `prod_id` set |
+
+Both the PROD ID (e.g. `PROD-123`) and the PROD title are shown for each row.
+
+### How PROD matching works
+
+Work items are matched to Jira actuals using the `prod_id` field on each work item. For each issue fetched from Jira:
+
+1. The issue's Epic is identified
+2. The Epic is fetched from Jira to find its parent PROD item — first via an **"implements"** issue link (outward from Epic to PROD), then falling back to the Epic's parent field
+3. Story points are summed from individual issues (not from the Epic itself)
+
+If a work item has no `prod_id`, the match falls back to `jira_key` and `linked_epic_keys`.
 
 ---
 
 ## All Teams View
 
-When **"All Teams"** is selected in the filter bar, the Capacity Planning page shows one planning card per active team for the selected quarter. Each card is independent — work item selection and allocations are managed per team.
+When **"All Teams"** is selected in the filter bar, the Quarterly Planning page shows one planning card per active team for the selected quarter. Each card is independent — work item selection and allocations are managed per team.
 
 Disabled teams (Teams page → disable toggle) are excluded from all views.
 
 ---
 
-## Exporting
-
-From the **Overview** page, use the export buttons to download the quarterly plan in:
-
-| Format | Contents |
-|--------|----------|
-| **Excel (.xlsx)** | Team summary, discipline breakdown, member allocations, top work items |
-| **CSV** | Flat format with team, member, discipline, work area, and allocation |
-| **JSON** | Structured data for programmatic use |
-| **PDF** | Screenshot of the current quarterly overview |
-
----
-
-## Quarterly Plan History — Reference
+## Quarterly Plan History — Quick Reference
 
 | Action | Where |
 |--------|-------|
 | Save a version | History → Versions → "Save Current Version" |
-| Set initial plan | History → Versions → "Set Initial" on a snapshot |
+| Set initial plan | History → Versions → flag icon on a snapshot |
 | Revert to a version | History → Versions → "Revert" |
 | View allocation changes | History → Changes tab |
 | View full audit trail | History → Audit Log tab |
 | Fetch Jira actuals | History → Actuals tab |
-| Export plan | Overview page → export buttons |
+| View plan vs actuals chart | History → Actuals tab (after fetching) |
