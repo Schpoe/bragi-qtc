@@ -41,30 +41,6 @@ If the update includes schema changes (new fields or models), also run:
 docker compose run --rm backend npx prisma db push
 ```
 
-## Data Migration (from Base44)
-
-Place your CSV exports from Base44 in the `import/` folder. Only the files you provide will be imported — missing files are skipped.
-
-To import everything:
-```bash
-docker compose run --rm backend node prisma/migrate-from-base44.js
-```
-
-To import only quarterly plans, work items, and allocations, place just these 5 files in `import/`:
-- `Team_export.csv`
-- `TeamMember_export.csv`
-- `WorkArea_export.csv`
-- `QuarterlyAllocation_export.csv`
-- `QuarterlyWorkAreaSelection_export.csv`
-
-Then run the same command — the script will skip the missing files automatically.
-
-## Copying files to the server
-
-```bash
-scp ./import/*.csv user@your-server:/path/to/bragi-qtc/import/
-```
-
 ## Development
 
 Frontend (Vite dev server):
