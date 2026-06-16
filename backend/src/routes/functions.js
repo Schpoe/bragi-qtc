@@ -368,15 +368,22 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     const spField = jira.detectStoryPointsField(fieldMap);
     const project = team.jira_project_key;
 
-    // All issues touched during the quarter — classify by status on our side
-    const allJql = `project = "${project}" AND updated >= "${dateRange.start}" AND updated <= "${dateRange.end}" ORDER BY updated DESC`;
+    // Strict "completed in the quarter": an issue counts as Completed/Cancelled only
+    // if it was FINISHED (resolutiondate) within the quarter — not merely updated in it.
+    // In Progress = still-open issues that were touched during the quarter.
+    // Jira treats a bare end date as 00:00, so make the upper bound inclusive of the last day.
+    const endInclusive  = `${dateRange.end} 23:59`;
+    const resolvedJql   = `project = "${project}" AND resolutiondate >= "${dateRange.start}" AND resolutiondate <= "${endInclusive}" ORDER BY resolutiondate DESC`;
+    const inProgressJql = `project = "${project}" AND resolution = EMPTY AND updated >= "${dateRange.start}" AND updated <= "${endInclusive}" ORDER BY updated DESC`;
 
     // customfield_10014 = Epic Link (old-style company-managed projects)
     const spFields = ['summary', 'status', 'issuetype', 'parent', 'customfield_10014', spField];
-    const allIssues = await jira.searchJql(allJql, spFields);
+    const [resolvedIssues, openIssues] = await Promise.all([
+      jira.searchJql(resolvedJql, spFields),
+      jira.searchJql(inProgressJql, spFields),
+    ]);
 
-    const completedStatuses = new Set(['done', 'closed', 'resolved', 'released', 'complete', 'completed']);
-    const ignoredStatuses   = new Set(['to do', 'backlog', 'open', 'new', 'todo']);
+    const ignoredStatuses = new Set(['to do', 'backlog', 'open', 'new', 'todo']);
     // Cancelled / abandoned work — counts as neither delivered nor in-progress.
     // "Obsolete / Won't Do" is the real Jira status to ignore; the rest are common
     // variants. Overridable via JIRA_EXCLUDED_STATUSES (comma-separated status names).
@@ -392,15 +399,16 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     );
 
     const statusOf = (i) => (i.fields?.status?.name || '').toLowerCase();
-    const excludedIssues   = allIssues.filter(i => excludedStatuses.has(statusOf(i)));
-    const completedIssues  = allIssues.filter(i => !excludedStatuses.has(statusOf(i)) && completedStatuses.has(statusOf(i)));
-    const inProgressIssues = allIssues.filter(i => {
+    // Of the issues resolved this quarter: cancelled (excluded status) vs genuinely completed.
+    const excludedIssues   = resolvedIssues.filter(i => excludedStatuses.has(statusOf(i)));
+    const completedIssues  = resolvedIssues.filter(i => !excludedStatuses.has(statusOf(i)));
+    // Open issues touched this quarter, minus backlog/to-do (and any stray excluded status).
+    const inProgressIssues = openIssues.filter(i => {
       const s = statusOf(i);
-      return !excludedStatuses.has(s) && !completedStatuses.has(s) && !ignoredStatuses.has(s);
+      return !excludedStatuses.has(s) && !ignoredStatuses.has(s);
     });
 
-    const completedJql  = allJql;
-    const inProgressJql = allJql;
+    const completedJql = resolvedJql;
 
     const getSP = (issue) => {
       const val = issue.fields?.[spField];
@@ -427,7 +435,7 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     const excluded   = excludedIssues.map(mapIssue);
 
     // Fetch unique epics to get their name, SP, and PROD parent
-    const epicKeys = [...new Set(allIssues.map(getEpicKey).filter(Boolean))];
+    const epicKeys = [...new Set([...resolvedIssues, ...openIssues].map(getEpicKey).filter(Boolean))];
     const epicDetails = {};
     await Promise.all(epicKeys.map(async (key) => {
       try {

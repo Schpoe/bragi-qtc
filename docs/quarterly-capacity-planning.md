@@ -137,13 +137,13 @@ At the end of the quarter, pull actual delivery data from Jira to compare agains
 2. The panel shows the planned capacity from the initial plan
 3. Click **"Fetch from \<PROJECT\>"**
 
-The panel fetches two sets of issues from Jira for the quarter's date range (e.g. 1 Apr – 30 Jun for Q2):
+The panel fetches issues from Jira for the quarter's date range (e.g. 1 Apr – 30 Jun for Q2):
 
 | Section | Logic |
 |---------|-------|
-| **Completed** | Issues with a completed status (Done, Closed, Resolved, Released) |
-| **In Progress** | Issues started but not completed (excludes backlog/to-do) |
-| **Cancelled** | Issues in an excluded status (`Obsolete / Won't Do` etc.) — counted as neither delivered nor in progress |
+| **Completed** | Issues **resolved within the quarter** (`resolutiondate` in range) — strictly completed *in* the quarter, not merely updated in it. An issue finished in an earlier quarter no longer counts. |
+| **In Progress** | Still-open issues (unresolved) updated during the quarter, excluding backlog/to-do |
+| **Cancelled** | Issues resolved within the quarter in an excluded status (`Obsolete / Won't Do` etc.) — counted as neither delivered nor in progress |
 
 ### Plan vs Delivered — summary
 
