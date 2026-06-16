@@ -10,10 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ClipboardCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
-import { PlanDeliverySummary } from "../components/sprint/QuarterlyPlanHistoryPanel";
+import { PlanDeliverySummary, ComparisonDonut } from "../components/sprint/QuarterlyPlanHistoryPanel";
 import { summarizeComparison, COMPARISON_BUCKETS } from "@/lib/quarterly-comparison";
 
 // Sort "Q2 2025" descending (newest first).
@@ -123,13 +123,13 @@ export default function QuarterlyReview() {
     [summaries],
   );
 
-  // Aggregate composition across the filtered scope.
-  const pieData = useMemo(
-    () => COMPARISON_BUCKETS
-      .map(b => ({ name: b.label, value: round1(summaries.reduce((s, { sm }) => s + (sm.buckets?.[b.key] || 0), 0)), color: b.color }))
-      .filter(d => d.value > 0),
-    [summaries],
-  );
+  // Aggregate bucket totals across the filtered scope (for the all-teams donut).
+  const aggBuckets = useMemo(() => {
+    const acc = {};
+    COMPARISON_BUCKETS.forEach(b => { acc[b.key] = 0; });
+    summaries.forEach(({ sm }) => COMPARISON_BUCKETS.forEach(b => { acc[b.key] += sm.buckets?.[b.key] || 0; }));
+    return acc;
+  }, [summaries]);
 
   const deleteSnapshot = useMutation({
     mutationFn: (id) => bragiQTC.entities.QuarterlyComparisonSnapshot.delete(id),
@@ -139,6 +139,7 @@ export default function QuarterlyReview() {
 
   const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "");
   const scopeName = teamFilter === "all" ? "All teams" : (teamOptions.find(t => t.id === teamFilter)?.name || "Team");
+  const isAllTeams = teamFilter === "all";
 
   return (
     <div>
@@ -178,10 +179,11 @@ export default function QuarterlyReview() {
         />
       ) : (
         <div className="space-y-6">
-          {/* Roll-up: stats + charts */}
+          {/* All-teams roll-up — only shown when "All teams" is selected */}
+          {isAllTeams && (
           <Card>
             <CardHeader className="pb-3 border-b">
-              <CardTitle className="text-base font-bold">{scopeName} — {selectedQuarter}</CardTitle>
+              <CardTitle className="text-base font-bold">All teams — {selectedQuarter}</CardTitle>
               <p className="text-xs text-muted-foreground">{forQuarter.length} team{forQuarter.length === 1 ? "" : "s"} finalized · days</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-6">
@@ -216,26 +218,15 @@ export default function QuarterlyReview() {
                 {/* Aggregate composition */}
                 <div className="rounded-lg border border-border p-4">
                   <p className="text-sm font-semibold mb-1">Effort breakdown</p>
-                  <p className="text-xs text-muted-foreground mb-3">Where the {scopeName === "All teams" ? "org's" : "team's"} planned and actual effort landed.</p>
-                  {pieData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={320}>
-                      <PieChart>
-                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={2} dataKey="value" label={({ percent }) => (percent >= 0.05 ? `${Math.round(percent * 100)}%` : "")} labelLine={false}>
-                          {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                        </Pie>
-                        <Tooltip formatter={(v) => `${v}d`} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                        <Legend wrapperStyle={{ fontSize: 10 }} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <p className="text-xs text-muted-foreground py-8 text-center">No delivered or in-progress effort recorded.</p>
-                  )}
+                  <p className="text-xs text-muted-foreground mb-3">Where the org's planned and actual effort landed.</p>
+                  <ComparisonDonut buckets={aggBuckets} height={320} />
                 </div>
               </div>
             </CardContent>
           </Card>
+          )}
 
-          {/* Per-team frozen comparisons */}
+          {/* Per-team frozen comparisons (each panel includes its own chart) */}
           {forQuarter.map(snap => (
             <Card key={snap.id} className="border-primary/20">
               <CardHeader className="pb-3 border-b">

@@ -5,7 +5,7 @@ import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { canManageAllocations } from "@/lib/permissions";
 import JiraLink from "@/components/shared/JiraLink";
-import { summarizeComparison } from "@/lib/quarterly-comparison";
+import { summarizeComparison, COMPARISON_BUCKETS } from "@/lib/quarterly-comparison";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,7 @@ import { History, ChevronDown, ChevronRight, ArrowRight, TrendingUp, TrendingDow
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -719,6 +719,27 @@ function RoleChip({ role }) {
   return null;
 }
 
+// Effort-breakdown donut for a single buckets object (a team, or an aggregate).
+export function ComparisonDonut({ buckets, height = 260 }) {
+  const data = COMPARISON_BUCKETS
+    .map(b => ({ name: b.label, value: Math.round((buckets?.[b.key] || 0) * 10) / 10, color: b.color }))
+    .filter(d => d.value > 0);
+  if (data.length === 0) {
+    return <p className="text-xs text-muted-foreground py-8 text-center">No delivered or in-progress effort recorded.</p>;
+  }
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <PieChart>
+        <Pie data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={88} paddingAngle={2} dataKey="value" label={({ percent }) => (percent >= 0.06 ? `${Math.round(percent * 100)}%` : "")} labelLine={false}>
+          {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+        </Pie>
+        <Tooltip formatter={(v) => `${v}d`} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+        <Legend wrapperStyle={{ fontSize: 10 }} />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
 export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, hasInitial, quarter, teamName }) {
   const exportRef = useRef(null);
   const [exporting, setExporting] = useState(false);
@@ -733,7 +754,7 @@ export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, has
     deliveredUnplNon, inProgUnplNon,
     totalDelivered, totalInProgress, totalUnplanned, totalActivity,
     excludedCount, excludedSP,
-    deliveryPct, unplannedPct, plannedNotDelivered,
+    deliveryPct, unplannedPct, plannedNotDelivered, buckets,
   } = summarizeComparison(rows, daysPerSp, actuals?.excluded);
 
   const bucketRows = (arr, withPlan) => arr
@@ -788,16 +809,28 @@ export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, has
     if (!exportRef.current) return;
     setExporting(true);
     try {
-      const canvas = await html2canvas(exportRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
-      const img = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
+      // JPEG (not PNG) keeps the file small — a PNG screenshot of this page is ~12MB,
+      // JPEG at scale 1.5 / q0.7 is a fraction of that while staying legible.
+      const canvas = await html2canvas(exportRef.current, { scale: 1.5, backgroundColor: "#ffffff", useCORS: true });
+      const img = canvas.toDataURL("image/jpeg", 0.7);
+      const pdf = new jsPDF("p", "mm", "a4", true); // compress = true
       const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
       const margin = 10;
       const w = pageW - margin * 2;
-      const h = (canvas.height * w) / canvas.width;
+      const imgH = (canvas.height * w) / canvas.width;
       pdf.setFontSize(13);
       pdf.text(`Plan vs Delivered — ${teamName} — ${quarter}`, margin, margin + 2);
-      pdf.addImage(img, "PNG", margin, margin + 6, w, h);
+      // Place the full image, then add pages shifting it up so tall content (incl. the
+      // chart) isn't clipped.
+      const top = margin + 6;
+      pdf.addImage(img, "JPEG", margin, top, w, imgH, undefined, "FAST");
+      let shown = pageH - top - margin;
+      while (shown < imgH) {
+        pdf.addPage();
+        pdf.addImage(img, "JPEG", margin, margin - shown, w, imgH, undefined, "FAST");
+        shown += pageH - margin * 2;
+      }
       pdf.save(`plan-vs-delivered_${quarter}_${teamName}`.replace(/[^a-z0-9_-]+/gi, "-") + ".pdf");
     } catch (err) {
       console.error("Summary PDF export failed:", err);
@@ -944,6 +977,12 @@ export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, has
         <BucketTable title="Planned topics" items={bucketRows(planned, true)} withPlan />
         <BucketTable title="Unplanned PROD topics (delivered but not planned)" items={bucketRows(unplannedProd, false)} withPlan={false} />
         <BucketTable title="Unplanned non-PROD topics (Jira work with no PROD link)" items={bucketRows(unplannedNonProd, false)} withPlan={false} />
+
+        {/* Effort breakdown chart — inside the export region so it's in the PDF */}
+        <div className="rounded-lg border border-border p-4">
+          <p className="text-sm font-semibold mb-3">Effort breakdown</p>
+          <ComparisonDonut buckets={buckets} />
+        </div>
       </div>
     </div>
   );

@@ -218,14 +218,17 @@ Only an admin or the team's manager can finalize. There is **one snapshot per te
 Finalized snapshots appear on the dedicated **Quarterly Review** page (left nav):
 
 - A **quarter selector**, and — for **admins and team managers** — a **team filter**. A team manager's own team is preselected; **"All teams"** shows everyone.
-- A **roll-up** card for the selected scope — headline stats (planned, delivered, in-progress, **planned-not-delivered**, unplanned, cancelled) and two charts: **Effort by team & category** (stacked bars) and **Effort breakdown** (donut). Both split effort into eight mutually-exclusive buckets so the numbers reconcile against the plan:
-  - **Planned PROD** — delivered / in progress / **not delivered** (the plan gap)
-  - **Planned capacity (non-PROD)** — planned days with no Jira delivery (e.g. "Time Off"); counted as planned capacity, **not** as a delivery gap
-  - **Unplanned PROD** — delivered / in progress
-  - **Non-PROD** — delivered / in progress
+- An **all-teams roll-up** card — shown **only when "All teams" is selected** — with combined headline stats (planned, delivered, in-progress, **planned-not-delivered**, unplanned, cancelled), a cross-team **Effort by team & category** stacked bar, and an aggregate **Effort breakdown** donut.
+- A **per-team panel** for each finalized team — the frozen summary, **its own Effort-breakdown chart**, CSV/PDF export, and a stamp of who finalized it and when. (When a single team is filtered, only that team's panel shows — no all-teams data.)
 
-  Buckets 1–2 reconcile against the plan; the rest is the extra work done on top. The charts recompute from each snapshot's stored rows, so the breakdown applies to already-finalized quarters too.
-- A **per-team** frozen comparison below, each rendered exactly like the live summary (with CSV/PDF export), stamped with who finalized it and when.
+The charts split effort into eight mutually-exclusive buckets so the numbers reconcile against the plan:
+
+- **Planned PROD** — delivered / in progress / **not delivered** (the plan gap)
+- **Planned capacity (non-PROD)** — planned days with no Jira delivery (e.g. "Time Off"); counted as planned capacity, **not** as a delivery gap
+- **Unplanned PROD** — delivered / in progress
+- **Non-PROD** — delivered / in progress
+
+The first two reconcile against the plan; the rest is the extra work done on top. Charts recompute from each snapshot's stored rows, so the breakdown applies to already-finalized quarters too. The **PDF export includes the chart**, and is JPEG-compressed to keep the file small.
 
 Because the data is stored, the Quarterly Review page loads instantly and never drifts — even years later, and even if the underlying Jira tickets change. Admins can remove a finalized snapshot from the page if it was captured by mistake.
 
