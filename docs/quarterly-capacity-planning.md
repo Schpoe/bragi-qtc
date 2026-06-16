@@ -145,6 +145,8 @@ The panel fetches issues from Jira for the quarter's date range (e.g. 1 Apr – 
 | **In Progress** | Still-open issues (unresolved) updated during the quarter, excluding backlog/to-do |
 | **Cancelled** | Issues resolved within the quarter in an excluded status (`Obsolete / Won't Do` etc.) — counted as neither delivered nor in progress |
 
+> **Large projects:** rate limits are retried automatically and each category is capped at 2000 issues per fetch. If a project exceeds that, the Actuals tab shows a "results were capped" warning and figures reflect the most recent issues.
+
 ### Plan vs Delivered — summary
 
 At the top of the fetched actuals is a **days-based summary** (the unit mismatch between planned *days* and delivered *story points* is resolved using the team's Working-days-per-SP factor). It shows:

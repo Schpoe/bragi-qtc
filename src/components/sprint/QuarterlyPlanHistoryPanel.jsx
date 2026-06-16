@@ -1366,6 +1366,12 @@ function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarte
                 </div>
               </details>
             )}
+            {actuals.truncated && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                This project returned more than {actuals.maxIssues} issues for the quarter, so results were capped and may be incomplete. Counts reflect the most recent {actuals.maxIssues} issues per category.
+              </div>
+            )}
             {actuals.unresolvedEpics?.length > 0 && (
               <details className="text-xs rounded-lg border border-amber-200 bg-amber-50/40 dark:bg-amber-950/20 p-2">
                 <summary className="cursor-pointer text-amber-800 dark:text-amber-300 font-medium py-0.5">

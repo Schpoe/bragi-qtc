@@ -14,6 +14,22 @@ function isConfigured() {
   return !!(process.env.JIRA_BASE_URL && process.env.JIRA_EMAIL && process.env.JIRA_API_TOKEN);
 }
 
+// fetch wrapper that retries on 429 (rate limit) / 503, honouring Retry-After.
+// Large Jira projects can rate-limit a burst of requests; this prevents a single
+// 429 from failing the whole actuals fetch.
+async function fetchWithRetry(url, options = {}, retries = 4) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, options);
+    if ((res.status === 429 || res.status === 503) && attempt < retries) {
+      const ra = parseInt(res.headers.get('retry-after') || '', 10);
+      const waitMs = (Number.isNaN(ra) ? Math.min(2 ** attempt, 8) : Math.min(ra, 30)) * 1000;
+      await new Promise(r => setTimeout(r, waitMs));
+      continue;
+    }
+    return res;
+  }
+}
+
 function mapStatusToProgress(status) {
   const s = (status || '').toLowerCase();
   if (s.includes('backlog') || s.includes('to do')) return 0;
@@ -25,7 +41,7 @@ function mapStatusToProgress(status) {
 
 async function fetchIssue(issueKey) {
   const url = `${process.env.JIRA_BASE_URL}/rest/api/3/issue/${issueKey}`;
-  const res = await fetch(url, { headers: getJiraHeaders() });
+  const res = await fetchWithRetry(url, { headers: getJiraHeaders() });
   if (!res.ok) return null;
   return res.json();
 }
@@ -40,16 +56,20 @@ async function fetchFieldMap() {
   return map;
 }
 
-async function searchJql(jql, fields = ['summary', 'status', 'issuetype', 'parent', 'customfield_10016', 'customfield_10024', 'customfield_10028']) {
+// Paginates through all matching issues. Stops early once `maxTotal` issues have
+// been collected (backstop for very large projects); the result carries a
+// `.truncated` flag when more issues exist beyond the cap.
+async function searchJql(jql, fields = ['summary', 'status', 'issuetype', 'parent', 'customfield_10016', 'customfield_10024', 'customfield_10028'], maxTotal = Infinity) {
   const url = `${process.env.JIRA_BASE_URL}/rest/api/3/search/jql`;
   let allIssues = [];
   let nextPageToken = undefined;
+  let truncated = false;
 
   do {
     const body = { jql, maxResults: 50, fields };
     if (nextPageToken) body.nextPageToken = nextPageToken;
 
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       method: 'POST',
       headers: getJiraHeaders(),
       body: JSON.stringify(body),
@@ -69,8 +89,14 @@ async function searchJql(jql, fields = ['summary', 'status', 'issuetype', 'paren
     const page = data.issues || [];
     allIssues = allIssues.concat(page);
     nextPageToken = data.isLast ? undefined : data.nextPageToken;
+
+    if (nextPageToken && allIssues.length >= maxTotal) {
+      truncated = true;
+      nextPageToken = undefined;
+    }
   } while (nextPageToken);
 
+  allIssues.truncated = truncated;
   return allIssues;
 }
 

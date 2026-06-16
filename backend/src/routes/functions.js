@@ -389,10 +389,14 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
 
     // parent = team-managed epic link; epicLinkField/customfield_10014 = company-managed Epic Link
     const spFields = [...new Set(['summary', 'status', 'issuetype', 'parent', epicLinkField, 'customfield_10014', spField])];
+    // Backstop for very large projects (e.g. high-volume bug projects) so a single
+    // fetch can't paginate/fan-out without bound and time out.
+    const MAX_ISSUES = 2000;
     const [resolvedIssues, openIssues] = await Promise.all([
-      jira.searchJql(resolvedJql, spFields),
-      jira.searchJql(inProgressJql, spFields),
+      jira.searchJql(resolvedJql, spFields, MAX_ISSUES),
+      jira.searchJql(inProgressJql, spFields, MAX_ISSUES),
     ]);
+    const truncated = !!(resolvedIssues.truncated || openIssues.truncated);
 
     const ignoredStatuses = new Set(['to do', 'backlog', 'open', 'new', 'todo']);
     // Cancelled / abandoned work — counts as neither delivered nor in-progress.
@@ -449,7 +453,10 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     const epicKeys = [...new Set([...resolvedIssues, ...openIssues].map(getEpicKey).filter(Boolean))];
     const epicDetails = {};
     const prefixOf = (key) => (key || '').split('-')[0].toUpperCase();
-    await Promise.all(epicKeys.map(async (key) => {
+    // Bounded concurrency: fetching every epic at once on a large project triggers
+    // Jira rate limits. Process in small batches instead.
+    const EPIC_CONCURRENCY = 8;
+    const resolveEpic = async (key) => {
       try {
         const epic = await jira.fetchIssue(key);
         if (!epic) return;
@@ -490,7 +497,10 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
           })),
         };
       } catch {}
-    }));
+    };
+    for (let i = 0; i < epicKeys.length; i += EPIC_CONCURRENCY) {
+      await Promise.all(epicKeys.slice(i, i + EPIC_CONCURRENCY).map(resolveEpic));
+    }
 
     // Epics that ended up with no PROD link — surfaced so linkage gaps can be diagnosed.
     const unresolvedEpics = Object.values(epicDetails)
@@ -560,6 +570,8 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
         epicLinkField,
         prodProjectKeys: [...prodPrefixes],
         unresolvedEpics,
+        truncated,
+        maxIssues: MAX_ISSUES,
         jiraBaseUrl: process.env.JIRA_BASE_URL || null,
         excludedStatuses: [...excludedStatuses],
         jql: { completed: completedJql, inProgress: inProgressJql },
