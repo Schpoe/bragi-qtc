@@ -142,7 +142,7 @@ The panel fetches issues from Jira for the quarter's date range (e.g. 1 Apr – 
 | Section | Logic |
 |---------|-------|
 | **Completed** | Issues **resolved within the quarter** (`resolutiondate` in range) — strictly completed *in* the quarter, not merely updated in it. An issue finished in an earlier quarter no longer counts. |
-| **In Progress** | Still-open issues (unresolved) updated during the quarter, excluding backlog/to-do |
+| **In Progress** | Open issues whose **status changed during the quarter** (genuine workflow movement), excluding backlog/to-do. Tickets merely touched to link a test case or add a comment — which only bump the `updated` date, not the status — are **not** counted. |
 | **Cancelled** | Issues resolved within the quarter in an excluded status (`Obsolete / Won't Do` etc.) — counted as neither delivered nor in progress |
 
 > **Large projects:** rate limits are retried automatically and each category is capped at 2000 issues per fetch. If a project exceeds that, the Actuals tab shows a "results were capped" warning and figures reflect the most recent issues.

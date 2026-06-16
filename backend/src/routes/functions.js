@@ -385,7 +385,11 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     // Jira treats a bare end date as 00:00, so make the upper bound inclusive of the last day.
     const endInclusive  = `${dateRange.end} 23:59`;
     const resolvedJql   = `project = "${project}" AND resolutiondate >= "${dateRange.start}" AND resolutiondate <= "${endInclusive}" ORDER BY resolutiondate DESC`;
-    const inProgressJql = `project = "${project}" AND resolution = EMPTY AND updated >= "${dateRange.start}" AND updated <= "${endInclusive}" ORDER BY updated DESC`;
+    // In progress = open issues whose STATUS actually moved during the quarter — so a
+    // ticket merely touched to link a test case / add a comment (which only bumps
+    // `updated`) is not counted. Falls back to `updated` if a project rejects CHANGED.
+    const inProgressJql = `project = "${project}" AND resolution = EMPTY AND status CHANGED DURING ("${dateRange.start}", "${dateRange.end}") ORDER BY updated DESC`;
+    const inProgressJqlFallback = `project = "${project}" AND resolution = EMPTY AND updated >= "${dateRange.start}" AND updated <= "${endInclusive}" ORDER BY updated DESC`;
 
     // parent = team-managed epic link; epicLinkField/customfield_10014 = company-managed Epic Link
     const spFields = [...new Set(['summary', 'status', 'issuetype', 'parent', epicLinkField, 'customfield_10014', spField])];
@@ -394,7 +398,8 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     const MAX_ISSUES = 2000;
     const [resolvedIssues, openIssues] = await Promise.all([
       jira.searchJql(resolvedJql, spFields, MAX_ISSUES),
-      jira.searchJql(inProgressJql, spFields, MAX_ISSUES),
+      jira.searchJql(inProgressJql, spFields, MAX_ISSUES)
+        .catch(() => jira.searchJql(inProgressJqlFallback, spFields, MAX_ISSUES)),
     ]);
     const truncated = !!(resolvedIssues.truncated || openIssues.truncated);
 
