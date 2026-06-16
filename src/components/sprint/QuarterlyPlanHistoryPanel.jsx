@@ -733,7 +733,7 @@ export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, has
     deliveredUnplNon, inProgUnplNon,
     totalDelivered, totalInProgress, totalUnplanned, totalActivity,
     excludedCount, excludedSP,
-    deliveryPct, unplannedPct,
+    deliveryPct, unplannedPct, plannedNotDelivered,
   } = summarizeComparison(rows, daysPerSp, actuals?.excluded);
 
   const bucketRows = (arr, withPlan) => arr
@@ -909,6 +909,12 @@ export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, has
             value={`${deliveredPlanned}d`}
             sub={`+ ${inProgPlanned}d in progress`}
             tone="border-border bg-muted/30"
+          />
+          <StatCard
+            label="Planned not delivered"
+            value={`${plannedNotDelivered}d`}
+            sub="PROD plan gap"
+            tone="border-slate-200 bg-slate-50/60 dark:bg-slate-900/30 text-slate-700 dark:text-slate-300"
           />
           <StatCard
             label="Cancelled (excluded)"

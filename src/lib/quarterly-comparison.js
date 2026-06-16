@@ -38,6 +38,27 @@ export function summarizeComparison(rows = [], daysPerSp = 1, excluded = null) {
   const deliveryPct  = plannedInitial > 0 ? Math.round(((deliveredPlanned + inProgPlanned) / plannedInitial) * 100) : null;
   const unplannedPct = totalActivity > 0 ? Math.round((totalUnplanned / totalActivity) * 100) : 0;
 
+  // Mutually-exclusive breakdown (days) by topic type × delivery state.
+  // PROD-planned (1-3) + planned capacity (4) reconcile against the plan;
+  // unplanned PROD (5-6) and non-PROD (7-8) are the extra work on top.
+  // Capacity buckets (planned, no PROD link — e.g. "Time Off") are NOT counted as a
+  // delivery gap; they're planned days with no Jira delivery by nature.
+  const dlv = (r) => spToDays(r.completedSP);
+  const ip  = (r) => spToDays(r.inProgressSP);
+  const prodPlanned     = rows.filter(r => r.category === "planned");
+  const capacityPlanned = rows.filter(r => r.category === "planned-no-prod");
+  const buckets = {
+    prodPlannedDelivered:    sum(prodPlanned, dlv),
+    prodPlannedInProgress:   sum(prodPlanned, ip),
+    prodPlannedNotDelivered: sum(prodPlanned, r => Math.max(0, (r.initialDays || 0) - dlv(r) - ip(r))),
+    plannedCapacity:         sum(capacityPlanned, r => r.initialDays),
+    unplannedProdDelivered:  deliveredUnplProd,
+    unplannedProdInProgress: inProgUnplProd,
+    nonProdDelivered:        deliveredUnplNon,
+    nonProdInProgress:       inProgUnplNon,
+  };
+  const plannedNotDelivered = buckets.prodPlannedNotDelivered;
+
   return {
     planned, unplannedProd, unplannedNonProd,
     plannedInitial, plannedCurrent,
@@ -47,5 +68,19 @@ export function summarizeComparison(rows = [], daysPerSp = 1, excluded = null) {
     totalDelivered, totalInProgress, totalUnplanned, totalActivity,
     excludedCount, excludedSP,
     deliveryPct, unplannedPct,
+    buckets, plannedNotDelivered,
   };
 }
+
+// Bucket display config — shared by the Review charts (and anywhere the
+// topic-type × state breakdown is shown), so colours/labels stay consistent.
+export const COMPARISON_BUCKETS = [
+  { key: "prodPlannedDelivered",    label: "Planned PROD · delivered",     color: "#10b981" },
+  { key: "prodPlannedInProgress",   label: "Planned PROD · in progress",   color: "#3b82f6" },
+  { key: "prodPlannedNotDelivered", label: "Planned PROD · not delivered", color: "#94a3b8" },
+  { key: "plannedCapacity",         label: "Planned capacity (non-PROD)",  color: "#f59e0b" },
+  { key: "unplannedProdDelivered",  label: "Unplanned PROD · delivered",   color: "#8b5cf6" },
+  { key: "unplannedProdInProgress", label: "Unplanned PROD · in progress", color: "#c4b5fd" },
+  { key: "nonProdDelivered",        label: "Non-PROD · delivered",         color: "#14b8a6" },
+  { key: "nonProdInProgress",       label: "Non-PROD · in progress",       color: "#5eead4" },
+];

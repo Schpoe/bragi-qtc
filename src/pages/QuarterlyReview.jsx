@@ -14,6 +14,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import { PlanDeliverySummary } from "../components/sprint/QuarterlyPlanHistoryPanel";
+import { summarizeComparison, COMPARISON_BUCKETS } from "@/lib/quarterly-comparison";
 
 // Sort "Q2 2025" descending (newest first).
 function quarterRank(q) {
@@ -84,47 +85,51 @@ export default function QuarterlyReview() {
     [snapshots, selectedQuarter, teamFilter],
   );
 
+  // Recompute each snapshot's summary from its stored rows (source of truth) so the
+  // latest bucket logic applies even to snapshots finalized earlier.
+  const summaries = useMemo(
+    () => forQuarter.map(s => ({ snap: s, sm: summarizeComparison(Array.isArray(s.rows) ? s.rows : [], s.days_per_sp ?? 1, s.excluded) })),
+    [forQuarter],
+  );
+
   const totals = useMemo(() => {
-    const acc = { plannedInitial: 0, delivered: 0, inProgress: 0, unplanned: 0, excludedCount: 0, deliveredPlanned: 0, deliveredUnplanned: 0 };
-    forQuarter.forEach(s => {
-      const sm = s.summary || {};
-      acc.plannedInitial    += sm.plannedInitial || 0;
-      acc.delivered         += sm.totalDelivered || 0;
-      acc.inProgress        += sm.totalInProgress || 0;
-      acc.unplanned         += sm.totalUnplanned || 0;
-      acc.excludedCount     += sm.excludedCount || 0;
-      acc.deliveredPlanned  += sm.deliveredPlanned || 0;
-      acc.deliveredUnplanned += (sm.deliveredUnplProd || 0) + (sm.deliveredUnplNon || 0);
+    const acc = { plannedInitial: 0, delivered: 0, inProgress: 0, unplanned: 0, plannedNotDelivered: 0, excludedCount: 0 };
+    summaries.forEach(({ sm }) => {
+      acc.plannedInitial      += sm.plannedInitial || 0;
+      acc.delivered           += sm.totalDelivered || 0;
+      acc.inProgress          += sm.totalInProgress || 0;
+      acc.unplanned           += sm.totalUnplanned || 0;
+      acc.plannedNotDelivered += sm.plannedNotDelivered || 0;
+      acc.excludedCount       += sm.excludedCount || 0;
     });
     return {
       plannedInitial: round1(acc.plannedInitial),
       delivered: round1(acc.delivered),
       inProgress: round1(acc.inProgress),
       unplanned: round1(acc.unplanned),
+      plannedNotDelivered: round1(acc.plannedNotDelivered),
       excludedCount: acc.excludedCount,
-      deliveredPlanned: round1(acc.deliveredPlanned),
-      deliveredUnplanned: round1(acc.deliveredUnplanned),
       deliveryPct: acc.plannedInitial > 0 ? Math.round((acc.delivered / acc.plannedInitial) * 100) : null,
     };
-  }, [forQuarter]);
+  }, [summaries]);
 
-  // Per-team grouped bars: planned vs delivered vs in-progress (days).
+  // Per-team stacked bars: topic-type × delivery-state buckets (days).
   const barData = useMemo(
-    () => forQuarter.map(s => ({
-      name: s.team_name || "Team",
-      planned: round1(s.summary?.plannedInitial),
-      delivered: round1(s.summary?.totalDelivered),
-      inProgress: round1(s.summary?.totalInProgress),
-    })),
-    [forQuarter],
+    () => summaries.map(({ snap, sm }) => {
+      const row = { name: snap.team_name || "Team" };
+      COMPARISON_BUCKETS.forEach(b => { row[b.key] = round1(sm.buckets?.[b.key]); });
+      return row;
+    }),
+    [summaries],
   );
 
-  // Where the effort went (composition of the filtered scope).
-  const pieData = useMemo(() => ([
-    { name: "Delivered on plan", value: totals.deliveredPlanned, color: "#10b981" },
-    { name: "Unplanned delivered", value: totals.deliveredUnplanned, color: "#a78bfa" },
-    { name: "In progress", value: totals.inProgress, color: "#3b82f6" },
-  ].filter(d => d.value > 0)), [totals]);
+  // Aggregate composition across the filtered scope.
+  const pieData = useMemo(
+    () => COMPARISON_BUCKETS
+      .map(b => ({ name: b.label, value: round1(summaries.reduce((s, { sm }) => s + (sm.buckets?.[b.key] || 0), 0)), color: b.color }))
+      .filter(d => d.value > 0),
+    [summaries],
+  );
 
   const deleteSnapshot = useMutation({
     mutationFn: (id) => bragiQTC.entities.QuarterlyComparisonSnapshot.delete(id),
@@ -180,43 +185,46 @@ export default function QuarterlyReview() {
               <p className="text-xs text-muted-foreground">{forQuarter.length} team{forQuarter.length === 1 ? "" : "s"} finalized · days</p>
             </CardHeader>
             <CardContent className="pt-4 space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 <StatCard label="Planned (initial)" value={`${totals.plannedInitial}d`} tone="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200" />
                 <StatCard label="Delivered" value={`${totals.delivered}d`} sub={totals.deliveryPct != null ? `${totals.deliveryPct}% of plan` : undefined} tone="border-green-200 bg-green-50/50 dark:bg-green-950/20 text-green-900 dark:text-green-200" />
                 <StatCard label="In progress" value={`${totals.inProgress}d`} tone="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 text-blue-900 dark:text-blue-200" />
+                <StatCard label="Planned not delivered" value={`${totals.plannedNotDelivered}d`} tone="border-slate-200 bg-slate-50/60 dark:bg-slate-900/30 text-slate-700 dark:text-slate-300" />
                 <StatCard label="Unplanned" value={`${totals.unplanned}d`} tone="border-purple-200 bg-purple-50/50 dark:bg-purple-950/20 text-purple-900 dark:text-purple-200" />
                 <StatCard label="Cancelled" value={totals.excludedCount} sub="tickets" tone="border-border bg-muted/30" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Planned vs delivered by team */}
+                {/* Per-team breakdown by topic type × delivery state */}
                 <div className="rounded-lg border border-border p-4">
-                  <p className="text-sm font-semibold mb-3">Planned vs delivered by team</p>
-                  <ResponsiveContainer width="100%" height={260}>
+                  <p className="text-sm font-semibold mb-1">Effort by team & category</p>
+                  <p className="text-xs text-muted-foreground mb-3">Planned PROD (delivered / in progress / not delivered), planned capacity, unplanned PROD, and non-PROD — in days.</p>
+                  <ResponsiveContainer width="100%" height={320}>
                     <BarChart data={barData} margin={{ top: 4, right: 8, left: 0, bottom: 48 }} barCategoryGap="25%">
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                       <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} angle={-30} textAnchor="end" interval={0} height={56} />
                       <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={v => `${v}d`} width={40} />
                       <Tooltip formatter={(v) => `${v}d`} cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                      <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
-                      <Bar dataKey="planned" name="Planned" fill="#f59e0b" radius={[3, 3, 0, 0]} maxBarSize={30} />
-                      <Bar dataKey="delivered" name="Delivered" fill="#10b981" radius={[3, 3, 0, 0]} maxBarSize={30} />
-                      <Bar dataKey="inProgress" name="In progress" fill="#3b82f6" radius={[3, 3, 0, 0]} maxBarSize={30} />
+                      <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
+                      {COMPARISON_BUCKETS.map(b => (
+                        <Bar key={b.key} dataKey={b.key} name={b.label} stackId="a" fill={b.color} maxBarSize={44} />
+                      ))}
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
 
-                {/* Effort composition */}
+                {/* Aggregate composition */}
                 <div className="rounded-lg border border-border p-4">
-                  <p className="text-sm font-semibold mb-3">Where the effort went</p>
+                  <p className="text-sm font-semibold mb-1">Effort breakdown</p>
+                  <p className="text-xs text-muted-foreground mb-3">Where the {scopeName === "All teams" ? "org's" : "team's"} planned and actual effort landed.</p>
                   {pieData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={260}>
+                    <ResponsiveContainer width="100%" height={320}>
                       <PieChart>
-                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={2} dataKey="value" label={({ percent }) => `${Math.round(percent * 100)}%`} labelLine={false}>
+                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={2} dataKey="value" label={({ percent }) => (percent >= 0.05 ? `${Math.round(percent * 100)}%` : "")} labelLine={false}>
                           {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
                         </Pie>
                         <Tooltip formatter={(v) => `${v}d`} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
                       </PieChart>
                     </ResponsiveContainer>
                   ) : (
