@@ -7,7 +7,6 @@ import { useAuth } from "@/lib/AuthContext";
 import { isAdmin } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { bragiQTC } from "@/api/bragiQTCClient";
 import ImpersonationBanner from "@/components/admin/ImpersonationBanner";
 import ImpersonateUserDialog from "@/components/admin/ImpersonateUserDialog";
 import logo from "@/bragi-qtc-new.png";

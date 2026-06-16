@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, RefreshCw, CheckCircle2, AlertCircle, Wifi, WifiOff } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, AlertCircle, Wifi } from "lucide-react";
 
 function LogPane({ entries }) {
   if (entries.length === 0) return null;

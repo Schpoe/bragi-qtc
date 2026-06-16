@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { cn, getWorkAreaColor } from "@/lib/utils";
+import { getWorkAreaColor } from "@/lib/utils";
 
 const DEFAULT_CAPACITY = 60;
 
