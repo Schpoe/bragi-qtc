@@ -217,8 +217,8 @@ Only an admin or the team's manager can finalize. There is **one snapshot per te
 
 Finalized snapshots appear on the dedicated **Quarterly Review** page (left nav):
 
-- A **quarter selector** at the top.
-- An **all-teams roll-up** card — combined planned / delivered / in-progress / unplanned (in days) and cancelled-ticket count across every finalized team.
+- A **quarter selector**, and — for **admins and team managers** — a **team filter**. A team manager's own team is preselected; **"All teams"** shows everyone.
+- A **roll-up** card for the selected scope — headline stats (planned / delivered / in-progress / unplanned in days, plus cancelled-ticket count) and two charts: **Planned vs delivered by team** (grouped bars) and **Where the effort went** (a donut splitting effort into delivered-on-plan, unplanned, and in-progress).
 - A **per-team** frozen comparison below, each rendered exactly like the live summary (with CSV/PDF export), stamped with who finalized it and when.
 
 Because the data is stored, the Quarterly Review page loads instantly and never drifts — even years later, and even if the underlying Jira tickets change. Admins can remove a finalized snapshot from the page if it was captured by mistake.
