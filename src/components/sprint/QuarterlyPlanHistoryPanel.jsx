@@ -1092,7 +1092,14 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
   }, [actuals, initialPlan, members, quarterlyAllocations, workAreas, quarter, teamId]);
 
   const [finalizing, setFinalizing] = useState(false);
-  const [finalized, setFinalized] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const finalizeQc = useQueryClient();
+  const { data: existingSnap } = useQuery({
+    queryKey: ["comparisonSnapshot", quarter, teamId],
+    queryFn: () => bragiQTC.entities.QuarterlyComparisonSnapshot.filter({ quarter, team_id: teamId }),
+    enabled: !!(quarter && teamId),
+    select: (arr) => (Array.isArray(arr) ? arr[0] : null) || null,
+  });
 
   if (rows.length === 0) return null;
 
@@ -1116,7 +1123,7 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
       category: r.category,
     }));
 
-  const handleFinalize = async () => {
+  const doFinalize = async () => {
     setFinalizing(true);
     try {
       const s = summarizeComparison(rows, daysPerSp, actuals.excluded);
@@ -1134,26 +1141,53 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
         excluded: actuals.excluded ? { count: actuals.excluded.count, storyPoints: actuals.excluded.storyPoints } : null,
         summary,
       });
-      setFinalized(true);
+      await finalizeQc.invalidateQueries({ queryKey: ["comparisonSnapshot", quarter, teamId] });
+      finalizeQc.invalidateQueries({ queryKey: ["comparisonSnapshots"] });
       toast.success(`Finalized ${quarter} — saved to Quarterly Review`);
     } catch (err) {
       toast.error(err.message || "Failed to finalize quarter");
     } finally {
       setFinalizing(false);
+      setConfirmOpen(false);
     }
+  };
+
+  // Confirm before overwriting an already-finalized snapshot.
+  const handleFinalizeClick = () => {
+    if (existingSnap) setConfirmOpen(true);
+    else doFinalize();
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-xs text-muted-foreground">
-          Finalizing freezes this comparison to the <strong>Quarterly Review</strong> page as a permanent record.
+          {existingSnap ? (
+            <>Last finalized <strong>{formatDate(existingSnap.captured_at)}</strong>{existingSnap.captured_by_email ? ` by ${existingSnap.captured_by_email}` : ""}. Re-finalizing overwrites it.</>
+          ) : (
+            <>Finalizing freezes this comparison to the <strong>Quarterly Review</strong> page as a permanent record.</>
+          )}
         </p>
-        <Button size="sm" variant={finalized ? "outline" : "default"} className="h-7 text-xs gap-1.5" onClick={handleFinalize} disabled={finalizing}>
+        <Button size="sm" variant={existingSnap ? "outline" : "default"} className="h-7 text-xs gap-1.5" onClick={handleFinalizeClick} disabled={finalizing}>
           <BookMarked className={cn("w-3 h-3", finalizing && "animate-pulse")} />
-          {finalizing ? "Saving…" : finalized ? "Re-finalize quarter" : "Finalize quarter"}
+          {finalizing ? "Saving…" : existingSnap ? "Re-finalize quarter" : "Finalize quarter"}
         </Button>
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Overwrite finalized {quarter}?</DialogTitle>
+            <DialogDescription>
+              {actuals.team?.name ? `${actuals.team.name} — ` : ""}{quarter} was already finalized{existingSnap ? ` on ${formatDate(existingSnap.captured_at)}` : ""}{existingSnap?.captured_by_email ? ` by ${existingSnap.captured_by_email}` : ""}. Re-finalizing replaces that frozen record with the current comparison. This can't be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={finalizing}>Cancel</Button>
+            <Button onClick={doFinalize} disabled={finalizing}>{finalizing ? "Saving…" : "Overwrite"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <PlanDeliverySummary
         rows={rows}
