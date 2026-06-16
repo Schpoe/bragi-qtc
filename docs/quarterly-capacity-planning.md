@@ -208,7 +208,12 @@ If a work item has no `prod_id`, the match falls back to `jira_key` and `linked_
 The Actuals tab is a **live** view — it re-queries Jira each time, and Jira data keeps changing. To keep a permanent, accurate record of how a quarter actually went, **finalize** it:
 
 1. Open **Quarterly Planning** → a team → **Quarterly Plan History** → **Actuals** tab and **Fetch** the actuals.
-2. Click **"Finalize quarter"**. This freezes the current plan-vs-delivered comparison (the per-topic rows + summary, the team's SP→days factor, the date range) into a permanent snapshot. Re-clicking overwrites it ("Re-finalize quarter").
+2. Click **"Finalize quarter"**. This freezes the current plan-vs-delivered comparison (the per-topic rows + summary, the team's SP→days factor, the date range) into a permanent snapshot.
+
+Only an admin or the team's manager can finalize. There is **one snapshot per team + quarter**:
+
+- If the quarter was already finalized, the button reads **"Re-finalize quarter"** and **"Last finalized \<date, time\> by \<who\>"** is shown beside it.
+- Re-finalizing **overwrites** the previous record (after a confirmation prompt) — the prior capture is not kept, so it's a deliberate replace, not a version history.
 
 Finalized snapshots appear on the dedicated **Quarterly Review** page (left nav):
 
