@@ -1352,13 +1352,40 @@ function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarte
 
         {actuals && (
           <div className="space-y-3">
-            <div className="text-xs text-muted-foreground">{actuals.dateRange.start} → {actuals.dateRange.end} · SP field: <code>{actuals.storyPointsField}</code></div>
+            <div className="text-xs text-muted-foreground">
+              {actuals.dateRange.start} → {actuals.dateRange.end} · SP field: <code>{actuals.storyPointsField}</code>
+              {actuals.epicLinkField && <> · Epic link: <code>{actuals.epicLinkField}</code></>}
+              {actuals.prodProjectKeys?.length > 0 && <> · PROD project: <code>{actuals.prodProjectKeys.join(", ")}</code></>}
+            </div>
             {actuals.jql && (
               <details className="text-xs">
                 <summary className="cursor-pointer text-muted-foreground hover:text-foreground py-0.5">Show JQL queries</summary>
                 <div className="mt-1.5 space-y-1.5">
                   <div className="font-mono bg-muted rounded p-2 break-all">{actuals.jql.completed}</div>
                   <div className="font-mono bg-muted rounded p-2 break-all">{actuals.jql.inProgress}</div>
+                </div>
+              </details>
+            )}
+            {actuals.unresolvedEpics?.length > 0 && (
+              <details className="text-xs rounded-lg border border-amber-200 bg-amber-50/40 dark:bg-amber-950/20 p-2">
+                <summary className="cursor-pointer text-amber-800 dark:text-amber-300 font-medium py-0.5">
+                  {actuals.unresolvedEpics.length} epic{actuals.unresolvedEpics.length === 1 ? "" : "s"} with no PROD link (shown as "Unplanned non-PROD")
+                </summary>
+                <p className="text-muted-foreground mt-1.5 mb-2">
+                  These epics aren't linked to a PROD item ({actuals.prodProjectKeys?.join("/") || "PROD"}-…). Link them in Jira (an "implements" link or a PROD parent), then refresh.
+                </p>
+                <div className="space-y-1.5">
+                  {actuals.unresolvedEpics.map(ep => (
+                    <div key={ep.key} className="flex items-start gap-2">
+                      <JiraLink issueKey={ep.key} baseUrl={actuals.jiraBaseUrl} showIcon className="font-mono shrink-0" />
+                      <span className="flex-1 truncate">{ep.name}</span>
+                      {ep.links?.length > 0 && (
+                        <span className="text-muted-foreground shrink-0">
+                          {ep.links.filter(l => l.key).map(l => `${l.type || "link"}→${l.key}`).join(", ") || "no links"}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </details>
             )}

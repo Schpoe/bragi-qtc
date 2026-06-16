@@ -366,7 +366,18 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
 
     const fieldMap = await jira.fetchFieldMap();
     const spField = jira.detectStoryPointsField(fieldMap);
+    const epicLinkField = jira.detectEpicLinkField(fieldMap);
     const project = team.jira_project_key;
+
+    // Which project(s) hold PROD items — used to recognise an epic's PROD parent by key.
+    // Derived from the planned work items' prod_id values, with an env override / default.
+    const prodPrefixes = new Set(
+      (process.env.JIRA_PROD_PROJECT_KEY ? [process.env.JIRA_PROD_PROJECT_KEY] : [])
+        .concat((Array.isArray(prodKeys) ? prodKeys : []).map(k => String(k).split('-')[0]))
+        .map(p => p.trim().toUpperCase())
+        .filter(Boolean)
+    );
+    if (prodPrefixes.size === 0) prodPrefixes.add('PROD');
 
     // Strict "completed in the quarter": an issue counts as Completed/Cancelled only
     // if it was FINISHED (resolutiondate) within the quarter — not merely updated in it.
@@ -376,8 +387,8 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     const resolvedJql   = `project = "${project}" AND resolutiondate >= "${dateRange.start}" AND resolutiondate <= "${endInclusive}" ORDER BY resolutiondate DESC`;
     const inProgressJql = `project = "${project}" AND resolution = EMPTY AND updated >= "${dateRange.start}" AND updated <= "${endInclusive}" ORDER BY updated DESC`;
 
-    // customfield_10014 = Epic Link (old-style company-managed projects)
-    const spFields = ['summary', 'status', 'issuetype', 'parent', 'customfield_10014', spField];
+    // parent = team-managed epic link; epicLinkField/customfield_10014 = company-managed Epic Link
+    const spFields = [...new Set(['summary', 'status', 'issuetype', 'parent', epicLinkField, 'customfield_10014', spField])];
     const [resolvedIssues, openIssues] = await Promise.all([
       jira.searchJql(resolvedJql, spFields),
       jira.searchJql(inProgressJql, spFields),
@@ -418,7 +429,7 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     };
 
     const getEpicKey = (issue) =>
-      issue.fields?.parent?.key || issue.fields?.customfield_10014 || null;
+      issue.fields?.parent?.key || issue.fields?.[epicLinkField] || issue.fields?.customfield_10014 || null;
 
     const mapIssue = (issue) => ({
       key: issue.key,
@@ -437,35 +448,54 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     // Fetch unique epics to get their name, SP, and PROD parent
     const epicKeys = [...new Set([...resolvedIssues, ...openIssues].map(getEpicKey).filter(Boolean))];
     const epicDetails = {};
+    const prefixOf = (key) => (key || '').split('-')[0].toUpperCase();
     await Promise.all(epicKeys.map(async (key) => {
       try {
         const epic = await jira.fetchIssue(key);
-        if (epic) {
-          // Find PROD via "implements" issue link (outward from Epic → PROD)
-          // Falls back to parent-child for projects that use that structure
-          let prodKey = null, prodName = null;
-          const links = epic.fields?.issuelinks || [];
-          for (const link of links) {
-            if ((link.type?.outward || '').toLowerCase() === 'implements' && link.outwardIssue) {
-              prodKey  = link.outwardIssue.key;
-              prodName = link.outwardIssue.fields?.summary || null;
-              break;
-            }
-          }
-          if (!prodKey) {
-            prodKey  = epic.fields?.parent?.key || null;
+        if (!epic) return;
+        let prodKey = null, prodName = null;
+        const links = epic.fields?.issuelinks || [];
+
+        // 1) Scan ALL issue links (both directions) for a linked issue that lives in a
+        //    PROD project. Prefer an "implements"-style relationship when several match.
+        const candidates = [];
+        for (const link of links) {
+          const linked = link.outwardIssue || link.inwardIssue;
+          if (!linked?.key || !prodPrefixes.has(prefixOf(linked.key))) continue;
+          const rel = `${link.type?.outward || ''} ${link.type?.inward || ''}`.toLowerCase();
+          candidates.push({ key: linked.key, name: linked.fields?.summary || null, implementsRel: rel.includes('implement') });
+        }
+        const chosen = candidates.find(c => c.implementsRel) || candidates[0];
+        if (chosen) { prodKey = chosen.key; prodName = chosen.name; }
+
+        // 2) Fallback: the epic's parent, if it lives in a PROD project.
+        if (!prodKey) {
+          const parentKey = epic.fields?.parent?.key || null;
+          if (parentKey && prodPrefixes.has(prefixOf(parentKey))) {
+            prodKey  = parentKey;
             prodName = epic.fields?.parent?.fields?.summary || null;
           }
-          epicDetails[key] = {
-            key,
-            name: epic.fields?.summary,
-            storyPoints: getSP(epic),
-            prodKey,
-            prodName,
-          };
         }
+
+        epicDetails[key] = {
+          key,
+          name: epic.fields?.summary,
+          storyPoints: getSP(epic),
+          prodKey,
+          prodName,
+          // diagnostics: links seen on epics that did NOT resolve to a PROD
+          links: prodKey ? undefined : links.map(l => ({
+            type: l.type?.name || null,
+            key: (l.outwardIssue || l.inwardIssue)?.key || null,
+          })),
+        };
       } catch {}
     }));
+
+    // Epics that ended up with no PROD link — surfaced so linkage gaps can be diagnosed.
+    const unresolvedEpics = Object.values(epicDetails)
+      .filter(e => !e.prodKey)
+      .map(e => ({ key: e.key, name: e.name, links: e.links || [] }));
 
     // Build breakdown: group by PROD → Epic
     // SP is taken from the Epic (not individual issues) since that's where it's stored
@@ -527,6 +557,9 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
         team: { id: team.id, name: team.name, jira_project_key: project, days_per_sp: team.days_per_sp ?? 1 },
         dateRange,
         storyPointsField: spField,
+        epicLinkField,
+        prodProjectKeys: [...prodPrefixes],
+        unresolvedEpics,
         jiraBaseUrl: process.env.JIRA_BASE_URL || null,
         excludedStatuses: [...excludedStatuses],
         jql: { completed: completedJql, inProgress: inProgressJql },

@@ -96,4 +96,15 @@ function detectStoryPointsField(fieldMap) {
   return 'customfield_10016'; // most common fallback
 }
 
-module.exports = { isConfigured, fetchIssue, fetchFieldMap, searchJql, mapStatusToProgress, getQuarterDateRange, detectStoryPointsField, getJiraHeaders };
+// Find the "Epic Link" field ID (company-managed projects store the epic key here,
+// whereas team-managed projects use the `parent` field). Env var > auto-detect > fallback.
+function detectEpicLinkField(fieldMap) {
+  if (process.env.JIRA_EPIC_LINK_FIELD) return process.env.JIRA_EPIC_LINK_FIELD;
+  const candidates = ['Epic Link', 'Parent Link', 'Epic'];
+  for (const name of candidates) {
+    if (fieldMap[name]) return fieldMap[name];
+  }
+  return 'customfield_10014'; // most common fallback
+}
+
+module.exports = { isConfigured, fetchIssue, fetchFieldMap, searchJql, mapStatusToProgress, getQuarterDateRange, detectStoryPointsField, detectEpicLinkField, getJiraHeaders };

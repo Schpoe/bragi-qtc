@@ -188,11 +188,17 @@ Both the PROD ID (e.g. `PROD-123`) and the PROD title are shown for each row.
 
 Work items are matched to Jira actuals using the `prod_id` field on each work item. For each issue fetched from Jira:
 
-1. The issue's Epic is identified
-2. The Epic is fetched from Jira to find its parent PROD item — first via an **"implements"** issue link (outward from Epic to PROD), then falling back to the Epic's parent field
-3. Story points are summed from individual issues (not from the Epic itself)
+1. The issue's Epic is identified — via the `parent` field (team-managed projects) or the auto-detected **Epic Link** field (company-managed projects).
+2. The Epic is fetched from Jira to find its PROD item. The resolver:
+   - scans **all** of the Epic's issue links, in **both** directions, for a linked issue that belongs to a **PROD project**, preferring an **"implements"**-style relationship;
+   - falls back to the Epic's **parent** if the parent is itself a PROD item.
+3. Story points are summed from individual issues (not from the Epic itself).
+
+**Which projects count as "PROD"** is taken from the project keys of the team's planned `prod_id` values (e.g. `PROD-123` → project `PROD`), so it adapts automatically. Override with `JIRA_PROD_PROJECT_KEY` in `.env` if needed. The Epic Link field is auto-detected but can be forced with `JIRA_EPIC_LINK_FIELD`.
 
 If a work item has no `prod_id`, the match falls back to `jira_key` and `linked_epic_keys`.
+
+**Diagnosing gaps.** Epics that don't resolve to a PROD show up under **Unplanned non-PROD**. The Actuals tab lists them in an expandable "N epics with no PROD link" panel, including each epic's existing links, so you can see exactly what to fix in Jira (add an "implements" link to the PROD, or set the PROD as the Epic's parent) and re-fetch.
 
 ---
 
