@@ -215,22 +215,25 @@ Only an admin or the team's manager can finalize. There is **one snapshot per te
 - If the quarter was already finalized, the button reads **"Re-finalize quarter"** and **"Last finalized \<date, time\> by \<who\>"** is shown beside it.
 - Re-finalizing **overwrites** the previous record (after a confirmation prompt) — the prior capture is not kept, so it's a deliberate replace, not a version history.
 
-Finalized snapshots appear on the dedicated **Quarterly Review** page (left nav):
+Finalized snapshots appear on the dedicated **Quarterly Review** page (left nav). The page always uses the **same layout**, whether you're looking at one team or all teams — the data is simply scoped to the selection:
 
-- A **quarter selector**, and — for **admins and team managers** — a **team filter**. A team manager's own team is preselected; **"All teams"** shows everyone.
-- An **all-teams roll-up** card — shown **only when "All teams" is selected** — with combined headline stats (planned, delivered, in-progress, **planned-not-delivered**, unplanned, cancelled), a cross-team **Effort by team & category** stacked bar, and an aggregate **Effort breakdown** donut.
-- A **per-team panel** for each finalized team — the frozen summary, **its own Effort-breakdown chart**, CSV/PDF export, and a stamp of who finalized it and when. (When a single team is filtered, only that team's panel shows — no all-teams data.)
+1. **Title** — the current scope (a team name, or "All teams") and quarter.
+2. **Plan vs Delivered — Summary** — headline stats in days: planned (initial), delivered, in-progress, **planned-not-delivered**, unplanned, and cancelled tickets.
+3. **Diagrams** — **Effort breakdown** (donut) is always shown; **Effort by team & category** (cross-team stacked bar) appears **only when "All teams"** is selected.
+4. **Topic lists** — **Planned topics**, **Unplanned PROD topics**, and **Unplanned non-PROD topics**, each with planned / delivered / in-progress days (and the underlying story points + issue counts).
 
-The charts split effort into eight mutually-exclusive buckets so the numbers reconcile against the plan:
+Controls: a **quarter selector**, and — for **admins and team managers** — a **team filter** (a team manager's own team is preselected; "All teams" aggregates everyone). When "All teams" is selected, the stats and topic lists are **aggregated across teams** (each team's story points are converted to days with its own factor before summing).
+
+The diagrams split effort into eight mutually-exclusive buckets so the numbers reconcile against the plan:
 
 - **Planned PROD** — delivered / in progress / **not delivered** (the plan gap)
 - **Planned capacity (non-PROD)** — planned days with no Jira delivery (e.g. "Time Off"); counted as planned capacity, **not** as a delivery gap
 - **Unplanned PROD** — delivered / in progress
 - **Non-PROD** — delivered / in progress
 
-The first two reconcile against the plan; the rest is the extra work done on top. Charts recompute from each snapshot's stored rows, so the breakdown applies to already-finalized quarters too. The **PDF export includes the chart**, and is JPEG-compressed to keep the file small.
+The first two reconcile against the plan; the rest is the extra work done on top. Everything recomputes from each snapshot's stored rows, so the breakdown (and any later logic improvements) apply to already-finalized quarters too.
 
-Because the data is stored, the Quarterly Review page loads instantly and never drifts — even years later, and even if the underlying Jira tickets change. Admins can remove a finalized snapshot from the page if it was captured by mistake.
+The whole view is **exportable** via the **CSV** and **PDF** buttons (the PDF includes the diagrams and is JPEG-compressed to keep the file small). Because the data is stored, the page loads instantly and never drifts — even years later, and even if the underlying Jira tickets change. With a single team selected, an admin can remove that finalized snapshot.
 
 ---
 
