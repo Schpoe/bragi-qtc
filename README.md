@@ -12,6 +12,7 @@ Quarterly capacity planning tool for Bragi — plan each team's quarter, then co
   - **Cancelled** = `Obsolete / Won't Do` (and similar) excluded from both.
 - **Plan vs Delivered summary** — everything in **days** via a per-team *Working-days-per-story-point* factor; broken into Planned / Unplanned-PROD / Unplanned-non-PROD with Leading/Supporting tags, a deviation narrative, and CSV/PDF export.
 - **Quarterly Review page** — finalize a quarter to freeze an immutable, instantly-loading record (per-team + all-teams roll-up) that never drifts as Jira changes.
+- **BambooHR availability sync (optional)** — compute each member's quarterly capacity as *weekdays − approved time off* (prefill at quarter start, true-up at quarter end).
 - **Clickable Jira links** throughout (PROD IDs, epics, sync candidates) open the issue in a new tab.
 
 ## Documentation
@@ -39,6 +40,9 @@ See **[docs/quarterly-capacity-planning.md](docs/quarterly-capacity-planning.md)
      - `JIRA_EPIC_LINK_FIELD` — Epic Link custom field ID for company-managed projects (default: auto-detected).
      - `JIRA_PROD_PROJECT_KEY` — project key(s) holding PROD items (default: derived from the plan's `prod_id` values, fallback `PROD`).
      - `JIRA_EXCLUDED_STATUSES` — comma-separated statuses treated as cancelled (default: `Obsolete / Won't Do` + common variants).
+   - **BambooHR (optional — quarterly availability sync):**
+     - `BAMBOOHR_SUBDOMAIN` — your BambooHR company domain.
+     - `BAMBOOHR_API_KEY` — a BambooHR API key (used server-side).
 
 4. Start the app:
    ```bash

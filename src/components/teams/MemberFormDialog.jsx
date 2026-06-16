@@ -7,9 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
+import { useBambooHrConfig, useBambooHrDirectory } from "@/hooks/useBambooHr";
+
+const norm = (s) => (s || "").trim().toLowerCase();
 
 export default function MemberFormDialog({ open, onOpenChange, member, teamId, onSave }) {
-  const [form, setForm] = useState({ name: "", discipline: "", sprint_days: 100 });
+  const [form, setForm] = useState({ name: "", discipline: "", sprint_days: 100, bamboohr_id: "" });
   const [newDiscipline, setNewDiscipline] = useState("");
   const [showNewDiscipline, setShowNewDiscipline] = useState(false);
 
@@ -18,17 +21,25 @@ export default function MemberFormDialog({ open, onOpenChange, member, teamId, o
     queryFn: () => bragiQTC.entities.TeamMember.list(),
   });
 
+  const { configured: bambooConfigured } = useBambooHrConfig();
+  const { employees: bambooEmployees } = useBambooHrDirectory(open && bambooConfigured);
+
   const existingDisciplines = [...new Set(members.map(m => m.discipline).filter(Boolean))].sort();
 
   useEffect(() => {
     if (member) {
-      setForm({ name: member.name, discipline: member.discipline, sprint_days: member.sprint_days ?? 10 });
+      setForm({ name: member.name, discipline: member.discipline, sprint_days: member.sprint_days ?? 10, bamboohr_id: member.bamboohr_id || "" });
     } else {
-      setForm({ name: "", discipline: existingDisciplines[0] || "", sprint_days: 10 });
+      setForm({ name: "", discipline: existingDisciplines[0] || "", sprint_days: 10, bamboohr_id: "" });
     }
     setNewDiscipline("");
     setShowNewDiscipline(false);
   }, [member, open]);
+
+  // Suggest a BambooHR match by name when nothing is mapped yet.
+  const suggested = (!form.bamboohr_id && form.name)
+    ? bambooEmployees.find(e => norm(e.name) === norm(form.name))
+    : null;
 
   const handleSave = () => {
     if (!form.name.trim()) return;
@@ -82,6 +93,30 @@ export default function MemberFormDialog({ open, onOpenChange, member, teamId, o
             <Label>Sprint capacity (days)</Label>
             <Input type="number" min={1} value={form.sprint_days} onChange={(e) => setForm({ ...form, sprint_days: Number(e.target.value) })} />
           </div>
+          {bambooConfigured && (
+            <div className="space-y-2">
+              <Label>BambooHR employee</Label>
+              <Select value={form.bamboohr_id || "none"} onValueChange={(v) => setForm({ ...form, bamboohr_id: v === "none" ? "" : v })}>
+                <SelectTrigger><SelectValue placeholder="Not mapped" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not mapped</SelectItem>
+                  {bambooEmployees.map(e => (
+                    <SelectItem key={e.id} value={e.id}>{e.name}{e.email ? ` — ${e.email}` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {suggested && (
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline"
+                  onClick={() => setForm({ ...form, bamboohr_id: suggested.id })}
+                >
+                  Suggested match: {suggested.name} — use this
+                </button>
+              )}
+              <p className="text-xs text-muted-foreground">Used to pull this member's time off when syncing quarterly availability.</p>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

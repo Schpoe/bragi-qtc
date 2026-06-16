@@ -46,6 +46,18 @@ The app automatically detects your Jira story points field by looking for common
 
 **Excluded statuses.** Tickets in a cancelled status — by default `Obsolete / Won't Do` plus common variants (`Won't Fix`, `Cancelled`, `Rejected`, `Duplicate`, `Declined`, `Abandoned`) — are counted as **neither delivered nor in progress**. They are reported separately as "Cancelled". Override the list with `JIRA_EXCLUDED_STATUSES` in `.env` (comma-separated status names, case-insensitive), e.g. `JIRA_EXCLUDED_STATUSES=Obsolete / Won't Do,Rejected`.
 
+### 4. BambooHR (optional)
+
+Connect BambooHR to compute each member's **quarterly availability** from their approved time off, instead of entering capacity by hand.
+
+1. Set `BAMBOOHR_SUBDOMAIN` (your company domain) and `BAMBOOHR_API_KEY` in `.env`.
+2. **Map members** — edit a team member (Teams → a team → member) and pick their **BambooHR employee** from the dropdown. The form suggests a match by name; confirm or change it. Only mapped members are synced.
+3. **Sync** — on **Quarterly Planning** (with a single team and quarter selected), click **"Sync availability from BambooHR"**. For each mapped member it sets the quarter's **Capacity** to:
+
+   > working days = **weekdays in the quarter − approved BambooHR time-off** (on weekdays)
+
+   Run it at the **start** of the quarter to prefill planned availability, and again at the **end** to true it up to the time off actually taken. It **overwrites** the capacity of every mapped member (unmapped members are left untouched). Public holidays are not subtracted.
+
 ---
 
 ## Setting Up a Quarterly Plan

@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../prisma');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const jira = require('../lib/jira');
+const bamboohr = require('../lib/bamboohr');
 
 const router = express.Router();
 
@@ -667,6 +668,77 @@ router.post('/getJiraConfig', requireAuth, async (_req, res) => {
       configured: jira.isConfigured(),
     },
   });
+});
+
+// ── BambooHR: availability sync ──────────────────────────────────────────────
+
+router.post('/getBambooHrConfig', requireAuth, async (_req, res) => {
+  res.json({ data: { configured: bamboohr.isConfigured() } });
+});
+
+// Employee directory for the member-mapping picker (admin/manager only).
+router.post('/getBambooHrDirectory', requireAuth, async (req, res) => {
+  try {
+    if (!bamboohr.isConfigured()) return res.status(400).json({ error: 'BambooHR not configured (BAMBOOHR_SUBDOMAIN, BAMBOOHR_API_KEY)' });
+    if (req.user.role !== 'admin' && req.user.role !== 'team_manager') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    const directory = await bamboohr.fetchDirectory();
+    res.json({ data: { employees: directory } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Compute available working days for a quarter from BambooHR (weekdays − approved
+// time off) and overwrite each mapped member's TeamMemberCapacity for that quarter.
+// Run at the start of a quarter to prefill, and again at the end to true-up.
+router.post('/syncBambooHrAvailability', requireAuth, async (req, res) => {
+  try {
+    if (!bamboohr.isConfigured()) return res.status(400).json({ error: 'BambooHR not configured (BAMBOOHR_SUBDOMAIN, BAMBOOHR_API_KEY)' });
+    const { teamId, quarter } = req.body;
+    if (!teamId || !quarter) return res.status(400).json({ error: 'teamId and quarter are required' });
+
+    const isAdmin = req.user.role === 'admin';
+    const isManager = req.user.role === 'team_manager' && (req.user.managed_team_ids || []).includes(teamId);
+    if (!isAdmin && !isManager) return res.status(403).json({ error: 'Not authorized to manage this team' });
+
+    const dateRange = jira.getQuarterDateRange(quarter);
+    if (!dateRange) return res.status(400).json({ error: `Cannot parse quarter: ${quarter}` });
+
+    const weekdays = bamboohr.countWeekdays(dateRange.start, dateRange.end);
+    const offByEmployee = await bamboohr.fetchApprovedTimeOffDays(dateRange.start, dateRange.end);
+
+    const members = await prisma.teamMember.findMany({ where: { team_id: teamId } });
+    const results = [];
+    for (const m of members) {
+      if (!m.bamboohr_id) { results.push({ name: m.name, mapped: false }); continue; }
+      const off = offByEmployee[String(m.bamboohr_id)] || 0;
+      const workingDays = Math.max(0, Math.round(weekdays - off));
+      const existing = await prisma.teamMemberCapacity.findFirst({ where: { team_member_id: m.id, quarter } });
+      if (existing) {
+        await prisma.teamMemberCapacity.update({ where: { id: existing.id }, data: { working_days: workingDays } });
+      } else {
+        await prisma.teamMemberCapacity.create({ data: { team_member_id: m.id, quarter, working_days: workingDays } });
+      }
+      results.push({ name: m.name, mapped: true, offDays: Math.round(off * 10) / 10, workingDays });
+    }
+
+    res.json({
+      data: {
+        quarter,
+        dateRange,
+        weekdays,
+        updated: results.filter(r => r.mapped).length,
+        unmapped: results.filter(r => !r.mapped).length,
+        members: results,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

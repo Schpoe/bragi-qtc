@@ -3,11 +3,14 @@ import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { canManageAllocations, isTeamManager } from "@/lib/permissions";
-import { CalendarRange } from "lucide-react";
+import { CalendarRange, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import { useSelectedQuarter, useSelectedTeam } from "@/lib/useSelectedQuarter";
 import { useQuarters } from "@/lib/useQuarters";
+import { useBambooHrConfig } from "@/hooks/useBambooHr";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import FilterBar from "../components/shared/FilterBar";
@@ -23,6 +26,7 @@ export default function QuarterlyPlanning() {
     : "all";
   const [selectedTeamId, setSelectedTeamId] = useSelectedTeam(defaultTeamId);
   const queryClient = useQueryClient();
+  const { configured: bambooConfigured } = useBambooHrConfig();
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
     queryKey: ["teams"],
@@ -77,6 +81,16 @@ export default function QuarterlyPlanning() {
   const deleteQuarterlyAllocation = useMutation({
     mutationFn: (id) => bragiQTC.entities.QuarterlyAllocation.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] }),
+  });
+
+  const syncBambooAvailability = useMutation({
+    mutationFn: (teamId) => bragiQTC.functions.invoke("syncBambooHrAvailability", { teamId, quarter: selectedQuarter }),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["teamMemberCapacities"] });
+      const d = res?.data || {};
+      toast.success(`Availability synced from BambooHR — ${d.updated ?? 0} member${d.updated === 1 ? "" : "s"} updated${d.unmapped ? `, ${d.unmapped} unmapped` : ""} (${d.weekdays ?? 0} weekdays in quarter).`);
+    },
+    onError: (err) => toast.error(err.message || "BambooHR sync failed"),
   });
 
   const logQuarterlyHistory = (entry) => {
@@ -266,7 +280,22 @@ export default function QuarterlyPlanning() {
           <>
             <Card className="border-primary/20">
               <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
-                <CardTitle className="text-base font-bold text-foreground">Quarterly Plan — {selectedQuarter}</CardTitle>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <CardTitle className="text-base font-bold text-foreground">Quarterly Plan — {selectedQuarter}</CardTitle>
+                  {bambooConfigured && canManageAllocations(user, effectiveTeamId) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs gap-1.5"
+                      onClick={() => syncBambooAvailability.mutate(effectiveTeamId)}
+                      disabled={syncBambooAvailability.isPending}
+                      title="Set each mapped member's capacity for this quarter to working days minus approved BambooHR time off"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${syncBambooAvailability.isPending ? "animate-spin" : ""}`} />
+                      {syncBambooAvailability.isPending ? "Syncing…" : "Sync availability from BambooHR"}
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="pt-6">
                 <QuarterlyAllocationTable
