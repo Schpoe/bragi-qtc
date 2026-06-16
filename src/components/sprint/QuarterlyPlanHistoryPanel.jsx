@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { History, ChevronDown, ChevronRight, ArrowRight, TrendingUp, TrendingDown, Minus, Download, Save, RotateCcw, Trash2, BookMarked, Star, RefreshCw, CheckCircle2, Clock, AlertCircle, Crown, Users, FileDown } from "lucide-react";
+import { History, ChevronDown, ChevronRight, ArrowRight, TrendingUp, TrendingDown, Minus, Download, Save, RotateCcw, Trash2, BookMarked, Star, RefreshCw, CheckCircle2, Clock, AlertCircle, Crown, Users, FileDown, Info } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -1304,6 +1304,20 @@ function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarte
               {actuals.epicLinkField && <> · Epic link: <code>{actuals.epicLinkField}</code></>}
               {actuals.prodProjectKeys?.length > 0 && <> · PROD project: <code>{actuals.prodProjectKeys.join(", ")}</code></>}
             </div>
+
+            <details className="text-xs rounded-lg border border-border bg-muted/20 p-2">
+              <summary className="cursor-pointer flex items-center gap-1.5 text-muted-foreground hover:text-foreground py-0.5 font-medium">
+                <Info className="w-3.5 h-3.5 shrink-0" /> How are these numbers calculated?
+              </summary>
+              <ul className="mt-2 space-y-1.5 text-muted-foreground list-disc pl-5">
+                <li><strong className="text-green-700 dark:text-green-400">Completed</strong> — issues whose <em>resolution date</em> falls within the quarter. Work finished in an earlier quarter does not count, even if it was touched again this quarter.</li>
+                <li><strong className="text-blue-700 dark:text-blue-400">In Progress</strong> — open issues whose <em>status actually changed</em> during the quarter. Tickets merely touched to link a test case or add a comment only bump the "updated" date, not the status, so they are <strong>not</strong> counted.</li>
+                <li><strong className="text-muted-foreground">Cancelled</strong> — issues resolved in the quarter with a status like <code>Obsolete / Won't Do</code>; counted as neither delivered nor in progress.</li>
+                <li><strong>Days</strong> — story points are converted to days with this team's factor (<strong>1 SP = {daysPerSp} day{daysPerSp === 1 ? "" : "s"}</strong>, set on the Teams page). Planned days come from the quarterly allocations.</li>
+                <li><strong>PROD / Epic</strong> — each issue rolls up through its Epic to its PROD item (via an "implements" link or PROD parent). Genuine epics with no PROD link show as <em>Unplanned non-PROD</em>; loose work with no epic is grouped under <em>No epic / unassigned</em>.</li>
+              </ul>
+            </details>
+
             {actuals.jql && (
               <details className="text-xs">
                 <summary className="cursor-pointer text-muted-foreground hover:text-foreground py-0.5">Show JQL queries</summary>
