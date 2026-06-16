@@ -78,6 +78,7 @@ export const bragiQTC = {
       setInitialPlan: (id) => apiFetch(`/api/quarterly-plan-snapshots/${id}/set-initial-plan`, { method: 'PATCH' }),
     },
     JiraSyncHistory:            makeEntityClient('/api/jira-sync-history'),
+    QuarterlyComparisonSnapshot: makeEntityClient('/api/quarterly-comparison-snapshots'),
   },
 
   functions: {

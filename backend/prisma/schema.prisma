@@ -144,3 +144,24 @@ model JiraSyncHistory {
   result_summary Json?
   created_at     DateTime @default(now())
 }
+
+model QuarterlyComparisonSnapshot {
+  id                String   @id @default(uuid())
+  quarter           String
+  team_id           String
+  team_name         String?
+  days_per_sp       Float    @default(1)
+  jira_base_url     String?
+  date_start        String?
+  date_end          String?
+  has_initial       Boolean  @default(false)
+  rows              Json
+  excluded          Json?
+  summary           Json?
+  captured_by_email String?
+  captured_at       DateTime @default(now())
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  @@unique([quarter, team_id])
+}

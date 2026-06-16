@@ -5,6 +5,7 @@ import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { canManageAllocations, isAdmin } from "@/lib/permissions";
 import JiraLink from "@/components/shared/JiraLink";
+import { summarizeComparison } from "@/lib/quarterly-comparison";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -718,37 +719,22 @@ function RoleChip({ role }) {
   return null;
 }
 
-function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, hasInitial, quarter, teamName }) {
+export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, hasInitial, quarter, teamName }) {
   const exportRef = useRef(null);
   const [exporting, setExporting] = useState(false);
 
   const spToDays = (sp) => Math.round((sp || 0) * daysPerSp * 10) / 10;
-  const sum = (arr, f) => Math.round(arr.reduce((s, r) => s + (f(r) || 0), 0) * 10) / 10;
 
-  const planned          = rows.filter(r => r.category === "planned" || r.category === "planned-no-prod");
-  const unplannedProd    = rows.filter(r => r.category === "unplanned");
-  const unplannedNonProd = rows.filter(r => r.category === "epic-only" || r.category === "unassigned");
-
-  const plannedInitial = sum(planned, r => r.initialDays);
-  const plannedCurrent = sum(planned, r => r.currentDays);
-
-  const deliveredPlanned   = sum(planned, r => spToDays(r.completedSP));
-  const inProgPlanned      = sum(planned, r => spToDays(r.inProgressSP));
-  const deliveredUnplProd  = sum(unplannedProd, r => spToDays(r.completedSP));
-  const inProgUnplProd     = sum(unplannedProd, r => spToDays(r.inProgressSP));
-  const deliveredUnplNon   = sum(unplannedNonProd, r => spToDays(r.completedSP));
-  const inProgUnplNon      = sum(unplannedNonProd, r => spToDays(r.inProgressSP));
-
-  const totalDelivered  = Math.round((deliveredPlanned + deliveredUnplProd + deliveredUnplNon) * 10) / 10;
-  const totalInProgress = Math.round((inProgPlanned + inProgUnplProd + inProgUnplNon) * 10) / 10;
-  const totalUnplanned  = Math.round((deliveredUnplProd + deliveredUnplNon + inProgUnplProd + inProgUnplNon) * 10) / 10;
-  const totalActivity   = Math.round((totalDelivered + totalInProgress) * 10) / 10;
-
-  const excludedCount = actuals.excluded?.count ?? 0;
-  const excludedSP    = actuals.excluded?.storyPoints ?? 0;
-
-  const deliveryPct  = plannedInitial > 0 ? Math.round(((deliveredPlanned + inProgPlanned) / plannedInitial) * 100) : null;
-  const unplannedPct = totalActivity > 0 ? Math.round((totalUnplanned / totalActivity) * 100) : 0;
+  const {
+    planned, unplannedProd, unplannedNonProd,
+    plannedInitial, plannedCurrent,
+    deliveredPlanned, inProgPlanned,
+    deliveredUnplProd, inProgUnplProd,
+    deliveredUnplNon, inProgUnplNon,
+    totalDelivered, totalInProgress, totalUnplanned, totalActivity,
+    excludedCount, excludedSP,
+    deliveryPct, unplannedPct,
+  } = summarizeComparison(rows, daysPerSp, actuals?.excluded);
 
   const bucketRows = (arr, withPlan) => arr
     .map(r => ({
@@ -1105,6 +1091,9 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
     });
   }, [actuals, initialPlan, members, quarterlyAllocations, workAreas, quarter, teamId]);
 
+  const [finalizing, setFinalizing] = useState(false);
+  const [finalized, setFinalized] = useState(false);
+
   if (rows.length === 0) return null;
 
   const hasInitial = rows.some(r => r.category === 'planned');
@@ -1127,8 +1116,45 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
       category: r.category,
     }));
 
+  const handleFinalize = async () => {
+    setFinalizing(true);
+    try {
+      const s = summarizeComparison(rows, daysPerSp, actuals.excluded);
+      const { planned, unplannedProd, unplannedNonProd, ...summary } = s;
+      await bragiQTC.functions.invoke("saveQuarterlyComparison", {
+        quarter,
+        team_id: teamId,
+        team_name: actuals.team?.name ?? null,
+        days_per_sp: daysPerSp,
+        jira_base_url: jiraBaseUrl ?? null,
+        date_start: actuals.dateRange?.start ?? null,
+        date_end: actuals.dateRange?.end ?? null,
+        has_initial: hasInitial,
+        rows,
+        excluded: actuals.excluded ? { count: actuals.excluded.count, storyPoints: actuals.excluded.storyPoints } : null,
+        summary,
+      });
+      setFinalized(true);
+      toast.success(`Finalized ${quarter} — saved to Quarterly Review`);
+    } catch (err) {
+      toast.error(err.message || "Failed to finalize quarter");
+    } finally {
+      setFinalizing(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-xs text-muted-foreground">
+          Finalizing freezes this comparison to the <strong>Quarterly Review</strong> page as a permanent record.
+        </p>
+        <Button size="sm" variant={finalized ? "outline" : "default"} className="h-7 text-xs gap-1.5" onClick={handleFinalize} disabled={finalizing}>
+          <BookMarked className={cn("w-3 h-3", finalizing && "animate-pulse")} />
+          {finalizing ? "Saving…" : finalized ? "Re-finalize quarter" : "Finalize quarter"}
+        </Button>
+      </div>
+
       <PlanDeliverySummary
         rows={rows}
         daysPerSp={daysPerSp}

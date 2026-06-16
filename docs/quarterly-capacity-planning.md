@@ -203,6 +203,23 @@ If a work item has no `prod_id`, the match falls back to `jira_key` and `linked_
 
 ---
 
+## Finalizing a Quarter & the Quarterly Review page
+
+The Actuals tab is a **live** view — it re-queries Jira each time, and Jira data keeps changing. To keep a permanent, accurate record of how a quarter actually went, **finalize** it:
+
+1. Open **Quarterly Planning** → a team → **Quarterly Plan History** → **Actuals** tab and **Fetch** the actuals.
+2. Click **"Finalize quarter"**. This freezes the current plan-vs-delivered comparison (the per-topic rows + summary, the team's SP→days factor, the date range) into a permanent snapshot. Re-clicking overwrites it ("Re-finalize quarter").
+
+Finalized snapshots appear on the dedicated **Quarterly Review** page (left nav):
+
+- A **quarter selector** at the top.
+- An **all-teams roll-up** card — combined planned / delivered / in-progress / unplanned (in days) and cancelled-ticket count across every finalized team.
+- A **per-team** frozen comparison below, each rendered exactly like the live summary (with CSV/PDF export), stamped with who finalized it and when.
+
+Because the data is stored, the Quarterly Review page loads instantly and never drifts — even years later, and even if the underlying Jira tickets change. Admins can remove a finalized snapshot from the page if it was captured by mistake.
+
+---
+
 ## All Teams View
 
 When **"All Teams"** is selected in the filter bar, the Quarterly Planning page shows one planning card per active team for the selected quarter. Each card is independent — work item selection and allocations are managed per team.
@@ -222,3 +239,5 @@ Disabled teams (Teams page → disable toggle) are excluded from all views.
 | View full audit trail | History → Audit Log tab |
 | Fetch Jira actuals | History → Actuals tab |
 | View plan vs actuals chart | History → Actuals tab (after fetching) |
+| Finalize (freeze) a quarter | History → Actuals tab → "Finalize quarter" |
+| View finalized comparisons | Quarterly Review page (left nav) |

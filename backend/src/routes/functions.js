@@ -619,6 +619,45 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
   }
 });
 
+// Freeze a quarter's plan-vs-delivered comparison for a team (one per quarter+team;
+// re-finalizing overwrites). Stores the already-computed rows + summary so the
+// dedicated review page renders an immutable record without re-querying Jira.
+router.post('/saveQuarterlyComparison', requireAuth, async (req, res) => {
+  try {
+    const { quarter, team_id, team_name, days_per_sp, jira_base_url, date_start, date_end, has_initial, rows, excluded, summary } = req.body;
+    if (!quarter || !team_id || !Array.isArray(rows)) {
+      return res.status(400).json({ error: 'quarter, team_id and rows are required' });
+    }
+    const isAdmin = req.user.role === 'admin';
+    const isManager = req.user.role === 'team_manager' && (req.user.managed_team_ids || []).includes(team_id);
+    if (!isAdmin && !isManager) {
+      return res.status(403).json({ error: 'Not authorized to finalize this team' });
+    }
+    const data = {
+      team_name: team_name || null,
+      days_per_sp: typeof days_per_sp === 'number' ? days_per_sp : 1,
+      jira_base_url: jira_base_url || null,
+      date_start: date_start || null,
+      date_end: date_end || null,
+      has_initial: !!has_initial,
+      rows,
+      excluded: excluded || null,
+      summary: summary || null,
+      captured_by_email: req.user.email || null,
+      captured_at: new Date(),
+    };
+    const item = await prisma.quarterlyComparisonSnapshot.upsert({
+      where: { quarter_team_id: { quarter, team_id } },
+      update: data,
+      create: { quarter, team_id, ...data },
+    });
+    res.json({ data: item });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Expose the Jira base URL (and configured flag) so the frontend can build
 // clickable links to issues without duplicating JIRA_BASE_URL in a build-time var.
 router.post('/getJiraConfig', requireAuth, async (_req, res) => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { LayoutDashboard, Users, FolderKanban, CalendarRange, Menu, X, Trash2, Shield, LogOut, Eye, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { LayoutDashboard, Users, FolderKanban, CalendarRange, ClipboardCheck, Menu, X, Trash2, Shield, LogOut, Eye, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
 import { isAdmin } from "@/lib/permissions";
@@ -15,6 +15,7 @@ import logo from "@/bragi-qtc-new.png";
 const navItems = [
   { name: "Overview", page: "Dashboard", icon: LayoutDashboard },
   { name: "Quarterly Planning", page: "QuarterlyPlanning", icon: CalendarRange },
+  { name: "Quarterly Review", page: "QuarterlyReview", icon: ClipboardCheck },
   { name: "Teams", page: "Teams", icon: Users },
   { name: "Work Items", page: "WorkAreas", icon: FolderKanban },
   { name: "Work Item Types", page: "WorkAreaTypes", icon: FolderKanban, adminOnly: true },

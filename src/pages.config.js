@@ -51,6 +51,7 @@ import Dashboard from './pages/Dashboard';
 import JiraImport from './pages/JiraImport';
 import JiraSync from './pages/JiraSync';
 import QuarterlyPlanning from './pages/QuarterlyPlanning';
+import QuarterlyReview from './pages/QuarterlyReview';
 import Teams from './pages/Teams';
 import WorkAreaTypes from './pages/WorkAreaTypes';
 import WorkAreas from './pages/WorkAreas';
@@ -62,6 +63,7 @@ export const PAGES = {
     "JiraImport": JiraImport,
     "JiraSync": JiraSync,
     "QuarterlyPlanning": QuarterlyPlanning,
+    "QuarterlyReview": QuarterlyReview,
     "Teams": Teams,
     "WorkAreaTypes": WorkAreaTypes,
     "WorkAreas": WorkAreas,
