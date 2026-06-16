@@ -759,6 +759,10 @@ function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, hasInitial
       plannedDays: withPlan ? (r.initialDays ?? null) : null,
       deliveredDays: spToDays(r.completedSP),
       inProgressDays: spToDays(r.inProgressSP),
+      completedSP: r.completedSP ?? 0,
+      inProgressSP: r.inProgressSP ?? 0,
+      completedCount: r.completedCount ?? 0,
+      inProgressCount: r.inProgressCount ?? 0,
     }))
     .filter(r => (r.plannedDays ?? 0) > 0 || r.deliveredDays > 0 || r.inProgressDays > 0)
     .sort((a, b) => (b.deliveredDays + b.inProgressDays + (b.plannedDays ?? 0)) - (a.deliveredDays + a.inProgressDays + (a.plannedDays ?? 0)));
@@ -777,10 +781,10 @@ function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, hasInitial
       ["Unplanned work", totalUnplanned].map(esc).join(","),
       ["Excluded (cancelled) tickets", excludedCount].map(esc).join(","),
       [],
-      ["Section", "Topic", "Key", "Role", "Planned (d)", "Delivered (d)", "In progress (d)"].map(esc).join(","),
+      ["Section", "Topic", "Key", "Role", "Planned (d)", "Delivered (d)", "In progress (d)", "Done SP", "In progress SP", "Done #", "In progress #"].map(esc).join(","),
     ];
     const addBucket = (label, arr, withPlan) => bucketRows(arr, withPlan).forEach(r =>
-      lines.push([label, r.name, r.prodKey ?? "", r.role ?? "", r.plannedDays ?? "", r.deliveredDays, r.inProgressDays].map(esc).join(",")));
+      lines.push([label, r.name, r.prodKey ?? "", r.role ?? "", r.plannedDays ?? "", r.deliveredDays, r.inProgressDays, r.completedSP, r.inProgressSP, r.completedCount, r.inProgressCount].map(esc).join(",")));
     addBucket("Planned", planned, true);
     addBucket("Unplanned PROD", unplannedProd, false);
     addBucket("Unplanned non-PROD", unplannedNonProd, false);
@@ -855,8 +859,14 @@ function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, hasInitial
                     </div>
                   </td>
                   {withPlan && <td className="text-center py-1.5 px-2 tabular-nums text-amber-700">{r.plannedDays != null ? `${r.plannedDays}d` : "—"}</td>}
-                  <td className="text-center py-1.5 px-2 tabular-nums text-green-700">{r.deliveredDays}d</td>
-                  <td className="text-center py-1.5 px-2 tabular-nums text-blue-700">{r.inProgressDays}d</td>
+                  <td className="text-center py-1.5 px-2 tabular-nums text-green-700">
+                    {r.deliveredDays}d
+                    {r.completedSP > 0 && <span className="block text-[10px] text-green-600/70 font-normal">{r.completedSP} SP · {r.completedCount}</span>}
+                  </td>
+                  <td className="text-center py-1.5 px-2 tabular-nums text-blue-700">
+                    {r.inProgressDays}d
+                    {r.inProgressSP > 0 && <span className="block text-[10px] text-blue-600/70 font-normal">{r.inProgressSP} SP · {r.inProgressCount}</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1129,8 +1139,6 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
         teamName={actuals.team?.name ?? ""}
       />
 
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan vs Actuals by PROD</p>
-
       {/* Bar chart */}
       {chartData.length > 0 && (
         <div className="rounded-lg border border-border bg-background p-4">
@@ -1183,76 +1191,10 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
             </BarChart>
           </ResponsiveContainer>
           {rows.length > 15 && (
-            <p className="text-xs text-muted-foreground text-center mt-1">Showing top 15 items — see table below for all</p>
+            <p className="text-xs text-muted-foreground text-center mt-1">Top 15 by effort — full breakdown in the summary above</p>
           )}
         </div>
       )}
-
-      <div className="space-y-2">
-      <div className="overflow-x-auto rounded-lg border border-border text-xs">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-muted/40 border-b border-border">
-              <th className="text-left py-2 px-3 font-semibold">PROD / Topic</th>
-              {hasInitial && <th className="text-center py-2 px-3 font-semibold text-amber-700">Initial Plan</th>}
-              <th className="text-center py-2 px-3 font-semibold">Current Plan</th>
-              {hasInitial && <th className="text-center py-2 px-3 font-semibold text-muted-foreground">Δ</th>}
-              <th className="text-center py-2 px-3 font-semibold text-green-700">Done SP</th>
-              <th className="text-center py-2 px-3 font-semibold text-blue-700">In Progress SP</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(row => {
-              const delta = (row.currentDays !== null && row.initialDays !== null) ? row.currentDays - row.initialDays : null;
-              const categoryBadge = {
-                'planned':          <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Planned</span>,
-                'unplanned':        <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Unplanned</span>,
-                'epic-only':        <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Epic</span>,
-                'unassigned':       <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-muted text-muted-foreground">No epic</span>,
-                'planned-no-prod':  <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-muted text-muted-foreground">No PROD link</span>,
-              }[row.category];
-              return (
-                <tr key={row.key} className="border-b border-border/50 hover:bg-muted/20">
-                  <td className="py-2 px-3 max-w-[260px]">
-                    <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
-                      {row.prodKey && (
-                        <JiraLink issueKey={row.prodKey} baseUrl={jiraBaseUrl} showIcon className="font-mono text-[10px] shrink-0" />
-                      )}
-                      <span className="font-medium truncate">{row.prodName}</span>
-                      {categoryBadge}
-                    </div>
-                  </td>
-                  {hasInitial && (
-                    <td className="text-center py-2 px-3 tabular-nums text-amber-700">
-                      {row.initialDays !== null ? `${row.initialDays}d` : '—'}
-                    </td>
-                  )}
-                  <td className="text-center py-2 px-3 tabular-nums font-medium">
-                    {row.currentDays !== null ? `${row.currentDays}d` : '—'}
-                  </td>
-                  {hasInitial && (
-                    <td className={cn("text-center py-2 px-3 tabular-nums font-medium", delta > 0 ? "text-amber-600" : delta < 0 ? "text-blue-600" : "text-muted-foreground")}>
-                      {delta === null ? '—' : delta === 0 ? '=' : delta > 0 ? `+${delta}d` : `${delta}d`}
-                    </td>
-                  )}
-                  <td className="text-center py-2 px-3 tabular-nums text-green-700">
-                    {row.completedSP !== null ? `${row.completedSP} SP` : '—'}
-                    {row.completedCount > 0 && <span className="text-muted-foreground ml-1">({row.completedCount})</span>}
-                  </td>
-                  <td className="text-center py-2 px-3 tabular-nums text-blue-700">
-                    {row.inProgressSP !== null ? `${row.inProgressSP} SP` : '—'}
-                    {row.inProgressCount > 0 && <span className="text-muted-foreground ml-1">({row.inProgressCount})</span>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      {!hasInitial && (
-        <p className="text-xs text-muted-foreground">Mark a snapshot as "Initial Plan" in the Versions tab to see the initial vs current comparison.</p>
-      )}
-    </div>
     </div>
   );
 }

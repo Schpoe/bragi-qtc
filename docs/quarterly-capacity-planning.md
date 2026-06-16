@@ -153,12 +153,12 @@ At the top of the fetched actuals is a **days-based summary** (the unit mismatch
 
 - **Headline cards:** planned (initial vs current), delivered (done), in progress, unplanned work, delivered-on-plan, and cancelled count — all in days except the cancelled ticket count.
 - **Deviation narrative:** how much of the plan was delivered (%), how much effort went to unplanned topics (% of all activity), and how many tickets were excluded.
-- **Per-bucket breakdowns:**
-  - **Planned topics** — planned vs delivered vs in-progress days, with a **Leading**/**Supporting** tag showing the team's role on each.
+- **Per-bucket breakdowns** (each row shows planned / delivered / in-progress in days; the delivered and in-progress cells also show the underlying **story points and issue count**):
+  - **Planned topics** — planned vs delivered vs in-progress, with a **Leading**/**Supporting** tag showing the team's role on each. Plan-side capacity buckets with no `prod_id` (e.g. "Time Off") also appear here, with no Jira key.
   - **Unplanned PROD topics** — PROD work delivered/in-progress that was not in the plan (also tagged Leading/Supporting where the team owns the work item).
-  - **Unplanned non-PROD topics** — Jira work with no PROD link.
+  - **Unplanned non-PROD topics** — genuine Jira **Epics** with no PROD link, plus a single **"No epic / unassigned"** row that rolls up loose work with no epic at all.
 
-The summary is **exportable** via the **CSV** and **PDF** buttons in its header. PROD/Epic keys throughout are clickable and open the issue in Jira in a new tab.
+The summary is **exportable** via the **CSV** and **PDF** buttons in its header (the CSV includes the story-point and issue-count columns). PROD/Epic keys throughout are clickable and open the issue in Jira in a new tab.
 
 ### Visual comparison — bar chart
 
@@ -171,21 +171,19 @@ Below the summary, a **bar chart** compares plan vs delivery per PROD item. Stor
 | Done | Green | Completed story points (as days) |
 | In Progress | Blue | In-progress story points (as days) |
 
-Up to 15 items are shown in the chart. All items appear in the table below it.
+Up to 15 items (by effort) are shown in the chart; the full per-topic breakdown is in the summary above.
 
-### PROD-based breakdown table
+### How work is categorised
 
-Below the chart, a table groups all work by PROD item. Each row is labelled with its category:
+Each topic in the summary falls into one bucket:
 
-| Badge | Meaning |
-|-------|---------|
-| **Planned** (green) | In the initial quarterly plan, has a PROD link |
-| **Unplanned** (amber) | Appeared in Jira actuals but was not planned |
-| **Epic** (blue) | A genuine Jira **Epic** with no parent PROD item (only real epics get this badge — a story/sub-task parent does not) |
-| **No epic** (gray) | Loose Jira work with no epic at all — grouped into a single "No epic / unassigned" row, not a per-ticket topic |
-| **No PROD link** (gray) | In the plan but the work item has no `prod_id` set (e.g. a capacity bucket like "Time Off") |
+| Bucket | Meaning |
+|--------|---------|
+| **Planned** | In the initial quarterly plan (PROD-linked work items, plus capacity buckets with no `prod_id` such as "Time Off") |
+| **Unplanned PROD** | A PROD item that appeared in Jira actuals but was not in the plan |
+| **Unplanned non-PROD** | A genuine Jira **Epic** with no PROD link (only real epics — a story/sub-task parent does not count), plus the single **"No epic / unassigned"** roll-up of loose work |
 
-Both the PROD ID (e.g. `PROD-123`) and the PROD title are shown for each row.
+PROD/Epic keys are shown and clickable for every row that has one; the "No epic / unassigned" roll-up has no key by design.
 
 ### How PROD matching works
 
