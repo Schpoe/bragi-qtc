@@ -15,19 +15,21 @@ function toHex(color) {
 }
 
 export default function TeamFormDialog({ open, onOpenChange, team, onSave }) {
-  const [form, setForm] = useState({ name: "", description: "", color: "#3b82f6", jira_project_key: "" });
+  const [form, setForm] = useState({ name: "", description: "", color: "#3b82f6", jira_project_key: "", days_per_sp: "1" });
 
   useEffect(() => {
     if (team) {
-      setForm({ name: team.name, description: team.description || "", color: toHex(team.color), jira_project_key: team.jira_project_key || "" });
+      setForm({ name: team.name, description: team.description || "", color: toHex(team.color), jira_project_key: team.jira_project_key || "", days_per_sp: String(team.days_per_sp ?? 1) });
     } else {
-      setForm({ name: "", description: "", color: "#3b82f6", jira_project_key: "" });
+      setForm({ name: "", description: "", color: "#3b82f6", jira_project_key: "", days_per_sp: "1" });
     }
   }, [team, open]);
 
   const handleSave = () => {
     if (!form.name.trim()) return;
-    onSave(form);
+    const parsed = parseFloat(form.days_per_sp);
+    const days_per_sp = isNaN(parsed) || parsed <= 0 ? 1 : parsed;
+    onSave({ ...form, days_per_sp });
     onOpenChange(false);
   };
 
@@ -61,6 +63,20 @@ export default function TeamFormDialog({ open, onOpenChange, team, onSave }) {
               placeholder="e.g. MOBILE"
             />
             <p className="text-xs text-muted-foreground">Used to fetch quarterly actuals from Jira</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Working days per story point</Label>
+            <Input
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={form.days_per_sp}
+              onChange={(e) => setForm({ ...form, days_per_sp: e.target.value })}
+              placeholder="1"
+            />
+            <p className="text-xs text-muted-foreground">
+              Converts delivered story points to days for plan-vs-actuals (1 SP = {form.days_per_sp || "1"} day{(form.days_per_sp || "1") === "1" ? "" : "s"}).
+            </p>
           </div>
         </div>
         <DialogFooter>

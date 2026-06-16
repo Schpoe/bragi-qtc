@@ -6,9 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { X, Link as LinkIcon } from "lucide-react";
 import { bragiQTC } from "@/api/bragiQTCClient";
+import JiraLink from "@/components/shared/JiraLink";
+import { useJiraConfig } from "@/hooks/useJiraConfig";
 import { toast } from "sonner";
 
 export default function EpicLinkDialog({ open, onOpenChange, workArea, onLinked }) {
+  const { jiraBaseUrl } = useJiraConfig();
   const [epicKey, setEpicKey] = useState("");
   const [linking, setLinking] = useState(false);
 
@@ -69,7 +72,7 @@ export default function EpicLinkDialog({ open, onOpenChange, workArea, onLinked 
               <div className="flex flex-wrap gap-2">
                 {workArea.linked_epic_keys.map(key => (
                   <Badge key={key} variant="secondary" className="gap-2">
-                    {key}
+                    <JiraLink issueKey={key} baseUrl={jiraBaseUrl} showIcon />
                     <button
                       onClick={() => handleUnlink(key)}
                       className="hover:text-destructive"

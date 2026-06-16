@@ -29,6 +29,7 @@ model Team {
   lead_id          String?
   is_active        Boolean  @default(true)
   jira_project_key String?
+  days_per_sp      Float    @default(1)
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
 }

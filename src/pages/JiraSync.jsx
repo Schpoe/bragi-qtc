@@ -9,8 +9,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
 import PageHeader from "@/components/shared/PageHeader";
+import JiraLink from "@/components/shared/JiraLink";
+import { useJiraConfig } from "@/hooks/useJiraConfig";
 
 export default function JiraSync() {
+  const { jiraBaseUrl } = useJiraConfig();
   const [jql, setJql] = useState('project = PROD');
   const [syncResult, setSyncResult] = useState(null);
   const [error, setError] = useState(null);
@@ -359,7 +362,7 @@ export default function JiraSync() {
               {syncResult.workAreas.slice(0, 20).map((wa, idx) => (
                 <div key={idx} className="p-3 border rounded space-y-2">
                   <div className="flex items-start gap-2">
-                    <span className="font-mono text-xs text-muted-foreground">{wa.key}</span>
+                    <JiraLink issueKey={wa.key} baseUrl={jiraBaseUrl} showIcon className="font-mono text-xs" />
                     <span className="flex-1 font-medium text-sm">{wa.name}</span>
                     {wa.type && <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">{wa.type}</span>}
                   </div>

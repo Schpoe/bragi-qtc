@@ -22,6 +22,8 @@ import JiraImportDialog from "../components/workareas/JiraImportDialog";
 import JiraSyncButton from "../components/workareas/JiraSyncButton";
 import EpicLinkDialog from "../components/workareas/EpicLinkDialog";
 import JiraSyncHistoryTab from "../components/workareas/JiraSyncHistoryTab";
+import JiraLink from "@/components/shared/JiraLink";
+import { useJiraConfig } from "@/hooks/useJiraConfig";
 import { useAuth } from "@/lib/AuthContext";
 import { canManageWorkAreas, canCreateWorkArea, isViewer, isAdmin, getManageableTeams, canManageAllocations } from "@/lib/permissions";
 import { useQuarters } from "@/lib/useQuarters";
@@ -141,6 +143,7 @@ function TypeDistributionPanel({ workAreas, workAreaTypes, filterTypeId, onTypeF
 
 export default function WorkAreas() {
   const { user } = useAuth();
+  const { jiraBaseUrl } = useJiraConfig();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [jiraDialogOpen, setJiraDialogOpen] = useState(false);
   const [epicDialogOpen, setEpicDialogOpen] = useState(false);
@@ -513,10 +516,14 @@ export default function WorkAreas() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-medium text-sm">{wa.name}</p>
                               {wa.prod_id && (
-                                <Badge variant="outline" className="text-xs">{wa.prod_id}</Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  <JiraLink issueKey={wa.prod_id} baseUrl={jiraBaseUrl} showIcon />
+                                </Badge>
                               )}
                               {wa.jira_key && wa.jira_key !== wa.prod_id && (
-                                <Badge variant="outline" className="text-xs">{wa.jira_key}</Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  <JiraLink issueKey={wa.jira_key} baseUrl={jiraBaseUrl} showIcon />
+                                </Badge>
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -556,7 +563,9 @@ export default function WorkAreas() {
                             {wa.linked_epic_keys && wa.linked_epic_keys.length > 0 && (
                               <div className="flex items-center gap-1 mt-2 flex-wrap">
                                 {wa.linked_epic_keys.map(key => (
-                                  <Badge key={key} variant="secondary" className="text-xs">{key}</Badge>
+                                  <Badge key={key} variant="secondary" className="text-xs">
+                                    <JiraLink issueKey={key} baseUrl={jiraBaseUrl} showIcon />
+                                  </Badge>
                                 ))}
                               </div>
                             )}

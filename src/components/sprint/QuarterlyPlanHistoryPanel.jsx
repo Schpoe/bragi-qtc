@@ -1,7 +1,10 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { canManageAllocations, isAdmin } from "@/lib/permissions";
+import JiraLink from "@/components/shared/JiraLink";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { History, ChevronDown, ChevronRight, ArrowRight, TrendingUp, TrendingDown, Minus, Download, Save, RotateCcw, Trash2, BookMarked, Star, RefreshCw, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { History, ChevronDown, ChevronRight, ArrowRight, TrendingUp, TrendingDown, Minus, Download, Save, RotateCcw, Trash2, BookMarked, Star, RefreshCw, CheckCircle2, Clock, AlertCircle, Crown, Users, FileDown } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -350,7 +353,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations, workAreaSelections, jiraProjectKey }) {
+export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations, workAreaSelections, jiraProjectKey, daysPerSp = 1 }) {
   const [open, setOpen] = useState(false);
 
   const { data: allHistory = [], isLoading } = useQuery({
@@ -617,6 +620,7 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
                 members={members}
                 quarterlyAllocations={quarterlyAllocations}
                 workAreas={workAreas}
+                daysPerSp={daysPerSp}
               />
             </Tabs>
           </CardContent>
@@ -698,9 +702,254 @@ function ProdEpicBreakdown({ completed, inProgress }) {
   );
 }
 
+// ── Plan vs Delivered summary (days-based, exportable) ───────────────────────
+
+function RoleChip({ role }) {
+  if (role === "leading") return (
+    <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+      <Crown className="w-2.5 h-2.5" /> Leading
+    </span>
+  );
+  if (role === "supporting") return (
+    <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+      <Users className="w-2.5 h-2.5" /> Supporting
+    </span>
+  );
+  return null;
+}
+
+function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, hasInitial, quarter, teamName }) {
+  const exportRef = useRef(null);
+  const [exporting, setExporting] = useState(false);
+
+  const spToDays = (sp) => Math.round((sp || 0) * daysPerSp * 10) / 10;
+  const sum = (arr, f) => Math.round(arr.reduce((s, r) => s + (f(r) || 0), 0) * 10) / 10;
+
+  const planned          = rows.filter(r => r.category === "planned" || r.category === "planned-no-prod");
+  const unplannedProd    = rows.filter(r => r.category === "unplanned");
+  const unplannedNonProd = rows.filter(r => r.category === "epic-only");
+
+  const plannedInitial = sum(planned, r => r.initialDays);
+  const plannedCurrent = sum(planned, r => r.currentDays);
+
+  const deliveredPlanned   = sum(planned, r => spToDays(r.completedSP));
+  const inProgPlanned      = sum(planned, r => spToDays(r.inProgressSP));
+  const deliveredUnplProd  = sum(unplannedProd, r => spToDays(r.completedSP));
+  const inProgUnplProd     = sum(unplannedProd, r => spToDays(r.inProgressSP));
+  const deliveredUnplNon   = sum(unplannedNonProd, r => spToDays(r.completedSP));
+  const inProgUnplNon      = sum(unplannedNonProd, r => spToDays(r.inProgressSP));
+
+  const totalDelivered  = Math.round((deliveredPlanned + deliveredUnplProd + deliveredUnplNon) * 10) / 10;
+  const totalInProgress = Math.round((inProgPlanned + inProgUnplProd + inProgUnplNon) * 10) / 10;
+  const totalUnplanned  = Math.round((deliveredUnplProd + deliveredUnplNon + inProgUnplProd + inProgUnplNon) * 10) / 10;
+  const totalActivity   = Math.round((totalDelivered + totalInProgress) * 10) / 10;
+
+  const excludedCount = actuals.excluded?.count ?? 0;
+  const excludedSP    = actuals.excluded?.storyPoints ?? 0;
+
+  const deliveryPct  = plannedInitial > 0 ? Math.round(((deliveredPlanned + inProgPlanned) / plannedInitial) * 100) : null;
+  const unplannedPct = totalActivity > 0 ? Math.round((totalUnplanned / totalActivity) * 100) : 0;
+
+  const bucketRows = (arr, withPlan) => arr
+    .map(r => ({
+      key: r.key,
+      prodKey: r.prodKey,
+      name: r.prodName,
+      role: r.role,
+      plannedDays: withPlan ? (r.initialDays ?? null) : null,
+      deliveredDays: spToDays(r.completedSP),
+      inProgressDays: spToDays(r.inProgressSP),
+    }))
+    .filter(r => (r.plannedDays ?? 0) > 0 || r.deliveredDays > 0 || r.inProgressDays > 0)
+    .sort((a, b) => (b.deliveredDays + b.inProgressDays + (b.plannedDays ?? 0)) - (a.deliveredDays + a.inProgressDays + (a.plannedDays ?? 0)));
+
+  const exportCSV = () => {
+    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = [
+      ["Plan vs Delivered", quarter, teamName].map(esc).join(","),
+      [`Conversion: 1 SP = ${daysPerSp} day(s)`].map(esc).join(","),
+      [],
+      ["Metric", "Days"].map(esc).join(","),
+      ["Planned (initial)", plannedInitial].map(esc).join(","),
+      ["Planned (current)", plannedCurrent].map(esc).join(","),
+      ["Delivered (done)", totalDelivered].map(esc).join(","),
+      ["In progress", totalInProgress].map(esc).join(","),
+      ["Unplanned work", totalUnplanned].map(esc).join(","),
+      ["Excluded (cancelled) tickets", excludedCount].map(esc).join(","),
+      [],
+      ["Section", "Topic", "Key", "Role", "Planned (d)", "Delivered (d)", "In progress (d)"].map(esc).join(","),
+    ];
+    const addBucket = (label, arr, withPlan) => bucketRows(arr, withPlan).forEach(r =>
+      lines.push([label, r.name, r.prodKey ?? "", r.role ?? "", r.plannedDays ?? "", r.deliveredDays, r.inProgressDays].map(esc).join(",")));
+    addBucket("Planned", planned, true);
+    addBucket("Unplanned PROD", unplannedProd, false);
+    addBucket("Unplanned non-PROD", unplannedNonProd, false);
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `plan-vs-delivered_${quarter}_${teamName}`.replace(/[^a-z0-9_-]+/gi, "-") + ".csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = async () => {
+    if (!exportRef.current) return;
+    setExporting(true);
+    try {
+      const canvas = await html2canvas(exportRef.current, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      const img = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageW = pdf.internal.pageSize.getWidth();
+      const margin = 10;
+      const w = pageW - margin * 2;
+      const h = (canvas.height * w) / canvas.width;
+      pdf.setFontSize(13);
+      pdf.text(`Plan vs Delivered — ${teamName} — ${quarter}`, margin, margin + 2);
+      pdf.addImage(img, "PNG", margin, margin + 6, w, h);
+      pdf.save(`plan-vs-delivered_${quarter}_${teamName}`.replace(/[^a-z0-9_-]+/gi, "-") + ".pdf");
+    } catch (err) {
+      console.error("Summary PDF export failed:", err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const StatCard = ({ label, value, sub, tone }) => (
+    <div className={cn("rounded-lg border p-3", tone)}>
+      <p className="text-[11px] font-semibold uppercase tracking-wide opacity-80">{label}</p>
+      <p className="text-xl font-bold tabular-nums mt-0.5">{value}</p>
+      {sub && <p className="text-[11px] opacity-80 mt-0.5">{sub}</p>}
+    </div>
+  );
+
+  const BucketTable = ({ title, items, withPlan }) => {
+    if (items.length === 0) return (
+      <div>
+        <p className="text-xs font-semibold mb-1">{title}</p>
+        <p className="text-xs text-muted-foreground italic">None.</p>
+      </div>
+    );
+    return (
+      <div>
+        <p className="text-xs font-semibold mb-1">{title}</p>
+        <div className="overflow-x-auto rounded-lg border border-border text-xs">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-muted/40 border-b border-border">
+                <th className="text-left py-1.5 px-2 font-semibold">Topic</th>
+                {withPlan && <th className="text-center py-1.5 px-2 font-semibold text-amber-700">Planned</th>}
+                <th className="text-center py-1.5 px-2 font-semibold text-green-700">Delivered</th>
+                <th className="text-center py-1.5 px-2 font-semibold text-blue-700">In progress</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map(r => (
+                <tr key={r.key} className="border-b border-border/50">
+                  <td className="py-1.5 px-2">
+                    <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
+                      {r.prodKey && <JiraLink issueKey={r.prodKey} baseUrl={jiraBaseUrl} showIcon className="font-mono text-[10px] shrink-0" />}
+                      <span className="font-medium truncate max-w-[220px]">{r.name}</span>
+                      <RoleChip role={r.role} />
+                    </div>
+                  </td>
+                  {withPlan && <td className="text-center py-1.5 px-2 tabular-nums text-amber-700">{r.plannedDays != null ? `${r.plannedDays}d` : "—"}</td>}
+                  <td className="text-center py-1.5 px-2 tabular-nums text-green-700">{r.deliveredDays}d</td>
+                  <td className="text-center py-1.5 px-2 tabular-nums text-blue-700">{r.inProgressDays}d</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-background p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold">Plan vs Delivered — Summary</p>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">1 SP = {daysPerSp} day{daysPerSp === 1 ? "" : "s"}</span>
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={exportCSV}>
+            <Download className="w-3 h-3" /> CSV
+          </Button>
+          <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={exportPDF} disabled={exporting}>
+            <FileDown className="w-3 h-3" /> {exporting ? "…" : "PDF"}
+          </Button>
+        </div>
+      </div>
+
+      <div ref={exportRef} className="space-y-4">
+        {/* Headline stats */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <StatCard
+            label="Planned (initial)"
+            value={`${plannedInitial}d`}
+            sub={hasInitial && plannedCurrent !== plannedInitial ? `current plan ${plannedCurrent}d` : (hasInitial ? "unchanged" : "no initial plan set")}
+            tone="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 text-amber-900 dark:text-amber-200"
+          />
+          <StatCard
+            label="Delivered (done)"
+            value={`${totalDelivered}d`}
+            sub={deliveryPct != null ? `${deliveryPct}% of initial plan` : "vs plan n/a"}
+            tone="border-green-200 bg-green-50/50 dark:bg-green-950/20 text-green-900 dark:text-green-200"
+          />
+          <StatCard
+            label="In progress"
+            value={`${totalInProgress}d`}
+            sub="not yet completed"
+            tone="border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 text-blue-900 dark:text-blue-200"
+          />
+          <StatCard
+            label="Unplanned work"
+            value={`${totalUnplanned}d`}
+            sub={`${unplannedPct}% of all activity`}
+            tone="border-purple-200 bg-purple-50/50 dark:bg-purple-950/20 text-purple-900 dark:text-purple-200"
+          />
+          <StatCard
+            label="Delivered on plan"
+            value={`${deliveredPlanned}d`}
+            sub={`+ ${inProgPlanned}d in progress`}
+            tone="border-border bg-muted/30"
+          />
+          <StatCard
+            label="Cancelled (excluded)"
+            value={`${excludedCount}`}
+            sub={`${excludedSP} SP — Obsolete / Won't Do`}
+            tone="border-border bg-muted/30"
+          />
+        </div>
+
+        {/* Deviation narrative */}
+        <div className="rounded-lg bg-muted/30 border border-border p-3 text-xs leading-relaxed">
+          {deliveryPct != null ? (
+            <>
+              The team delivered <strong>{deliveredPlanned}d</strong> of <strong>{plannedInitial}d</strong> planned
+              ({deliveryPct}%){inProgPlanned > 0 && <> with <strong>{inProgPlanned}d</strong> still in progress</>}.
+            </>
+          ) : (
+            <>No initial plan is set, so planned-vs-delivered can't be measured — set one in the Versions tab.</>
+          )}{" "}
+          A further <strong>{totalUnplanned}d</strong> went to unplanned topics
+          ({deliveredUnplProd + inProgUnplProd}d on unplanned PROD items, {deliveredUnplNon + inProgUnplNon}d on non-PROD work),
+          i.e. <strong>{unplannedPct}%</strong> of all tracked activity this quarter.
+          {excludedCount > 0 && <> {excludedCount} ticket{excludedCount === 1 ? "" : "s"} marked Obsolete / Won't Do were excluded.</>}
+        </div>
+
+        {/* Per-bucket breakdowns */}
+        <BucketTable title="Planned topics" items={bucketRows(planned, true)} withPlan />
+        <BucketTable title="Unplanned PROD topics (delivered but not planned)" items={bucketRows(unplannedProd, false)} withPlan={false} />
+        <BucketTable title="Unplanned non-PROD topics (Jira work with no PROD link)" items={bucketRows(unplannedNonProd, false)} withPlan={false} />
+      </div>
+    </div>
+  );
+}
+
 // ── Plan vs Actuals comparison table ─────────────────────────────────────────
 
-function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocations, workAreas, quarter }) {
+function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocations, workAreas, quarter, daysPerSp = 1, jiraBaseUrl, teamId }) {
   const rows = useMemo(() => {
     if (!actuals) return [];
 
@@ -741,6 +990,23 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
       }
     });
 
+    // Role of this team on each work area / PROD (leading vs supporting)
+    const roleForWa = (wa) =>
+      wa.leading_team_id === teamId ? "leading"
+      : (wa.supporting_team_ids || []).includes(teamId) ? "supporting"
+      : null;
+    const roleByProd = {};   // prodKey → 'leading' | 'supporting'
+    const roleByWa   = {};   // workAreaId → 'leading' | 'supporting'
+    workAreas.forEach(wa => {
+      const role = roleForWa(wa);
+      roleByWa[wa.id] = role;
+      const prod = waToProd[wa.id];
+      if (role && prod?.prodKey) {
+        // leading wins over supporting if multiple work areas map to one PROD
+        if (role === "leading" || !roleByProd[prod.prodKey]) roleByProd[prod.prodKey] = role;
+      }
+    });
+
     // Sum days per prodKey for initial and current plan
     const sumByProd = (allocations) => {
       const map = {};
@@ -761,19 +1027,26 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
 
     // Build Jira actuals per groupKey
     const jiraByProd = {};
+    const FIELD = {
+      completed:  { sp: 'completedSP',  count: 'completedCount' },
+      inProgress: { sp: 'inProgressSP', count: 'inProgressCount' },
+      excluded:   { sp: 'excludedSP',   count: 'excludedCount' },
+    };
     const addJira = (byProd, field) => {
+      const f = FIELD[field];
       (byProd || []).forEach(p => {
         const key  = p.groupKey || p.prodKey || p.prodName || '__none__';
         const name = p.prodName || 'Not assigned to PROD';
-        if (!jiraByProd[key]) jiraByProd[key] = { prodKey: p.prodKey || null, prodName: name, isProd: !!p.isProd, completedSP: 0, inProgressSP: 0, completedCount: 0, inProgressCount: 0 };
+        if (!jiraByProd[key]) jiraByProd[key] = { prodKey: p.prodKey || null, prodName: name, isProd: !!p.isProd, completedSP: 0, inProgressSP: 0, excludedSP: 0, completedCount: 0, inProgressCount: 0, excludedCount: 0 };
         p.epics.forEach(e => {
-          jiraByProd[key][field === 'completed' ? 'completedSP' : 'inProgressSP']    += e.storyPoints;
-          jiraByProd[key][field === 'completed' ? 'completedCount' : 'inProgressCount'] += e.count;
+          jiraByProd[key][f.sp]    += e.storyPoints;
+          jiraByProd[key][f.count] += e.count;
         });
       });
     };
     addJira(actuals.completed.byProd, 'completed');
     addJira(actuals.inProgress.byProd, 'inProgress');
+    addJira(actuals.excluded?.byProd, 'excluded');
 
     // Merge all keys
     const allKeys = new Set([...Object.keys(initialByProd), ...Object.keys(currentByProd), ...Object.keys(jiraByProd)]);
@@ -792,30 +1065,40 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
       else if (inPlan)               category = 'planned';            // in initial plan + has PROD
       else                           category = 'unplanned';          // PROD in actuals but not planned
 
+      const role = key.startsWith('__wa:')
+        ? (roleByWa[key.slice(5)] ?? null)
+        : (roleByProd[key] ?? null);
+
       return {
         key,
         prodKey,
         prodName,
         category,
+        role,
         initialDays:    initialByProd[key]?.days  ?? null,
         currentDays:    currentByProd[key]?.days  ?? null,
         completedSP:    jira?.completedSP    ?? null,
         inProgressSP:   jira?.inProgressSP   ?? null,
+        excludedSP:     jira?.excludedSP     ?? null,
         completedCount: jira?.completedCount ?? 0,
         inProgressCount:jira?.inProgressCount ?? 0,
+        excludedCount:  jira?.excludedCount  ?? 0,
       };
     }).sort((a, b) => {
       const order = { planned: 0, 'unplanned': 1, 'epic-only': 2, 'planned-no-prod': 3 };
       if (order[a.category] !== order[b.category]) return order[a.category] - order[b.category];
       return (b.currentDays ?? 0) - (a.currentDays ?? 0);
     });
-  }, [actuals, initialPlan, members, quarterlyAllocations, workAreas, quarter]);
+  }, [actuals, initialPlan, members, quarterlyAllocations, workAreas, quarter, teamId]);
 
   if (rows.length === 0) return null;
 
   const hasInitial = rows.some(r => r.category === 'planned');
 
-  // Chart data — limit to top 15, 1 SP = 1 day
+  // SP → days conversion (per-team factor). Round to 1 decimal for display.
+  const spToDays = (sp) => Math.round((sp || 0) * daysPerSp * 10) / 10;
+
+  // Chart data — limit to top 15, story points converted to days via the team factor
   const chartData = rows
     .filter(r => r.category !== 'planned-no-prod')
     .filter(r => (r.initialDays ?? 0) + (r.currentDays ?? 0) + (r.completedSP ?? 0) + (r.inProgressSP ?? 0) > 0)
@@ -825,13 +1108,23 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
       fullName: r.prodName,
       planned: r.initialDays ?? 0,
       current: r.currentDays ?? 0,
-      done: r.completedSP ?? 0,
-      inProgress: r.inProgressSP ?? 0,
+      done: spToDays(r.completedSP),
+      inProgress: spToDays(r.inProgressSP),
       category: r.category,
     }));
 
   return (
     <div className="space-y-4">
+      <PlanDeliverySummary
+        rows={rows}
+        daysPerSp={daysPerSp}
+        jiraBaseUrl={jiraBaseUrl}
+        actuals={actuals}
+        hasInitial={hasInitial}
+        quarter={quarter}
+        teamName={actuals.team?.name ?? ""}
+      />
+
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Plan vs Actuals by PROD</p>
 
       {/* Bar chart */}
@@ -839,7 +1132,7 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
         <div className="rounded-lg border border-border bg-background p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold">Planned vs Delivered</p>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">1 SP = 1 day</span>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">1 SP = {daysPerSp} day{daysPerSp === 1 ? "" : "s"}</span>
           </div>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 56 }} barCategoryGap="25%">
@@ -918,7 +1211,7 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
                   <td className="py-2 px-3 max-w-[260px]">
                     <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
                       {row.prodKey && (
-                        <span className="font-mono text-[10px] text-muted-foreground shrink-0">{row.prodKey}</span>
+                        <JiraLink issueKey={row.prodKey} baseUrl={jiraBaseUrl} showIcon className="font-mono text-[10px] shrink-0" />
                       )}
                       <span className="font-medium truncate">{row.prodName}</span>
                       {categoryBadge}
@@ -961,7 +1254,7 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
 
 // ── Actuals tab ───────────────────────────────────────────────────────────────
 
-function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarterlyAllocations, workAreas = [] }) {
+function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarterlyAllocations, workAreas = [], daysPerSp = 1 }) {
   const [actuals, setActuals] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1094,21 +1387,7 @@ function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarte
               </div>
             </div>
 
-            {/* Comparison row */}
-            {plannedDays !== null && (actuals.completed.storyPoints > 0 || actuals.inProgress.storyPoints > 0) && (
-              <div className="rounded-lg border border-border bg-muted/20 p-3 text-xs space-y-1.5">
-                <p className="font-semibold text-muted-foreground uppercase tracking-wide">Plan vs Actuals</p>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span><span className="font-semibold">{plannedDays}d</span> planned (initial)</span>
-                  <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                  <span><span className="font-semibold text-green-700">{actuals.completed.storyPoints} SP</span> completed</span>
-                  <span className="text-muted-foreground">+</span>
-                  <span><span className="font-semibold text-blue-700">{actuals.inProgress.storyPoints} SP</span> in progress</span>
-                </div>
-              </div>
-            )}
-
-            {/* Full plan vs actuals comparison by PROD */}
+            {/* Full plan vs delivered summary + comparison by PROD */}
             <PlanVsActualsTable
               actuals={actuals}
               initialPlan={initialPlan}
@@ -1116,6 +1395,9 @@ function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarte
               quarterlyAllocations={quarterlyAllocations}
               workAreas={workAreas}
               quarter={quarter}
+              daysPerSp={daysPerSp}
+              jiraBaseUrl={actuals.jiraBaseUrl}
+              teamId={teamId}
             />
           </div>
         )}

@@ -22,6 +22,8 @@ Each team must have at least one member. Go to **Teams**, create your teams and 
 
 For Jira integration, set the **Jira Project Key** on the team (Teams → edit team → "Jira Project Key", e.g. `MOBILE`). This is used to pull actuals at the end of the quarter.
 
+Each team also has a **Working days per story point** value (Teams → edit team). This is the per-team factor used to convert delivered story points into days for the plan-vs-delivered comparison — because 1 SP is rarely exactly 1 person-day, and the ratio differs per team. It defaults to `1`. (A future enhancement will derive this automatically from BambooHR absence data ÷ delivered SP; for now it is set manually.)
+
 ### 2. Work items
 
 Work items (features, projects, epics) are managed under **Work Items**. Each work item can have:
@@ -38,9 +40,11 @@ The `prod_id` is the primary matching key between the capacity plan and Jira act
 
 ### 3. Jira configuration (optional)
 
-Set `JIRA_BASE_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN` in your `.env` file to enable Jira sync and actuals fetching.
+Set `JIRA_BASE_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN` in your `.env` file to enable Jira sync and actuals fetching. `JIRA_BASE_URL` is also used to make every Jira key in the app (PROD IDs, Epic keys, sync candidates) a clickable link that opens the issue in a new tab.
 
 The app automatically detects your Jira story points field by looking for common field names (`Story Points`, `Story point estimate`, etc.). You can override this with `JIRA_STORY_POINTS_FIELD` in `.env`.
+
+**Excluded statuses.** Tickets in a cancelled status — by default `Obsolete / Won't Do` plus common variants (`Won't Fix`, `Cancelled`, `Rejected`, `Duplicate`, `Declined`, `Abandoned`) — are counted as **neither delivered nor in progress**. They are reported separately as "Cancelled". Override the list with `JIRA_EXCLUDED_STATUSES` in `.env` (comma-separated status names, case-insensitive), e.g. `JIRA_EXCLUDED_STATUSES=Obsolete / Won't Do,Rejected`.
 
 ---
 
@@ -137,12 +141,26 @@ The panel fetches two sets of issues from Jira for the quarter's date range (e.g
 
 | Section | Logic |
 |---------|-------|
-| **Completed** | Issues with a completed status (Done, Closed, Resolved) |
+| **Completed** | Issues with a completed status (Done, Closed, Resolved, Released) |
 | **In Progress** | Issues started but not completed (excludes backlog/to-do) |
+| **Cancelled** | Issues in an excluded status (`Obsolete / Won't Do` etc.) — counted as neither delivered nor in progress |
+
+### Plan vs Delivered — summary
+
+At the top of the fetched actuals is a **days-based summary** (the unit mismatch between planned *days* and delivered *story points* is resolved using the team's Working-days-per-SP factor). It shows:
+
+- **Headline cards:** planned (initial vs current), delivered (done), in progress, unplanned work, delivered-on-plan, and cancelled count — all in days except the cancelled ticket count.
+- **Deviation narrative:** how much of the plan was delivered (%), how much effort went to unplanned topics (% of all activity), and how many tickets were excluded.
+- **Per-bucket breakdowns:**
+  - **Planned topics** — planned vs delivered vs in-progress days, with a **Leading**/**Supporting** tag showing the team's role on each.
+  - **Unplanned PROD topics** — PROD work delivered/in-progress that was not in the plan (also tagged Leading/Supporting where the team owns the work item).
+  - **Unplanned non-PROD topics** — Jira work with no PROD link.
+
+The summary is **exportable** via the **CSV** and **PDF** buttons in its header. PROD/Epic keys throughout are clickable and open the issue in Jira in a new tab.
 
 ### Visual comparison — bar chart
 
-The actuals panel shows a **bar chart** comparing plan vs delivery per PROD item. Story points are translated to days at **1 SP = 1 day** so all bars use the same unit:
+Below the summary, a **bar chart** compares plan vs delivery per PROD item. Story points are translated to days using the team's **Working days per story point** factor (shown as `1 SP = N days` on the chart) so all bars use the same unit:
 
 | Bar | Colour | Source |
 |-----|--------|--------|

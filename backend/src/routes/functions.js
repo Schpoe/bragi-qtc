@@ -377,11 +377,26 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
 
     const completedStatuses = new Set(['done', 'closed', 'resolved', 'released', 'complete', 'completed']);
     const ignoredStatuses   = new Set(['to do', 'backlog', 'open', 'new', 'todo']);
+    // Cancelled / abandoned work — counts as neither delivered nor in-progress.
+    // "Obsolete / Won't Do" is the real Jira status to ignore; the rest are common
+    // variants. Overridable via JIRA_EXCLUDED_STATUSES (comma-separated status names).
+    const defaultExcluded = [
+      "obsolete / won't do", 'obsolete / wont do',
+      "won't do", 'wont do', "won't fix", 'wont fix',
+      'obsolete', 'cancelled', 'canceled', 'rejected', 'duplicate', 'declined', 'abandoned',
+    ];
+    const excludedStatuses = new Set(
+      process.env.JIRA_EXCLUDED_STATUSES
+        ? process.env.JIRA_EXCLUDED_STATUSES.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+        : defaultExcluded
+    );
 
-    const completedIssues  = allIssues.filter(i => completedStatuses.has((i.fields?.status?.name || '').toLowerCase()));
+    const statusOf = (i) => (i.fields?.status?.name || '').toLowerCase();
+    const excludedIssues   = allIssues.filter(i => excludedStatuses.has(statusOf(i)));
+    const completedIssues  = allIssues.filter(i => !excludedStatuses.has(statusOf(i)) && completedStatuses.has(statusOf(i)));
     const inProgressIssues = allIssues.filter(i => {
-      const s = (i.fields?.status?.name || '').toLowerCase();
-      return !completedStatuses.has(s) && !ignoredStatuses.has(s);
+      const s = statusOf(i);
+      return !excludedStatuses.has(s) && !completedStatuses.has(s) && !ignoredStatuses.has(s);
     });
 
     const completedJql  = allJql;
@@ -409,6 +424,7 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
 
     const completed  = completedIssues.map(mapIssue);
     const inProgress = inProgressIssues.map(mapIssue);
+    const excluded   = excludedIssues.map(mapIssue);
 
     // Fetch unique epics to get their name, SP, and PROD parent
     const epicKeys = [...new Set(allIssues.map(getEpicKey).filter(Boolean))];
@@ -500,9 +516,11 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     res.json({
       data: {
         quarter,
-        team: { id: team.id, name: team.name, jira_project_key: project },
+        team: { id: team.id, name: team.name, jira_project_key: project, days_per_sp: team.days_per_sp ?? 1 },
         dateRange,
         storyPointsField: spField,
+        jiraBaseUrl: process.env.JIRA_BASE_URL || null,
+        excludedStatuses: [...excludedStatuses],
         jql: { completed: completedJql, inProgress: inProgressJql },
         epicDetails,
         resolvedProdKeys,
@@ -518,12 +536,29 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
           issues: inProgress,
           byProd: buildBreakdown(inProgress),
         },
+        excluded: {
+          count: excluded.length,
+          storyPoints: excluded.reduce((sum, i) => sum + i.storyPoints, 0),
+          issues: excluded,
+          byProd: buildBreakdown(excluded),
+        },
       },
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// Expose the Jira base URL (and configured flag) so the frontend can build
+// clickable links to issues without duplicating JIRA_BASE_URL in a build-time var.
+router.post('/getJiraConfig', requireAuth, async (_req, res) => {
+  res.json({
+    data: {
+      jiraBaseUrl: process.env.JIRA_BASE_URL || null,
+      configured: jira.isConfigured(),
+    },
+  });
 });
 
 module.exports = router;
