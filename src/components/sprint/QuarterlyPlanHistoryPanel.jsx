@@ -727,7 +727,7 @@ function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, hasInitial
 
   const planned          = rows.filter(r => r.category === "planned" || r.category === "planned-no-prod");
   const unplannedProd    = rows.filter(r => r.category === "unplanned");
-  const unplannedNonProd = rows.filter(r => r.category === "epic-only");
+  const unplannedNonProd = rows.filter(r => r.category === "epic-only" || r.category === "unassigned");
 
   const plannedInitial = sum(planned, r => r.initialDays);
   const plannedCurrent = sum(planned, r => r.currentDays);
@@ -1037,7 +1037,7 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
       (byProd || []).forEach(p => {
         const key  = p.groupKey || p.prodKey || p.prodName || '__none__';
         const name = p.prodName || 'Not assigned to PROD';
-        if (!jiraByProd[key]) jiraByProd[key] = { prodKey: p.prodKey || null, prodName: name, isProd: !!p.isProd, completedSP: 0, inProgressSP: 0, excludedSP: 0, completedCount: 0, inProgressCount: 0, excludedCount: 0 };
+        if (!jiraByProd[key]) jiraByProd[key] = { prodKey: p.prodKey || null, prodName: name, isProd: !!p.isProd, isEpic: !!p.isEpic, completedSP: 0, inProgressSP: 0, excludedSP: 0, completedCount: 0, inProgressCount: 0, excludedCount: 0 };
         p.epics.forEach(e => {
           jiraByProd[key][f.sp]    += e.storyPoints;
           jiraByProd[key][f.count] += e.count;
@@ -1054,16 +1054,20 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
     return Array.from(allKeys).map(key => {
       const inPlan    = initialByProd[key] != null;
       const jira      = jiraByProd[key];
-      const isProd    = !key.startsWith('__') && (jira?.isProd !== false);
+      // A real PROD group: a plan-only prod key (key not "__…"), or a Jira group flagged isProd.
+      const isProd    = key.startsWith('__wa:') ? false
+                      : jira ? !!jira.isProd
+                      : !key.startsWith('__');
+      const isEpicGroup = !!jira?.isEpic;
       const prodKey   = (!key.startsWith('__') ? key : null) || jira?.prodKey || null;
       const prodName  = initialByProd[key]?.prodName || currentByProd[key]?.prodName || jira?.prodName || key;
 
       // Category determines visual treatment
       let category;
       if (key.startsWith('__wa:'))   category = 'planned-no-prod';   // in plan, no PROD link
-      else if (!isProd)              category = 'epic-only';          // Jira Epic without PROD
-      else if (inPlan)               category = 'planned';            // in initial plan + has PROD
-      else                           category = 'unplanned';          // PROD in actuals but not planned
+      else if (isProd)               category = inPlan ? 'planned' : 'unplanned';
+      else if (isEpicGroup)          category = 'epic-only';          // real Jira Epic without a PROD
+      else                           category = 'unassigned';         // loose work (no epic / non-epic parent)
 
       const role = key.startsWith('__wa:')
         ? (roleByWa[key.slice(5)] ?? null)
@@ -1085,7 +1089,7 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
         excludedCount:  jira?.excludedCount  ?? 0,
       };
     }).sort((a, b) => {
-      const order = { planned: 0, 'unplanned': 1, 'epic-only': 2, 'planned-no-prod': 3 };
+      const order = { planned: 0, 'unplanned': 1, 'epic-only': 2, 'unassigned': 3, 'planned-no-prod': 4 };
       if (order[a.category] !== order[b.category]) return order[a.category] - order[b.category];
       return (b.currentDays ?? 0) - (a.currentDays ?? 0);
     });
@@ -1204,6 +1208,7 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
                 'planned':          <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Planned</span>,
                 'unplanned':        <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Unplanned</span>,
                 'epic-only':        <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Epic</span>,
+                'unassigned':       <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-muted text-muted-foreground">No epic</span>,
                 'planned-no-prod':  <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-muted text-muted-foreground">No PROD link</span>,
               }[row.category];
               return (

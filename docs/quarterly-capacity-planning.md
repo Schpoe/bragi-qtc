@@ -181,8 +181,9 @@ Below the chart, a table groups all work by PROD item. Each row is labelled with
 |-------|---------|
 | **Planned** (green) | In the initial quarterly plan, has a PROD link |
 | **Unplanned** (amber) | Appeared in Jira actuals but was not planned |
-| **Epic** (blue) | Jira Epic with no parent PROD item |
-| **No PROD link** (gray) | In the plan but work item has no `prod_id` set |
+| **Epic** (blue) | A genuine Jira **Epic** with no parent PROD item (only real epics get this badge — a story/sub-task parent does not) |
+| **No epic** (gray) | Loose Jira work with no epic at all — grouped into a single "No epic / unassigned" row, not a per-ticket topic |
+| **No PROD link** (gray) | In the plan but the work item has no `prod_id` set (e.g. a capacity bucket like "Time Off") |
 
 Both the PROD ID (e.g. `PROD-123`) and the PROD title are shown for each row.
 

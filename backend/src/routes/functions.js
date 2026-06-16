@@ -462,6 +462,9 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
         if (!epic) return;
         let prodKey = null, prodName = null;
         const links = epic.fields?.issuelinks || [];
+        // Is the thing we grouped under actually an Epic? (A story/sub-task parent is not.)
+        const it = epic.fields?.issuetype;
+        const isEpic = it?.name === 'Epic' || (typeof it?.hierarchyLevel === 'number' && it.hierarchyLevel >= 1);
 
         // 1) Scan ALL issue links (both directions) for a linked issue that lives in a
         //    PROD project. Prefer an "implements"-style relationship when several match.
@@ -490,6 +493,7 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
           storyPoints: getSP(epic),
           prodKey,
           prodName,
+          isEpic,
           // diagnostics: links seen on epics that did NOT resolve to a PROD
           links: prodKey ? undefined : links.map(l => ({
             type: l.type?.name || null,
@@ -502,29 +506,36 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
       await Promise.all(epicKeys.slice(i, i + EPIC_CONCURRENCY).map(resolveEpic));
     }
 
-    // Epics that ended up with no PROD link — surfaced so linkage gaps can be diagnosed.
+    // Genuine epics that ended up with no PROD link — surfaced so linkage gaps can be diagnosed.
     const unresolvedEpics = Object.values(epicDetails)
-      .filter(e => !e.prodKey)
+      .filter(e => !e.prodKey && e.isEpic)
       .map(e => ({ key: e.key, name: e.name, links: e.links || [] }));
 
-    // Build breakdown: group by PROD → Epic
-    // SP is taken from the Epic (not individual issues) since that's where it's stored
+    const UNASSIGNED = 'No epic / unassigned';
+
+    // Build breakdown: group by PROD → Epic.
+    // Grouping rules:
+    //   - has a PROD link        → group under the PROD
+    //   - parent is a real Epic  → group under that Epic
+    //   - otherwise (no epic, or "parent" is a story/sub-task) → "unassigned" catch-all
     const buildBreakdown = (issues) => {
       const groups = {};
       issues.forEach(issue => {
         const epic     = issue.epicKey ? epicDetails[issue.epicKey] : null;
-        const epicKey  = issue.epicKey || null;
-        const epicName = epic?.name || issue.epicName || null;
         const prodKey  = epic?.prodKey  || null;
         const prodName = epic?.prodName || null;
-        const gKey     = prodKey || epicKey || '__none__';
+        const realEpic = !prodKey && !!epic?.isEpic;       // genuine epic, not a story parent
+        const epicKey  = (prodKey || realEpic) ? (issue.epicKey || null) : null;
+        const epicName = epic?.name || issue.epicName || null;
+        const gKey     = prodKey || (realEpic ? epicKey : null) || '__none__';
 
         if (!groups[gKey]) {
           groups[gKey] = {
             groupKey: gKey,
             isProd: !!prodKey,
+            isEpic: realEpic,
             prodKey,
-            prodName: prodName || (epicKey && !prodKey ? epicName : null) || 'Not assigned to PROD',
+            prodName: prodName || (realEpic ? epicName : null) || UNASSIGNED,
             epics: {},
           };
         }
@@ -532,7 +543,7 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
         if (!groups[gKey].epics[eKey]) {
           groups[gKey].epics[eKey] = {
             epicKey,
-            epicName: epicName || 'No Epic',
+            epicName: realEpic ? (epicName || 'Epic') : 'No epic',
             count: 0,
             storyPoints: 0,
           };
@@ -544,8 +555,8 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
       return Object.values(groups)
         .map(g => ({ ...g, epics: Object.values(g.epics).sort((a, b) => b.storyPoints - a.storyPoints) }))
         .sort((a, b) => {
-          if (a.prodName === 'Not assigned to PROD') return 1;
-          if (b.prodName === 'Not assigned to PROD') return -1;
+          if (a.prodName === UNASSIGNED) return 1;
+          if (b.prodName === UNASSIGNED) return -1;
           return (a.prodName || '').localeCompare(b.prodName || '');
         });
     };
