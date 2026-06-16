@@ -3,7 +3,7 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { canManageAllocations, isAdmin } from "@/lib/permissions";
+import { canManageAllocations } from "@/lib/permissions";
 import JiraLink from "@/components/shared/JiraLink";
 import { summarizeComparison } from "@/lib/quarterly-comparison";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +18,7 @@ import { History, ChevronDown, ChevronRight, ArrowRight, TrendingUp, TrendingDow
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
