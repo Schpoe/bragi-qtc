@@ -53,6 +53,8 @@ The app will be available at [http://localhost](http://localhost) (or the port s
 
 On first boot — and on every `up` — the database schema is applied automatically (`prisma db push`) and the admin user is seeded.
 
+All three services (`db`, `backend`, `frontend`) run with `restart: unless-stopped`, so the stack comes back automatically after a host reboot or crash — until you explicitly stop it.
+
 ## Deploying updates
 
 ```bash
