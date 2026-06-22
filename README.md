@@ -27,6 +27,7 @@ See **[docs/quarterly-capacity-planning.md](docs/quarterly-capacity-planning.md)
 
 1. Clone the repository
 2. Create a `.env` file from the example:
+
    ```bash
    cp .env.example .env
    ```
@@ -34,6 +35,9 @@ See **[docs/quarterly-capacity-planning.md](docs/quarterly-capacity-planning.md)
    - `DB_PASSWORD` — a strong random password for PostgreSQL
    - `JWT_SECRET` — a random string of at least 32 characters
    - `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` — initial admin credentials
+   - `APP_URL` — public URL the app is served from (e.g. `https://qtc.example.com`). Used in password-reset emails. Defaults to `http://localhost:3003` — **must be set correctly in production** or reset links will not work.
+   - `FRONTEND_URL` — same public URL, used for CORS. Set to the same value as `APP_URL`. Defaults to `http://localhost`.
+   - `PORT` — host port the frontend container is exposed on (default: `3003`).
    - **Jira integration (optional but needed for actuals & links):**
      - `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` — connection + auth. `JIRA_BASE_URL` also powers the clickable issue links.
      - `JIRA_STORY_POINTS_FIELD` — story-points custom field ID (default: auto-detected).
@@ -43,8 +47,13 @@ See **[docs/quarterly-capacity-planning.md](docs/quarterly-capacity-planning.md)
    - **BambooHR (optional — quarterly availability sync):**
      - `BAMBOOHR_SUBDOMAIN` — your BambooHR company domain.
      - `BAMBOOHR_API_KEY` — a BambooHR API key (used server-side).
+   - **SMTP (optional — password reset emails):**
+     - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` — outbound mail server credentials.
+     - `SMTP_FROM` — the From address on reset emails (default: `noreply@example.com`).
+     - If SMTP is not configured, reset links are printed to the backend log instead of emailed.
 
 4. Start the app:
+
    ```bash
    docker compose up -d --build
    ```
@@ -66,12 +75,14 @@ Schema changes (new fields or models) are applied automatically on startup — n
 ## Development
 
 Frontend (Vite dev server):
+
 ```bash
 npm install
 npm run dev
 ```
 
 Backend:
+
 ```bash
 cd backend
 npm install
