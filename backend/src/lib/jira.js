@@ -19,7 +19,7 @@ function isConfigured() {
 // 429 from failing the whole actuals fetch.
 async function fetchWithRetry(url, options = {}, retries = 4) {
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(url, options);
+    const res = await fetch(url, { ...options, signal: AbortSignal.timeout(30_000) });
     if ((res.status === 429 || res.status === 503) && attempt < retries) {
       const ra = parseInt(res.headers.get('retry-after') || '', 10);
       const waitMs = (Number.isNaN(ra) ? Math.min(2 ** attempt, 8) : Math.min(ra, 30)) * 1000;
@@ -48,7 +48,7 @@ async function fetchIssue(issueKey) {
 
 async function fetchFieldMap() {
   const url = `${process.env.JIRA_BASE_URL}/rest/api/3/field`;
-  const res = await fetch(url, { headers: getJiraHeaders() });
+  const res = await fetch(url, { headers: getJiraHeaders(), signal: AbortSignal.timeout(30_000) });
   if (!res.ok) throw new Error('Failed to fetch Jira fields');
   const fields = await res.json();
   const map = {};

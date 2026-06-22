@@ -32,7 +32,7 @@ function countWeekdays(start, end) {
 
 // Employee directory → [{ id, name, email }].
 async function fetchDirectory() {
-  const res = await fetch(`${baseUrl()}/v1/employees/directory`, { headers: getHeaders() });
+  const res = await fetch(`${baseUrl()}/v1/employees/directory`, { headers: getHeaders(), signal: AbortSignal.timeout(30_000) });
   if (!res.ok) {
     throw Object.assign(new Error(`BambooHR directory failed (HTTP ${res.status})`), { status: res.status });
   }
@@ -48,7 +48,7 @@ async function fetchDirectory() {
 // Returns { [employeeId]: offWeekdayDays }. Handles partial days via per-date amounts.
 async function fetchApprovedTimeOffDays(start, end) {
   const url = `${baseUrl()}/v1/time_off/requests?start=${start}&end=${end}&status=approved`;
-  const res = await fetch(url, { headers: getHeaders() });
+  const res = await fetch(url, { headers: getHeaders(), signal: AbortSignal.timeout(30_000) });
   if (!res.ok) {
     throw Object.assign(new Error(`BambooHR time-off failed (HTTP ${res.status})`), { status: res.status });
   }

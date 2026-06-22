@@ -7,6 +7,13 @@ if (missing.length) {
   process.exit(1);
 }
 
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+});
+
 const express = require('express');
 const cors = require('cors');
 
@@ -49,6 +56,12 @@ app.use('/api/backup', backupRoutes);
 app.use('/api/team-member-capacities', teamMemberCapacityRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
+app.use((err, req, res, next) => {
+  console.error('[express error]', err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ message: 'Internal server error' });
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
