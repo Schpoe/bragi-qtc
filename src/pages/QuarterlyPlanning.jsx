@@ -323,7 +323,7 @@ export default function QuarterlyPlanning() {
                       <div key={r.memberId} className="flex items-center justify-between rounded-md px-3 py-2 text-sm bg-amber-500/10 border border-amber-500/30">
                         <span className="font-medium">{r.memberName}</span>
                         <span className="ml-4 text-xs text-amber-600 dark:text-amber-400">
-                          {r.balance} days unused · renews in {r.daysUntilRenewal} days
+                          {r.balance} days unused · carryover {new Date(r.renewalDate).toLocaleDateString()} ({r.daysUntilRenewal} days) · {(r.balance / r.daysUntilRenewal).toFixed(2)} days/day
                         </span>
                       </div>
                     ))}
