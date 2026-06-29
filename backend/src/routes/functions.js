@@ -763,10 +763,9 @@ router.post('/getVacationRisk', async (req, res) => {
       if (!renewalDate) return;
       const renewal = new Date(renewalDate);
       const daysUntilRenewal = Math.ceil((renewal - today) / (1000 * 60 * 60 * 24));
-      let level = null;
-      if (balance > 5 && daysUntilRenewal <= 30) level = 'high';
-      else if (balance > 3 && daysUntilRenewal <= 60) level = 'medium';
-      if (level) risks.push({ memberId: member.id, memberName: member.name, balance, renewalDate, daysUntilRenewal, policyName, level });
+      if (balance >= 10 && daysUntilRenewal <= 90) {
+        risks.push({ memberId: member.id, memberName: member.name, balance, renewalDate, daysUntilRenewal, policyName });
+      }
     });
     risks.sort((a, b) => (a.level === 'high' ? -1 : 1) - (b.level === 'high' ? -1 : 1));
     res.json({ data: { risks } });
