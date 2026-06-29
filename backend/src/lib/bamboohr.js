@@ -91,7 +91,7 @@ async function fetchVacationBalances(bamboohrIds) {
     if (vacation) {
       map[id] = {
         balance: parseFloat(vacation.balance) || 0,
-        renewalDate: vacation.accrualDate || null,
+        renewalDate: vacation.carryOverDate || null,
         policyName: vacation.name,
       };
     }
