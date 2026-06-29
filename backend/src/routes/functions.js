@@ -754,6 +754,7 @@ router.post('/getVacationRisk', async (req, res) => {
     const bamboohrIds = members.map(m => m.bamboohr_id).filter(Boolean);
     if (bamboohrIds.length === 0) return res.json({ data: { risks: [] } });
     const balances = await bamboohr.fetchVacationBalances(bamboohrIds);
+    console.log('[vacationRisk] balances:', JSON.stringify(balances, null, 2));
     const today = new Date();
     const risks = [];
     members.forEach(member => {
@@ -767,7 +768,7 @@ router.post('/getVacationRisk', async (req, res) => {
         risks.push({ memberId: member.id, memberName: member.name, balance, renewalDate, daysUntilRenewal, policyName });
       }
     });
-    risks.sort((a, b) => (a.level === 'high' ? -1 : 1) - (b.level === 'high' ? -1 : 1));
+    risks.sort((a, b) => b.balance - a.balance);
     res.json({ data: { risks } });
   } catch (err) {
     res.status(500).json({ error: err.message });
