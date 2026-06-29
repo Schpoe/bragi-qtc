@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useSelectedQuarter, useSelectedTeam } from "@/lib/useSelectedQuarter";
 import { useQuarters } from "@/lib/useQuarters";
-import { useBambooHrConfig } from "@/hooks/useBambooHr";
+import { useBambooHrConfig, useVacationRisk } from "@/hooks/useBambooHr";
 import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import FilterBar from "../components/shared/FilterBar";
@@ -67,6 +67,8 @@ export default function QuarterlyPlanning() {
 
   const isViewingAllTeams = !selectedTeamId || selectedTeamId === "all";
   const effectiveTeamId = selectedTeamId && selectedTeamId !== "all" ? selectedTeamId : "";
+
+  const { risks: vacationRisks } = useVacationRisk(effectiveTeamId, bambooConfigured && !isViewingAllTeams);
 
   const createQuarterlyAllocation = useMutation({
     mutationFn: (data) => bragiQTC.entities.QuarterlyAllocation.create(data),
@@ -310,6 +312,25 @@ export default function QuarterlyPlanning() {
                 />
               </CardContent>
             </Card>
+            {bambooConfigured && !isViewingAllTeams && vacationRisks.length > 0 && (
+              <Card className="border-amber-500/40">
+                <CardHeader className="pb-3 border-b border-amber-500/20 bg-amber-500/5">
+                  <CardTitle className="text-base font-bold text-amber-700 dark:text-amber-400">Vacation Balance Risk</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="space-y-2">
+                    {vacationRisks.map(r => (
+                      <div key={r.memberId} className={`flex items-center justify-between rounded-md px-3 py-2 text-sm ${r.level === 'high' ? 'bg-red-500/10 border border-red-500/30' : 'bg-amber-500/10 border border-amber-500/30'}`}>
+                        <span className="font-medium">{r.memberName}</span>
+                        <span className={`ml-4 text-xs ${r.level === 'high' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                          {r.balance} days unused · renews in {r.daysUntilRenewal} days
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <Card className="border-border/60">
               <CardHeader className="pb-3 border-b">
                 <CardTitle className="text-base font-bold text-foreground">Capacity by Topic — {selectedQuarter}</CardTitle>

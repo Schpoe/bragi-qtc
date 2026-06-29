@@ -741,4 +741,38 @@ router.post('/syncBambooHrAvailability', requireAuth, async (req, res) => {
   }
 });
 
+
+router.post('/getVacationRisk', async (req, res) => {
+  if (!bamboohr.isConfigured()) return res.json({ data: { risks: [] } });
+  const { teamId } = req.body;
+  if (!teamId) return res.status(400).json({ error: 'teamId required' });
+  try {
+    const members = await prisma.teamMember.findMany({
+      where: { team_id: teamId, bamboohr_id: { not: null } },
+      select: { id: true, name: true, bamboohr_id: true },
+    });
+    const bamboohrIds = members.map(m => m.bamboohr_id).filter(Boolean);
+    if (bamboohrIds.length === 0) return res.json({ data: { risks: [] } });
+    const balances = await bamboohr.fetchVacationBalances(bamboohrIds);
+    const today = new Date();
+    const risks = [];
+    members.forEach(member => {
+      const bal = balances[member.bamboohr_id];
+      if (!bal) return;
+      const { balance, renewalDate, policyName } = bal;
+      if (!renewalDate) return;
+      const renewal = new Date(renewalDate);
+      const daysUntilRenewal = Math.ceil((renewal - today) / (1000 * 60 * 60 * 24));
+      let level = null;
+      if (balance > 5 && daysUntilRenewal <= 30) level = 'high';
+      else if (balance > 3 && daysUntilRenewal <= 60) level = 'medium';
+      if (level) risks.push({ memberId: member.id, memberName: member.name, balance, renewalDate, daysUntilRenewal, policyName, level });
+    });
+    risks.sort((a, b) => (a.level === 'high' ? -1 : 1) - (b.level === 'high' ? -1 : 1));
+    res.json({ data: { risks } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

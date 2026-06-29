@@ -70,4 +70,33 @@ async function fetchApprovedTimeOffDays(start, end) {
   return map;
 }
 
-module.exports = { isConfigured, countWeekdays, fetchDirectory, fetchApprovedTimeOffDays };
+
+async function fetchVacationBalances(bamboohrIds) {
+  const results = await Promise.allSettled(
+    bamboohrIds.map(id =>
+      fetch(`${baseUrl()}/v1/employees/${id}/timeOffPolicies`, { headers: getHeaders(), signal: AbortSignal.timeout(30_000) })
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json().then(policies => ({ id, policies }));
+        })
+    )
+  );
+  const map = {};
+  results.forEach(r => {
+    if (r.status !== 'fulfilled') return;
+    const { id, policies } = r.value;
+    const vacation = (Array.isArray(policies) ? policies : []).find(p =>
+      /vacation|annual leave|holiday/i.test(p.name || '')
+    );
+    if (vacation) {
+      map[id] = {
+        balance: parseFloat(vacation.balance) || 0,
+        renewalDate: vacation.accrualDate || null,
+        policyName: vacation.name,
+      };
+    }
+  });
+  return map;
+}
+
+module.exports = { isConfigured, countWeekdays, fetchDirectory, fetchApprovedTimeOffDays, fetchVacationBalances };

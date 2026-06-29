@@ -22,3 +22,14 @@ export function useBambooHrDirectory(enabled = true) {
   });
   return { employees: data?.data?.employees ?? [], isLoading, error };
 }
+
+export function useVacationRisk(teamId, enabled = true) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['vacationRisk', teamId],
+    queryFn: () => bragiQTC.functions.invoke('getVacationRisk', { teamId }),
+    enabled: enabled && !!teamId,
+    staleTime: 1000 * 60 * 15,
+    retry: false,
+  });
+  return { risks: data?.data?.risks ?? [], isLoading };
+}
