@@ -1,9 +1,9 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useState } from "react";
 import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { canManageAllocations, isTeamManager } from "@/lib/permissions";
-import { CalendarRange, RefreshCw } from "lucide-react";
+import { CalendarRange, RefreshCw, ArrowRightLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +15,7 @@ import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import FilterBar from "../components/shared/FilterBar";
 import QuarterlyAllocationTable from "../components/sprint/QuarterlyAllocationTable";
+import MovePlanDialog from "../components/sprint/MovePlanDialog";
 import QuarterlyPlanHistoryPanel from "../components/sprint/QuarterlyPlanHistoryPanel";
 import QuarterlyTopicBreakdown from "../components/dashboard/QuarterlyTopicBreakdown";
 
@@ -178,6 +179,23 @@ export default function QuarterlyPlanning() {
     },
   });
 
+  const [movePlanOpen, setMovePlanOpen] = useState(false);
+  const [moveError, setMoveError] = useState(null);
+  const movePlan = useMutation({
+    mutationFn: ({ mode, toQuarter }) =>
+      bragiQTC.functions.invoke('moveQuarterlyPlan', { teamId: effectiveTeamId, fromQuarter: selectedQuarter, toQuarter, mode }),
+    onSuccess: (_res, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["workAreaSelections"] });
+      queryClient.invalidateQueries({ queryKey: ["quarterlyAllocations"] });
+      queryClient.invalidateQueries({ queryKey: ["teamMemberCapacities", selectedQuarter] });
+      queryClient.invalidateQueries({ queryKey: ["teamMemberCapacities", vars.toQuarter] });
+      setMovePlanOpen(false);
+      setMoveError(null);
+      if (vars.mode === 'move') setSelectedQuarter(vars.toQuarter);
+    },
+    onError: (err) => setMoveError(err.message || 'Failed to move plan'),
+  });
+
   const quarterlyAllocationTimeoutRef = useRef({});
 
   const handleQuarterlyAllocationChange = (data) => {
@@ -264,6 +282,25 @@ export default function QuarterlyPlanning() {
         teams={teams}
         quarters={quarters}
         showTeamFilter={true}
+      />
+
+      {!isViewingAllTeams && canManageAllocations(user, effectiveTeamId) && (
+        <div className="mb-4 flex justify-end">
+          <Button variant="outline" size="sm" onClick={() => { setMoveError(null); setMovePlanOpen(true); }}>
+            <ArrowRightLeft className="w-4 h-4 mr-2" /> Move / copy plan
+          </Button>
+        </div>
+      )}
+
+      <MovePlanDialog
+        open={movePlanOpen}
+        onOpenChange={(o) => { setMovePlanOpen(o); if (!o) setMoveError(null); }}
+        teamName={teams.find(t => t.id === effectiveTeamId)?.name ?? ""}
+        fromQuarter={selectedQuarter}
+        quarters={quarters}
+        onConfirm={({ mode, toQuarter }) => movePlan.mutate({ mode, toQuarter })}
+        pending={movePlan.isPending}
+        error={moveError}
       />
 
       <div className="mb-6">

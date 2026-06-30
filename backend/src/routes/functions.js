@@ -345,6 +345,78 @@ router.post('/revertQuarterlyPlanSnapshot', requireAuth, async (req, res) => {
   }
 });
 
+// Move or copy a team's plan (allocations + capacity + column selection) between quarters.
+router.post('/moveQuarterlyPlan', requireAuth, async (req, res) => {
+  try {
+    const { teamId, fromQuarter, toQuarter, mode } = req.body;
+    if (!teamId || !fromQuarter || !toQuarter) {
+      return res.status(400).json({ error: 'teamId, fromQuarter and toQuarter are required' });
+    }
+    if (fromQuarter === toQuarter) {
+      return res.status(400).json({ error: 'Source and target quarter must differ' });
+    }
+    if (mode !== 'move' && mode !== 'copy') {
+      return res.status(400).json({ error: 'mode must be "move" or "copy"' });
+    }
+
+    const user = req.user;
+    const isAdmin = user.role === 'admin';
+    const isManager = user.role === 'team_manager' && (user.managed_team_ids || []).includes(teamId);
+    if (!isAdmin && !isManager) {
+      return res.status(403).json({ error: 'Not authorized to move this team\'s plan' });
+    }
+
+    const teamMembers = await prisma.teamMember.findMany({ where: { team_id: teamId }, select: { id: true } });
+    const memberIds = teamMembers.map(m => m.id);
+
+    // Collision guard — refuse if the target quarter already holds a plan for this team.
+    const [targetAllocations, targetCapacities, targetSelection] = await Promise.all([
+      memberIds.length ? prisma.quarterlyAllocation.count({ where: { quarter: toQuarter, team_member_id: { in: memberIds } } }) : 0,
+      memberIds.length ? prisma.teamMemberCapacity.count({ where: { quarter: toQuarter, team_member_id: { in: memberIds } } }) : 0,
+      prisma.quarterlyWorkAreaSelection.count({ where: { quarter: toQuarter, team_id: teamId } }),
+    ]);
+    if (targetAllocations + targetCapacities + targetSelection > 0) {
+      return res.status(409).json({ error: `Target quarter "${toQuarter}" already has a plan for this team. Clear it first or choose another quarter.` });
+    }
+
+    const counts = await prisma.$transaction(async (tx) => {
+      if (mode === 'move') {
+        const a = memberIds.length
+          ? await tx.quarterlyAllocation.updateMany({ where: { quarter: fromQuarter, team_member_id: { in: memberIds } }, data: { quarter: toQuarter } })
+          : { count: 0 };
+        const c = memberIds.length
+          ? await tx.teamMemberCapacity.updateMany({ where: { quarter: fromQuarter, team_member_id: { in: memberIds } }, data: { quarter: toQuarter } })
+          : { count: 0 };
+        const sel = await tx.quarterlyWorkAreaSelection.updateMany({ where: { quarter: fromQuarter, team_id: teamId }, data: { quarter: toQuarter } });
+        return { allocations: a.count, capacities: c.count, selections: sel.count };
+      }
+      // copy — duplicate source rows under the target quarter, leaving the source intact
+      const srcAllocations = memberIds.length
+        ? await tx.quarterlyAllocation.findMany({ where: { quarter: fromQuarter, team_member_id: { in: memberIds } } })
+        : [];
+      for (const a of srcAllocations) {
+        await tx.quarterlyAllocation.create({ data: { quarter: toQuarter, team_member_id: a.team_member_id, work_area_id: a.work_area_id, days: a.days } });
+      }
+      const srcCapacities = memberIds.length
+        ? await tx.teamMemberCapacity.findMany({ where: { quarter: fromQuarter, team_member_id: { in: memberIds } } })
+        : [];
+      for (const c of srcCapacities) {
+        await tx.teamMemberCapacity.create({ data: { quarter: toQuarter, team_member_id: c.team_member_id, working_days: c.working_days } });
+      }
+      const srcSelections = await tx.quarterlyWorkAreaSelection.findMany({ where: { quarter: fromQuarter, team_id: teamId } });
+      for (const s of srcSelections) {
+        await tx.quarterlyWorkAreaSelection.create({ data: { quarter: toQuarter, team_id: teamId, work_area_ids: s.work_area_ids, column_order: s.column_order } });
+      }
+      return { allocations: srcAllocations.length, capacities: srcCapacities.length, selections: srcSelections.length };
+    });
+
+    res.json({ data: { success: true, mode, ...counts } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Fetch quarterly Jira actuals for a team (completed + in-progress issues)
 router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
   try {
