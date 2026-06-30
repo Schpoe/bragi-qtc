@@ -147,6 +147,37 @@ export default function QuarterlyPlanning() {
     },
   });
 
+  // Persist column order per team+quarter, with optimistic cache update for instant drag feedback.
+  const updateColumnOrder = useMutation({
+    mutationFn: async ({ teamId, quarter, orderedIds }) => {
+      const existing = workAreaSelections.find(s => s.team_id === teamId && s.quarter === quarter);
+      if (existing) {
+        return bragiQTC.entities.QuarterlyWorkAreaSelection.update(existing.id, { column_order: orderedIds });
+      }
+      return bragiQTC.entities.QuarterlyWorkAreaSelection.create({ team_id: teamId, quarter, work_area_ids: orderedIds, column_order: orderedIds });
+    },
+    onMutate: async ({ teamId, quarter, orderedIds }) => {
+      await queryClient.cancelQueries({ queryKey: ["workAreaSelections"] });
+      const prev = queryClient.getQueryData(["workAreaSelections"]);
+      queryClient.setQueryData(["workAreaSelections"], (old = []) => {
+        const idx = old.findIndex(s => s.team_id === teamId && s.quarter === quarter);
+        if (idx === -1) {
+          return [...old, { id: `optimistic-${teamId}-${quarter}`, team_id: teamId, quarter, work_area_ids: orderedIds, column_order: orderedIds }];
+        }
+        const next = [...old];
+        next[idx] = { ...next[idx], column_order: orderedIds };
+        return next;
+      });
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["workAreaSelections"], ctx.prev);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["workAreaSelections"] });
+    },
+  });
+
   const quarterlyAllocationTimeoutRef = useRef({});
 
   const handleQuarterlyAllocationChange = (data) => {
@@ -314,6 +345,8 @@ export default function QuarterlyPlanning() {
                   onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: effectiveTeamId, quarter: selectedQuarter, workAreaIds })}
                   initialSelectedWorkAreaIds={manuallySelectedIds.size > 0 ? manuallySelectedIds : workAreasWithAllocations}
                   vacationByMember={vacationByMember}
+                  columnOrder={currentSelection?.column_order ?? []}
+                  onColumnReorder={(orderedIds) => updateColumnOrder.mutate({ teamId: effectiveTeamId, quarter: selectedQuarter, orderedIds })}
                 />
               </CardContent>
             </Card>

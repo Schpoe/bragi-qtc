@@ -46,6 +46,17 @@ function VacationBadge({ info }) {
   );
 }
 
+// Stable sort of work areas by their index in a saved column-order array.
+// Ids not present keep their natural position (sorted to the end, original order).
+function sortByOrder(list, order) {
+  if (!order || order.length === 0) return list;
+  const idx = (id) => {
+    const i = order.indexOf(id);
+    return i === -1 ? Number.MAX_SAFE_INTEGER : i;
+  };
+  return [...list].sort((a, b) => idx(a.id) - idx(b.id));
+}
+
 export default function QuarterlyAllocationTable({
   members,
   workAreas,
@@ -55,7 +66,9 @@ export default function QuarterlyAllocationTable({
   selectedTeamId,
   onSelectionChange,
   initialSelectedWorkAreaIds = new Set(),
-  vacationByMember = {}
+  vacationByMember = {},
+  columnOrder = [],
+  onColumnReorder
 }) {
   const [selectedWorkAreaIds, setSelectedWorkAreaIds] = useState(() => new Set(initialSelectedWorkAreaIds));
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -139,9 +152,9 @@ export default function QuarterlyAllocationTable({
   const relevantWorkAreas = workAreas.filter(wa => selectedWorkAreaIds.has(wa.id));
 
   const teamId = relevantTeamId;
-  const leadingWAs = relevantWorkAreas.filter(wa => wa.leading_team_id === teamId);
-  const supportingWAs = relevantWorkAreas.filter(wa => wa.supporting_team_ids?.includes(teamId) && wa.leading_team_id !== teamId);
-  const otherWAs = relevantWorkAreas.filter(wa => wa.leading_team_id !== teamId && !wa.supporting_team_ids?.includes(teamId));
+  const leadingWAs = sortByOrder(relevantWorkAreas.filter(wa => wa.leading_team_id === teamId), columnOrder);
+  const supportingWAs = sortByOrder(relevantWorkAreas.filter(wa => wa.supporting_team_ids?.includes(teamId) && wa.leading_team_id !== teamId), columnOrder);
+  const otherWAs = sortByOrder(relevantWorkAreas.filter(wa => wa.leading_team_id !== teamId && !wa.supporting_team_ids?.includes(teamId)), columnOrder);
   const groupedWAs = [...leadingWAs, ...supportingWAs, ...otherWAs];
   const hasGroups = [leadingWAs, supportingWAs, otherWAs].filter(g => g.length > 0).length > 1;
 
@@ -150,6 +163,34 @@ export default function QuarterlyAllocationTable({
     if (wa === supportingWAs[0]) return "border-l-2 border-amber-300";
     if (wa === otherWAs[0]) return "border-l-2 border-slate-300";
     return "";
+  };
+
+  // Column drag-and-drop (native HTML5). Reorder within a group only; persist per team+quarter.
+  const dndEnabled = !!onColumnReorder && selectedTeamId !== "all";
+  const dragColIdRef = useRef(null);
+  const [dragOverColId, setDragOverColId] = useState(null);
+
+  const groupListOf = (waId) => {
+    if (leadingWAs.some(w => w.id === waId)) return leadingWAs;
+    if (supportingWAs.some(w => w.id === waId)) return supportingWAs;
+    if (otherWAs.some(w => w.id === waId)) return otherWAs;
+    return null;
+  };
+
+  const handleColumnDrop = (targetId) => {
+    const dragId = dragColIdRef.current;
+    dragColIdRef.current = null;
+    setDragOverColId(null);
+    if (!dragId || dragId === targetId) return;
+    const group = groupListOf(dragId);
+    if (!group || group !== groupListOf(targetId)) return; // same group only
+    const ids = group.map(w => w.id);
+    const from = ids.indexOf(dragId);
+    const to = ids.indexOf(targetId);
+    if (from < 0 || to < 0) return;
+    ids.splice(to, 0, ids.splice(from, 1)[0]);
+    const orderFor = (g) => (g === group ? ids : g.map(w => w.id));
+    onColumnReorder([...orderFor(leadingWAs), ...orderFor(supportingWAs), ...orderFor(otherWAs)]);
   };
 
   const quarterAllocations = allocations.filter(a => a.quarter === quarter);
@@ -266,7 +307,20 @@ export default function QuarterlyAllocationTable({
               {groupedWAs.map(wa => {
                 const isNew = initialPlanAllocations && !initialPlanAllocations.some(a => a.work_area_id === wa.id);
                 return (
-                  <TableHead key={wa.id} className={cn("text-xs text-center font-semibold text-primary min-w-[130px] max-w-[180px]", getGroupBorder(wa))}>
+                  <TableHead
+                    key={wa.id}
+                    draggable={dndEnabled}
+                    onDragStart={dndEnabled ? () => { dragColIdRef.current = wa.id; } : undefined}
+                    onDragOver={dndEnabled ? (e) => {
+                      if (dragColIdRef.current && groupListOf(dragColIdRef.current) === groupListOf(wa.id)) {
+                        e.preventDefault();
+                        setDragOverColId(wa.id);
+                      }
+                    } : undefined}
+                    onDragLeave={dndEnabled ? () => setDragOverColId(prev => (prev === wa.id ? null : prev)) : undefined}
+                    onDrop={dndEnabled ? (e) => { e.preventDefault(); handleColumnDrop(wa.id); } : undefined}
+                    className={cn("text-xs text-center font-semibold text-primary min-w-[130px] max-w-[180px]", getGroupBorder(wa), dndEnabled && "cursor-grab", dragOverColId === wa.id && "ring-2 ring-inset ring-primary/50")}
+                  >
                     <div className="flex flex-col items-center gap-0.5 px-1">
                       <div className="flex items-start justify-center gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: getWorkAreaColor(wa) }} />

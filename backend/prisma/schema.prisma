@@ -94,6 +94,7 @@ model QuarterlyWorkAreaSelection {
   quarter       String
   team_id       String
   work_area_ids String[]
+  column_order  String[] @default([])
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 }
