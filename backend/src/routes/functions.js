@@ -748,6 +748,7 @@ router.post('/getVacationRisk', async (req, res) => {
   const { teamId } = req.body;
   if (!teamId) return res.status(400).json({ error: 'teamId required' });
   try {
+    console.log('[vacationRisk] querying prisma...');
     const members = await prisma.teamMember.findMany({
       where: { team_id: teamId, bamboohr_id: { not: null } },
       select: { id: true, name: true, bamboohr_id: true },
