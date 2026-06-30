@@ -100,6 +100,8 @@ The allocation table shows team members as rows and selected work items as colum
 
 **Vacation balances (if BambooHR is configured).** Each member's row shows a small badge with their unused-leave balance. It turns amber with a ⚠ when the member has **10+ days unused within 90 days of their hire-date anniversary** (the entitlement renewal point) — a prompt to schedule time off before it's lost. Hover the badge for the renewal date and policy. Negative balances show as "overdrawn" and are never flagged.
 
+For **external consultants** (BambooHR "Absences – Consultants & Externals" policy), the API doesn't expose a usable remaining balance, so days-unused is computed as a fixed annual entitlement minus days taken this year (`entitlement − usedYearToDate`). The entitlement defaults to **56 days (full-time)** and is set via `CONSULTANT_ANNUAL_ENTITLEMENT`; part-time consultants aren't auto-detected (BambooHR exposes no FTE field), so they'd need a manual adjustment.
+
 ### Step 4 — Lock the initial plan
 
 Once the plan is agreed, save it as the **initial plan**:

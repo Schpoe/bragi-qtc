@@ -72,17 +72,18 @@ async function fetchApprovedTimeOffDays(start, end) {
 
 
 // Per-employee leave balance + hire date.
-// Consultant/external absence policies report entitlement as a NEGATIVE balance
-// (e.g. -56 = 56 free days still to consume before the hire-date anniversary, with no
-// carry-over), whereas regular leave policies report unused days as a positive balance.
-// We normalise both to "days still unused" (positive) by flipping the sign for consultant
-// policies, so the same risk logic (>=10 days within 90 days of renewal) applies to both.
+// Consultant/external absence policies don't expose a usable "remaining" balance via the
+// BambooHR calculator (the balance is opaque and doesn't track accrued-minus-used), but
+// `usedYearToDate` is reliable. So for these we compute days-still-to-consume as a fixed
+// annual entitlement minus days already taken this period. Entitlement assumes full-time;
+// BambooHR exposes no FTE field we can key on, so part-timers would need a manual override.
+// Regular leave policies report unused days directly as a positive balance.
 const CONSULTANT_POLICY_RE = /consultant|external/i;
+const CONSULTANT_ANNUAL_ENTITLEMENT = Number(process.env.CONSULTANT_ANNUAL_ENTITLEMENT) || 56;
 
-// BambooHR exposes no carryover/renewal date, so the renewal anchor is the hire
-// date; the route computes the next hire-date anniversary from it. Balance comes
-// from the time_off/calculator endpoint (sign-normalised, summed across policies).
-// Returns { [employeeId]: { balance, hireDate, policyName } } where balance = days unused.
+// BambooHR exposes no carryover/renewal date, so the renewal anchor is the hire date;
+// the route computes the next hire-date anniversary from it. Returns
+// { [employeeId]: { balance, hireDate, policyName } } where balance = days still unused.
 async function fetchVacationBalances(bamboohrIds) {
   const results = await Promise.allSettled(
     bamboohrIds.map(async id => {
@@ -103,8 +104,11 @@ async function fetchVacationBalances(bamboohrIds) {
     const { id, policies, hireDate } = r.value;
     const list = Array.isArray(policies) ? policies : [];
     const balance = list.reduce((sum, p) => {
-      const bal = parseFloat(p.balance) || 0;
-      return sum + (CONSULTANT_POLICY_RE.test(p.name || '') ? -bal : bal);
+      if (CONSULTANT_POLICY_RE.test(p.name || '')) {
+        const used = parseFloat(p.usedYearToDate) || 0;
+        return sum + (CONSULTANT_ANNUAL_ENTITLEMENT - used); // days still to consume before renewal
+      }
+      return sum + (parseFloat(p.balance) || 0); // regular policy: positive balance = days unused
     }, 0);
     map[id] = { balance, hireDate, policyName: list[0]?.name || null };
   });
