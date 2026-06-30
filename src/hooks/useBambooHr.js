@@ -31,5 +31,5 @@ export function useVacationRisk(teamId, enabled = true) {
     staleTime: 1000 * 60 * 15,
     retry: false,
   });
-  return { risks: data?.data?.risks ?? [], isLoading };
+  return { members: data?.data?.members ?? [], isLoading };
 }

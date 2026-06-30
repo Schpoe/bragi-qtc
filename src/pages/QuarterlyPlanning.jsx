@@ -68,7 +68,7 @@ export default function QuarterlyPlanning() {
   const isViewingAllTeams = !selectedTeamId || selectedTeamId === "all";
   const effectiveTeamId = selectedTeamId && selectedTeamId !== "all" ? selectedTeamId : "";
 
-  const { risks: vacationRisks } = useVacationRisk(effectiveTeamId, bambooConfigured && !isViewingAllTeams);
+  const { members: vacationMembers } = useVacationRisk(effectiveTeamId, bambooConfigured && !isViewingAllTeams);
 
   const createQuarterlyAllocation = useMutation({
     mutationFn: (data) => bragiQTC.entities.QuarterlyAllocation.create(data),
@@ -312,18 +312,24 @@ export default function QuarterlyPlanning() {
                 />
               </CardContent>
             </Card>
-            {bambooConfigured && !isViewingAllTeams && vacationRisks.length > 0 && (
-              <Card className="border-amber-500/40">
-                <CardHeader className="pb-3 border-b border-amber-500/20 bg-amber-500/5">
-                  <CardTitle className="text-base font-bold text-amber-700 dark:text-amber-400">Vacation Balance Risk</CardTitle>
+            {bambooConfigured && !isViewingAllTeams && vacationMembers.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3 border-b">
+                  <CardTitle className="text-base font-bold text-foreground">Vacation Balances</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4">
                   <div className="space-y-2">
-                    {vacationRisks.map(r => (
-                      <div key={r.memberId} className="flex items-center justify-between rounded-md px-3 py-2 text-sm bg-amber-500/10 border border-amber-500/30">
-                        <span className="font-medium">{r.memberName}</span>
-                        <span className="ml-4 text-xs text-amber-600 dark:text-amber-400">
-                          {r.balance} days unused · carryover {new Date(r.renewalDate).toLocaleDateString()} ({r.daysUntilRenewal} days) · {(r.balance / r.daysUntilRenewal).toFixed(2)} days/day
+                    {vacationMembers.map(r => (
+                      <div key={r.memberId} className={`flex items-center justify-between rounded-md px-3 py-2 text-sm border ${r.atRisk ? 'bg-amber-500/10 border-amber-500/30' : 'border-border/50'}`}>
+                        <div className="flex items-center gap-2">
+                          {r.atRisk && <span className="text-amber-500 text-xs font-semibold">⚠</span>}
+                          <span className="font-medium">{r.memberName}</span>
+                        </div>
+                        <span className="ml-4 text-xs text-muted-foreground">
+                          {r.balance ?? '—'} days unused
+                          {r.renewalDate && r.daysUntilRenewal !== null ? (
+                            <> · carryover {new Date(r.renewalDate).toLocaleDateString()} ({r.daysUntilRenewal}d) · {(r.balance / r.daysUntilRenewal).toFixed(2)} d/d</>
+                          ) : ' · no renewal date'}
                         </span>
                       </div>
                     ))}

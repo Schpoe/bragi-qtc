@@ -743,35 +743,30 @@ router.post('/syncBambooHrAvailability', requireAuth, async (req, res) => {
 
 
 router.post('/getVacationRisk', async (req, res) => {
-  if (!bamboohr.isConfigured()) return res.json({ data: { risks: [] } });
+  if (!bamboohr.isConfigured()) return res.json({ data: { members: [] } });
   const { teamId } = req.body;
-  console.log('[vacationRisk] teamId:', teamId, typeof teamId);
   if (!teamId) return res.status(400).json({ error: 'teamId required' });
   try {
     const members = await prisma.teamMember.findMany({
       where: { team_id: teamId, bamboohr_id: { not: null } },
       select: { id: true, name: true, bamboohr_id: true },
     });
-    console.log('[vacationRisk] members found:', members.length, members.map(m => ({ name: m.name, bamboohr_id: m.bamboohr_id })));
     const bamboohrIds = members.map(m => m.bamboohr_id).filter(Boolean);
-    if (bamboohrIds.length === 0) return res.json({ data: { risks: [] } });
+    if (bamboohrIds.length === 0) return res.json({ data: { members: [] } });
     const balances = await bamboohr.fetchVacationBalances(bamboohrIds);
-    console.log('[vacationRisk] balances:', JSON.stringify(balances, null, 2));
     const today = new Date();
-    const risks = [];
-    members.forEach(member => {
+    const result = members.flatMap(member => {
       const bal = balances[member.bamboohr_id];
-      if (!bal) return;
+      if (!bal) return [];
       const { balance, renewalDate, policyName } = bal;
-      if (!renewalDate) return;
-      const renewal = new Date(renewalDate);
-      const daysUntilRenewal = Math.ceil((renewal - today) / (1000 * 60 * 60 * 24));
-      if (balance >= 10 && daysUntilRenewal <= 90) {
-        risks.push({ memberId: member.id, memberName: member.name, balance, renewalDate, daysUntilRenewal, policyName });
-      }
+      const daysUntilRenewal = renewalDate
+        ? Math.ceil((new Date(renewalDate) - today) / (1000 * 60 * 60 * 24))
+        : null;
+      const atRisk = balance >= 10 && daysUntilRenewal !== null && daysUntilRenewal <= 90;
+      return [{ memberId: member.id, memberName: member.name, balance, renewalDate, daysUntilRenewal, policyName, atRisk }];
     });
-    risks.sort((a, b) => b.balance - a.balance);
-    res.json({ data: { risks } });
+    result.sort((a, b) => b.balance - a.balance);
+    res.json({ data: { members: result } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
