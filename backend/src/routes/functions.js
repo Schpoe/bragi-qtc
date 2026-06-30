@@ -745,6 +745,7 @@ router.post('/syncBambooHrAvailability', requireAuth, async (req, res) => {
 router.post('/getVacationRisk', async (req, res) => {
   if (!bamboohr.isConfigured()) return res.json({ data: { risks: [] } });
   const { teamId } = req.body;
+  console.log('[vacationRisk] teamId:', teamId, typeof teamId);
   if (!teamId) return res.status(400).json({ error: 'teamId required' });
   try {
     const members = await prisma.teamMember.findMany({
