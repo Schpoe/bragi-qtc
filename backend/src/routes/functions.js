@@ -752,6 +752,7 @@ router.post('/getVacationRisk', async (req, res) => {
       where: { team_id: teamId, bamboohr_id: { not: null } },
       select: { id: true, name: true, bamboohr_id: true },
     });
+    console.log('[vacationRisk] members:', members.length, members.map(m => m.name));
     const bamboohrIds = members.map(m => m.bamboohr_id).filter(Boolean);
     if (bamboohrIds.length === 0) return res.json({ data: { members: [] } });
     const balances = await bamboohr.fetchVacationBalances(bamboohrIds);
