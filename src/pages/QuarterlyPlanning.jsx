@@ -69,6 +69,10 @@ export default function QuarterlyPlanning() {
   const effectiveTeamId = selectedTeamId && selectedTeamId !== "all" ? selectedTeamId : "";
 
   const { members: vacationMembers } = useVacationRisk(effectiveTeamId, bambooConfigured && !isViewingAllTeams);
+  const vacationByMember = useMemo(
+    () => Object.fromEntries(vacationMembers.map(v => [v.memberId, v])),
+    [vacationMembers]
+  );
 
   const createQuarterlyAllocation = useMutation({
     mutationFn: (data) => bragiQTC.entities.QuarterlyAllocation.create(data),
@@ -309,34 +313,10 @@ export default function QuarterlyPlanning() {
                   selectedTeamId={effectiveTeamId}
                   onSelectionChange={(workAreaIds) => updateWorkAreaSelection.mutate({ teamId: effectiveTeamId, quarter: selectedQuarter, workAreaIds })}
                   initialSelectedWorkAreaIds={manuallySelectedIds.size > 0 ? manuallySelectedIds : workAreasWithAllocations}
+                  vacationByMember={vacationByMember}
                 />
               </CardContent>
             </Card>
-            {bambooConfigured && !isViewingAllTeams && vacationMembers.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3 border-b">
-                  <CardTitle className="text-base font-bold text-foreground">Vacation Balances</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="space-y-2">
-                    {vacationMembers.map(r => (
-                      <div key={r.memberId} className={`flex items-center justify-between rounded-md px-3 py-2 text-sm border ${r.atRisk ? 'bg-amber-500/10 border-amber-500/30' : 'border-border/50'}`}>
-                        <div className="flex items-center gap-2">
-                          {r.atRisk && <span className="text-amber-500 text-xs font-semibold">⚠</span>}
-                          <span className="font-medium">{r.memberName}</span>
-                        </div>
-                        <span className="ml-4 text-xs text-muted-foreground">
-                          {r.balance ?? '—'} days unused
-                          {r.renewalDate && r.daysUntilRenewal !== null ? (
-                            <> · renews {new Date(r.renewalDate).toLocaleDateString()} ({r.daysUntilRenewal}d) · {r.daysUntilRenewal > 0 ? (r.balance / r.daysUntilRenewal).toFixed(2) : '∞'} d/d</>
-                          ) : ' · no hire date'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
             <Card className="border-border/60">
               <CardHeader className="pb-3 border-b">
                 <CardTitle className="text-base font-bold text-foreground">Capacity by Topic — {selectedQuarter}</CardTitle>

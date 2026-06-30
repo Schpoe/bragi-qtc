@@ -15,6 +15,27 @@ import { cn, getWorkAreaColor } from "@/lib/utils";
 
 const DEFAULT_CAPACITY = 60;
 
+// Per-member vacation badge: balance for everyone, amber ⚠ when at-risk.
+function VacationBadge({ info }) {
+  if (!info) return null;
+  const { balance, daysUntilRenewal, renewalDate, atRisk, policyName } = info;
+  const label = balance > 0 ? `${balance}d` : balance < 0 ? "overdrawn" : "0d";
+  const title = renewalDate
+    ? `${balance}d unused · renews ${new Date(renewalDate).toLocaleDateString()} (${daysUntilRenewal}d)${policyName ? ` · ${policyName}` : ""}`
+    : `${balance}d unused`;
+  return (
+    <span
+      title={title}
+      className={cn(
+        "text-[10px] font-medium px-1.5 py-0.5 rounded whitespace-nowrap",
+        atRisk ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" : "bg-muted text-muted-foreground"
+      )}
+    >
+      {atRisk && "⚠ "}{label}
+    </span>
+  );
+}
+
 export default function QuarterlyAllocationTable({
   members,
   workAreas,
@@ -23,7 +44,8 @@ export default function QuarterlyAllocationTable({
   onAllocationChange,
   selectedTeamId,
   onSelectionChange,
-  initialSelectedWorkAreaIds = new Set()
+  initialSelectedWorkAreaIds = new Set(),
+  vacationByMember = {}
 }) {
   const [selectedWorkAreaIds, setSelectedWorkAreaIds] = useState(() => new Set(initialSelectedWorkAreaIds));
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -256,6 +278,7 @@ export default function QuarterlyAllocationTable({
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold">{member.name}</span>
                     <DisciplineBadge discipline={member.discipline} />
+                    <VacationBadge info={vacationByMember[member.id]} />
                   </div>
                 </TableCell>
                 <TableCell className={cn("text-center sticky left-[180px] z-10 border-r p-1", isOverAllocated ? "bg-red-50" : totalPercent > 80 ? "bg-amber-50" : "bg-white")}>
@@ -353,6 +376,7 @@ export default function QuarterlyAllocationTable({
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="text-sm font-semibold truncate">{member.name}</span>
                 <DisciplineBadge discipline={member.discipline} />
+                <VacationBadge info={vacationByMember[member.id]} />
               </div>
               <span className={cn(
                 "text-sm font-bold tabular-nums whitespace-nowrap ml-2",
