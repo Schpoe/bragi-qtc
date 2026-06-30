@@ -92,7 +92,10 @@ router.post('/jiraSync', requireAdmin, async (req, res) => {
     logs.push(`Connected to ${process.env.JIRA_BASE_URL} — fetched ${Object.keys(fieldMap).length} fields`);
     logs.push(`Field mapping: Leading Team → ${leadingTeamField || '(not found)'}, Contributing Teams → ${contributingTeamsField || '(not found)'}, Type → ${typeField || '(not found)'}`);
 
-    const issues = await jira.searchJql(jql);
+    // Request the resolved team/type fields explicitly — searchJql's default field set
+    // omits them, which would make every Leading/Contributing Team come back empty.
+    const syncFields = ['summary', 'issuetype', leadingTeamField, contributingTeamsField, typeField].filter(Boolean);
+    const issues = await jira.searchJql(jql, syncFields);
     logs.push(`JQL returned ${issues.length} issue(s)`);
     if (issues.length === 0) {
       // Try fetching one of the issues directly as a sanity check
