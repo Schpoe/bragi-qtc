@@ -743,6 +743,7 @@ router.post('/syncBambooHrAvailability', requireAuth, async (req, res) => {
 
 
 router.post('/getVacationRisk', async (req, res) => {
+  console.log('[vacationRisk] configured:', bamboohr.isConfigured(), 'teamId:', req.body.teamId);
   if (!bamboohr.isConfigured()) return res.json({ data: { members: [] } });
   const { teamId } = req.body;
   if (!teamId) return res.status(400).json({ error: 'teamId required' });
