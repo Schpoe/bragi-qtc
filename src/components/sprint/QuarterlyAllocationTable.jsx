@@ -13,6 +13,8 @@ import AllocationCell from "./AllocationCell";
 import QuarterlyAllocationDialog from "./QuarterlyAllocationDialog";
 import { cn, getWorkAreaColor } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { useJiraConfig } from "@/hooks/useJiraConfig";
+import { jiraIssueUrl } from "@/lib/jira-links";
 
 const DEFAULT_CAPACITY = 60;
 
@@ -76,6 +78,7 @@ export default function QuarterlyAllocationTable({
   const capacityTimeoutRef = useRef({});
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { jiraBaseUrl } = useJiraConfig();
   const relevantTeamId = selectedTeamId === "all" ? members[0]?.team_id : selectedTeamId;
   const canEdit = relevantTeamId && canManageAllocations(user, relevantTeamId);
 
@@ -326,7 +329,30 @@ export default function QuarterlyAllocationTable({
                     <div className="flex flex-col items-center gap-0.5 px-1">
                       <div className="flex items-start justify-center gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: getWorkAreaColor(wa) }} />
-                        <span className="line-clamp-2 text-left leading-tight" title={wa.name}>{wa.name}</span>
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {jiraIssueUrl(jiraBaseUrl, wa.prod_id) ? (
+                                <a
+                                  href={jiraIssueUrl(jiraBaseUrl, wa.prod_id)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  draggable={false}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="line-clamp-2 text-left leading-tight hover:underline"
+                                >
+                                  {wa.name}
+                                </a>
+                              ) : (
+                                <span className="line-clamp-2 text-left leading-tight">{wa.name}</span>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <div>{wa.name}</div>
+                              {wa.prod_id && <div className="opacity-70 font-mono text-[10px] mt-0.5">{wa.prod_id}</div>}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                       {isNew && <span className="text-[10px] font-semibold text-amber-600 bg-amber-100 rounded px-1">NEW</span>}
                     </div>
@@ -493,7 +519,9 @@ export default function QuarterlyAllocationTable({
                         <div key={wa.id}>
                           <div className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1">
                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getWorkAreaColor(wa) }} />
-                            {wa.name}
+                            {jiraIssueUrl(jiraBaseUrl, wa.prod_id) ? (
+                              <a href={jiraIssueUrl(jiraBaseUrl, wa.prod_id)} target="_blank" rel="noopener noreferrer" className="hover:underline">{wa.name}</a>
+                            ) : wa.name}
                           </div>
                           {canEdit ? (
                             <AllocationCell
