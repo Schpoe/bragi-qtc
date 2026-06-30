@@ -12,6 +12,7 @@ import DisciplineBadge from "../shared/DisciplineBadge.jsx";
 import AllocationCell from "./AllocationCell";
 import QuarterlyAllocationDialog from "./QuarterlyAllocationDialog";
 import { cn, getWorkAreaColor } from "@/lib/utils";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 const DEFAULT_CAPACITY = 60;
 
@@ -20,19 +21,28 @@ function VacationBadge({ info }) {
   if (!info) return null;
   const { balance, daysUntilRenewal, renewalDate, atRisk, policyName } = info;
   const label = balance > 0 ? `${balance}d` : balance < 0 ? "overdrawn" : "0d";
-  const title = renewalDate
-    ? `${balance}d unused · renews ${new Date(renewalDate).toLocaleDateString()} (${daysUntilRenewal}d)${policyName ? ` · ${policyName}` : ""}`
-    : `${balance}d unused`;
   return (
-    <span
-      title={title}
-      className={cn(
-        "text-[10px] font-medium px-1.5 py-0.5 rounded whitespace-nowrap",
-        atRisk ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" : "bg-muted text-muted-foreground"
-      )}
-    >
-      {atRisk && "⚠ "}{label}
-    </span>
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={cn(
+              "text-[10px] font-medium px-1.5 py-0.5 rounded whitespace-nowrap cursor-default",
+              atRisk ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" : "bg-muted text-muted-foreground"
+            )}
+          >
+            {atRisk && "⚠ "}{label}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <div>{balance} days unused</div>
+          {renewalDate
+            ? <div>Renews {new Date(renewalDate).toLocaleDateString()} ({daysUntilRenewal} days)</div>
+            : <div>No hire date</div>}
+          {policyName && <div className="opacity-70">{policyName}</div>}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
