@@ -44,6 +44,8 @@ Set `JIRA_BASE_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN` in your `.env` file to e
 
 The app automatically detects your Jira story points field by looking for common field names (`Story Points`, `Story point estimate`, etc.). You can override this with `JIRA_STORY_POINTS_FIELD` in `.env`.
 
+**Work-item team assignment.** When work items are imported from Jira, each PROD item's **Leading Team** and **Contributing Teams** custom fields are read and matched to qtc teams **by name** (case-insensitive). The import requests those fields explicitly, so they must come back populated; an item whose team value is empty or doesn't match an existing qtc team is imported **unassigned** rather than guessed (it then appears under "Other" / the WorkAreas "All" view). To assign such items, create the matching team in qtc and re-import. The import log prints `Matched X/Y teams` and lists any team name it could not match.
+
 **Excluded statuses.** Tickets in a cancelled status — by default `Obsolete / Won't Do` plus common variants (`Won't Fix`, `Cancelled`, `Rejected`, `Duplicate`, `Declined`, `Abandoned`) — are counted as **neither delivered nor in progress**. They are reported separately as "Cancelled". Override the list with `JIRA_EXCLUDED_STATUSES` in `.env` (comma-separated status names, case-insensitive), e.g. `JIRA_EXCLUDED_STATUSES=Obsolete / Won't Do,Rejected`.
 
 ### 4. BambooHR (optional)
@@ -58,15 +60,17 @@ Connect BambooHR to compute each member's **quarterly availability** from their 
 
    Run it at the **start** of the quarter to prefill planned availability, and again at the **end** to true it up to the time off actually taken. It **overwrites** the capacity of every mapped member (unmapped members are left untouched). Public holidays are not subtracted.
 
+**Vacation balance flags.** With BambooHR configured and members mapped, the planning table also shows each member's **unused-leave balance** (from the BambooHR time-off calculator) as a badge on their row, flagged amber when 10+ days remain within 90 days of their **hire-date anniversary** (when the entitlement renews). This reads live from BambooHR — no sync run is required, only the member mapping above.
+
 ---
 
 ## Setting Up a Quarterly Plan
 
 ### Step 1 — Select the quarter and team
 
-Go to **Quarterly Planning**. Use the filter bar at the top to select the quarter (e.g. `Q2 2025`) and a specific team.
+Go to **Quarterly Planning**. The filter bar has a **two-stage period picker** — first the **Year**, then the **Quarter** (Q1–Q4) — plus a team selector. It defaults to the current year and quarter. The year list covers years that already have data plus the current and next year, so past plans stay reachable as history and future quarters can be planned; any quarter of a listed year is selectable.
 
-The quarter selector is sticky — your selection persists when navigating between pages.
+The selection is sticky — it persists when navigating between pages.
 
 ### Step 2 — Select work items
 
@@ -92,6 +96,10 @@ The allocation table shows team members as rows and selected work items as colum
   - Red: over-allocated
 - Changes are saved automatically
 
+**Column grouping, ordering, and Jira links.** Work-item columns are grouped into **Leading / Supporting / Other** bands (always shown, even if only one band has columns). **Drag a column header sideways to reorder it within its band** — the order is saved per team + quarter. Each column header links to its Jira PROD item (opens in a new tab) and shows the full work-item name on hover. To reorder, drag from the header area around the text rather than the link itself.
+
+**Vacation balances (if BambooHR is configured).** Each member's row shows a small badge with their unused-leave balance. It turns amber with a ⚠ when the member has **10+ days unused within 90 days of their hire-date anniversary** (the entitlement renewal point) — a prompt to schedule time off before it's lost. Hover the badge for the renewal date and policy. Negative balances show as "overdrawn" and are never flagged.
+
 ### Step 4 — Lock the initial plan
 
 Once the plan is agreed, save it as the **initial plan**:
@@ -106,6 +114,15 @@ The snapshot is marked with a gold ★ badge. From this point, the allocation ta
 - `↑+5d vs plan` — member is allocated more than initially planned
 - `↓-3d vs plan` — member is allocated less than initially planned
 - **NEW** badge on a work item column header — this work item was not in the initial plan
+
+### Move or copy a plan to another quarter
+
+If a plan was set up under the wrong quarter (a common slip is the right quarter in the wrong year), you don't need to re-enter it. With a single team selected, use the **Move / copy plan** button in the Quarterly Plan card header:
+
+- **Move** — relocates the plan (allocations, per-member capacity, and the column selection/order) to the target quarter and empties the source. After a move, the page switches to the target quarter.
+- **Copy** — duplicates the plan to the target quarter, leaving the source intact (useful to seed a new quarter from a previous one).
+
+If the target quarter already has a plan for that team, the action is **refused** (it never overwrites) — clear that quarter first or pick another. Admins and the team's manager can do this. Saved snapshots, plan history, and comparison snapshots stay with the original quarter.
 
 ---
 

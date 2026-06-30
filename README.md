@@ -4,7 +4,9 @@ Quarterly capacity planning tool for Bragi — plan each team's quarter, then co
 
 ## Features
 
-- **Quarterly capacity planning** — per-team allocation of members' days to work items, with utilisation tracking, work-item selection, and a sticky quarter/team filter.
+- **Quarterly capacity planning** — per-team allocation of members' days to work items, with utilisation tracking, work-item selection, drag-to-reorder work-item columns (saved per team + quarter), and a two-stage **Year + Quarter** filter.
+- **Move or copy a plan between quarters** — relocate a plan entered under the wrong quarter, or duplicate one to seed another quarter (refuses to overwrite an existing plan).
+- **Vacation balances (optional, BambooHR)** — each member's unused-leave balance shown on their row, flagged when 10+ days remain within 90 days of their hire-date anniversary (entitlement renewal).
 - **Plan history** — versioned snapshots, a flagged **initial plan** baseline, change tracking, and a full audit log.
 - **Jira actuals** — pull what was delivered per team for the quarter, with careful semantics:
   - **Completed** = issues *resolved within the quarter* (by resolution date), not merely touched.
