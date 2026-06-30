@@ -770,6 +770,7 @@ router.post('/getVacationRisk', async (req, res) => {
     result.sort((a, b) => b.balance - a.balance);
     res.json({ data: { members: result } });
   } catch (err) {
+    console.error('[vacationRisk] error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
