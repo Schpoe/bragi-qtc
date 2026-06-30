@@ -72,10 +72,17 @@ async function fetchApprovedTimeOffDays(start, end) {
 
 
 // Per-employee leave balance + hire date.
+// Consultant/external absence policies report entitlement as a NEGATIVE balance
+// (e.g. -56 = 56 free days still to consume before the hire-date anniversary, with no
+// carry-over), whereas regular leave policies report unused days as a positive balance.
+// We normalise both to "days still unused" (positive) by flipping the sign for consultant
+// policies, so the same risk logic (>=10 days within 90 days of renewal) applies to both.
+const CONSULTANT_POLICY_RE = /consultant|external/i;
+
 // BambooHR exposes no carryover/renewal date, so the renewal anchor is the hire
 // date; the route computes the next hire-date anniversary from it. Balance comes
-// from the time_off/calculator endpoint (summed across the employee's policies).
-// Returns { [employeeId]: { balance, hireDate, policyName } }.
+// from the time_off/calculator endpoint (sign-normalised, summed across policies).
+// Returns { [employeeId]: { balance, hireDate, policyName } } where balance = days unused.
 async function fetchVacationBalances(bamboohrIds) {
   const results = await Promise.allSettled(
     bamboohrIds.map(async id => {
@@ -95,7 +102,10 @@ async function fetchVacationBalances(bamboohrIds) {
     if (r.status !== 'fulfilled') return;
     const { id, policies, hireDate } = r.value;
     const list = Array.isArray(policies) ? policies : [];
-    const balance = list.reduce((sum, p) => sum + (parseFloat(p.balance) || 0), 0);
+    const balance = list.reduce((sum, p) => {
+      const bal = parseFloat(p.balance) || 0;
+      return sum + (CONSULTANT_POLICY_RE.test(p.name || '') ? -bal : bal);
+    }, 0);
     map[id] = { balance, hireDate, policyName: list[0]?.name || null };
   });
   return map;
