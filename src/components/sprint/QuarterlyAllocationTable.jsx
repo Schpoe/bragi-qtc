@@ -156,7 +156,9 @@ export default function QuarterlyAllocationTable({
   const supportingWAs = sortByOrder(relevantWorkAreas.filter(wa => wa.supporting_team_ids?.includes(teamId) && wa.leading_team_id !== teamId), columnOrder);
   const otherWAs = sortByOrder(relevantWorkAreas.filter(wa => wa.leading_team_id !== teamId && !wa.supporting_team_ids?.includes(teamId)), columnOrder);
   const groupedWAs = [...leadingWAs, ...supportingWAs, ...otherWAs];
-  const hasGroups = [leadingWAs, supportingWAs, otherWAs].filter(g => g.length > 0).length > 1;
+  // Always show the Leading/Supporting/Other band headers when there are any columns,
+  // even if only one group is populated (e.g. all leading).
+  const hasGroups = [leadingWAs, supportingWAs, otherWAs].filter(g => g.length > 0).length > 0;
 
   const getGroupBorder = (wa) => {
     if (wa === leadingWAs[0]) return "border-l-2 border-primary/30";
