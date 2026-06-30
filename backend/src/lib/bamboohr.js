@@ -83,7 +83,7 @@ async function fetchVacationBalances(bamboohrIds) {
   );
   const map = {};
   results.forEach(r => {
-    if (r.status !== 'fulfilled') return;
+    if (r.status !== 'fulfilled') { console.log('[bamboohr] failed:', r.reason?.message); return; }
     const { id, policies } = r.value;
     const allPolicies = Array.isArray(policies) ? policies : [];
     console.log('[bamboohr] policies for', id, allPolicies.map(p => p.name));
