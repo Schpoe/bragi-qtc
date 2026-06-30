@@ -201,11 +201,12 @@ export default function JiraImportDialog({ open, onOpenChange, teams: existingTe
       addLog(`Importing ${syncResult.workAreas.length} work items...`);
       for (const workArea of syncResult.workAreas) {
         try {
-          const leadingTeamId = teamMap[workArea.leadingTeam] || Object.values(teamMap)[0] || existingTeams[0]?.id;
+          // Match the Jira "Leading Team" value to a qtc team by name. If it does not
+          // match (unknown/deprecated/empty team), leave it unassigned — do NOT fall back
+          // to the first team, which silently mis-assigns every unmatched item.
+          const leadingTeamId = teamMap[workArea.leadingTeam] || null;
           if (!leadingTeamId) {
-            stats.errors.push(`${workArea.key}: No team available`);
-            addLog(`Skipped ${workArea.key} — no team available`, 'warn');
-            continue;
+            addLog(`${workArea.key}: leading team "${workArea.leadingTeam || '(empty)'}" has no matching team — left unassigned`, 'warn');
           }
 
           const supportingTeamIds = workArea.supportingTeams.map(t => teamMap[t]).filter(Boolean);
