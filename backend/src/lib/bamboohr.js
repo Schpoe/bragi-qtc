@@ -72,6 +72,7 @@ async function fetchApprovedTimeOffDays(start, end) {
 
 
 async function fetchVacationBalances(bamboohrIds) {
+  console.log('[bamboohr] fetching for ids:', bamboohrIds);
   const results = await Promise.allSettled(
     bamboohrIds.map(id =>
       fetch(`${baseUrl()}/v1/employees/${id}/timeOffPolicies`, { headers: getHeaders(), signal: AbortSignal.timeout(30_000) })
