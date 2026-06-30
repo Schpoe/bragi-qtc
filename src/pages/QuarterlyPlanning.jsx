@@ -328,8 +328,8 @@ export default function QuarterlyPlanning() {
                         <span className="ml-4 text-xs text-muted-foreground">
                           {r.balance ?? '—'} days unused
                           {r.renewalDate && r.daysUntilRenewal !== null ? (
-                            <> · carryover {new Date(r.renewalDate).toLocaleDateString()} ({r.daysUntilRenewal}d) · {(r.balance / r.daysUntilRenewal).toFixed(2)} d/d</>
-                          ) : ' · no renewal date'}
+                            <> · renews {new Date(r.renewalDate).toLocaleDateString()} ({r.daysUntilRenewal}d) · {r.daysUntilRenewal > 0 ? (r.balance / r.daysUntilRenewal).toFixed(2) : '∞'} d/d</>
+                          ) : ' · no hire date'}
                         </span>
                       </div>
                     ))}

@@ -28,7 +28,7 @@ export function useVacationRisk(teamId, enabled = true) {
     queryKey: ['vacationRisk', teamId],
     queryFn: () => bragiQTC.functions.invoke('getVacationRisk', { teamId }),
     enabled: enabled && !!teamId,
-    staleTime: 0,
+    staleTime: 1000 * 60 * 15,
     retry: false,
   });
   return { members: data?.data?.members ?? [], isLoading };

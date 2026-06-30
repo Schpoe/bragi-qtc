@@ -742,18 +742,24 @@ router.post('/syncBambooHrAvailability', requireAuth, async (req, res) => {
 });
 
 
+// Next anniversary of the hire date on/after today (the entitlement renewal anchor).
+function nextHireAnniversary(hireDate, today) {
+  const h = new Date(hireDate);
+  if (Number.isNaN(h.getTime())) return null;
+  const next = new Date(Date.UTC(today.getUTCFullYear(), h.getUTCMonth(), h.getUTCDate()));
+  if (next < today) next.setUTCFullYear(today.getUTCFullYear() + 1);
+  return next;
+}
+
 router.post('/getVacationRisk', async (req, res) => {
-  console.log('[vacationRisk] configured:', bamboohr.isConfigured(), 'teamId:', req.body.teamId);
   if (!bamboohr.isConfigured()) return res.json({ data: { members: [] } });
   const { teamId } = req.body;
   if (!teamId) return res.status(400).json({ error: 'teamId required' });
   try {
-    console.log('[vacationRisk] querying prisma...');
     const members = await prisma.teamMember.findMany({
       where: { team_id: teamId, bamboohr_id: { not: null } },
       select: { id: true, name: true, bamboohr_id: true },
     });
-    console.log('[vacationRisk] members:', members.length, members.map(m => m.name));
     const bamboohrIds = members.map(m => m.bamboohr_id).filter(Boolean);
     if (bamboohrIds.length === 0) return res.json({ data: { members: [] } });
     const balances = await bamboohr.fetchVacationBalances(bamboohrIds);
@@ -761,12 +767,14 @@ router.post('/getVacationRisk', async (req, res) => {
     const result = members.flatMap(member => {
       const bal = balances[member.bamboohr_id];
       if (!bal) return [];
-      const { balance, renewalDate, policyName } = bal;
-      const daysUntilRenewal = renewalDate
-        ? Math.ceil((new Date(renewalDate) - today) / (1000 * 60 * 60 * 24))
+      const { balance, hireDate, policyName } = bal;
+      const renewal = hireDate ? nextHireAnniversary(hireDate, today) : null;
+      const renewalDate = renewal ? renewal.toISOString().slice(0, 10) : null;
+      const daysUntilRenewal = renewal
+        ? Math.ceil((renewal - today) / (1000 * 60 * 60 * 24))
         : null;
       const atRisk = balance >= 10 && daysUntilRenewal !== null && daysUntilRenewal <= 90;
-      return [{ memberId: member.id, memberName: member.name, balance, renewalDate, daysUntilRenewal, policyName, atRisk }];
+      return [{ memberId: member.id, memberName: member.name, balance: Math.round(balance * 10) / 10, hireDate, renewalDate, daysUntilRenewal, policyName, atRisk }];
     });
     result.sort((a, b) => b.balance - a.balance);
     res.json({ data: { members: result } });

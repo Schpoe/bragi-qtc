@@ -51,7 +51,7 @@ app.use('/api/quarterly-plan-history', quarterlyPlanHistoryRoutes);
 app.use('/api/quarterly-plan-snapshots', quarterlyPlanSnapshotRoutes);
 app.use('/api/quarterly-comparison-snapshots', quarterlyComparisonSnapshotRoutes);
 app.use('/api/jira-sync-history', jiraSyncHistoryRoutes);
-app.use('/api/functions', (req, _res, next) => { console.log('[req]', req.method, req.path); next(); }, functionsRoutes);
+app.use('/api/functions', functionsRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/team-member-capacities', teamMemberCapacityRoutes);
 

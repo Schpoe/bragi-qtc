@@ -71,33 +71,32 @@ async function fetchApprovedTimeOffDays(start, end) {
 }
 
 
+// Per-employee leave balance + hire date.
+// BambooHR exposes no carryover/renewal date, so the renewal anchor is the hire
+// date; the route computes the next hire-date anniversary from it. Balance comes
+// from the time_off/calculator endpoint (summed across the employee's policies).
+// Returns { [employeeId]: { balance, hireDate, policyName } }.
 async function fetchVacationBalances(bamboohrIds) {
-  console.log('[bamboohr] fetching for ids:', bamboohrIds, 'url sample:', `${baseUrl()}/v1/employees/${bamboohrIds[0]}/timeOffPolicies`);
   const results = await Promise.allSettled(
-    bamboohrIds.map(id =>
-      fetch(`${baseUrl()}/v1/employees/${id}/timeOffPolicies`, { headers: getHeaders(), signal: AbortSignal.timeout(30_000) })
-        .then(res => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res.json().then(policies => ({ id, policies }));
-        })
-    )
+    bamboohrIds.map(async id => {
+      const [balRes, empRes] = await Promise.all([
+        fetch(`${baseUrl()}/v1/employees/${id}/time_off/calculator`, { headers: getHeaders(), signal: AbortSignal.timeout(30_000) }),
+        fetch(`${baseUrl()}/v1/employees/${id}?fields=hireDate`, { headers: getHeaders(), signal: AbortSignal.timeout(30_000) }),
+      ]);
+      if (!balRes.ok) throw new Error(`calculator HTTP ${balRes.status}`);
+      if (!empRes.ok) throw new Error(`employee HTTP ${empRes.status}`);
+      const policies = await balRes.json();
+      const emp = await empRes.json();
+      return { id, policies, hireDate: emp.hireDate || null };
+    })
   );
   const map = {};
   results.forEach(r => {
-    if (r.status !== 'fulfilled') { console.log('[bamboohr] failed:', r.reason?.message); return; }
-    const { id, policies } = r.value;
-    const allPolicies = Array.isArray(policies) ? policies : [];
-    console.log('[bamboohr] policies for', id, allPolicies.map(p => p.name));
-    const vacation = allPolicies.find(p =>
-      /vacation|annual leave|holiday/i.test(p.name || '')
-    );
-    if (vacation) {
-      map[id] = {
-        balance: parseFloat(vacation.balance) || 0,
-        renewalDate: vacation.carryOverDate || null,
-        policyName: vacation.name,
-      };
-    }
+    if (r.status !== 'fulfilled') return;
+    const { id, policies, hireDate } = r.value;
+    const list = Array.isArray(policies) ? policies : [];
+    const balance = list.reduce((sum, p) => sum + (parseFloat(p.balance) || 0), 0);
+    map[id] = { balance, hireDate, policyName: list[0]?.name || null };
   });
   return map;
 }
