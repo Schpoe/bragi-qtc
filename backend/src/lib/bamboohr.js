@@ -85,7 +85,9 @@ async function fetchVacationBalances(bamboohrIds) {
   results.forEach(r => {
     if (r.status !== 'fulfilled') return;
     const { id, policies } = r.value;
-    const vacation = (Array.isArray(policies) ? policies : []).find(p =>
+    const allPolicies = Array.isArray(policies) ? policies : [];
+    console.log('[bamboohr] policies for', id, allPolicies.map(p => p.name));
+    const vacation = allPolicies.find(p =>
       /vacation|annual leave|holiday/i.test(p.name || '')
     );
     if (vacation) {
