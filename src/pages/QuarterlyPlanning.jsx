@@ -284,14 +284,6 @@ export default function QuarterlyPlanning() {
         showTeamFilter={true}
       />
 
-      {!isViewingAllTeams && canManageAllocations(user, effectiveTeamId) && (
-        <div className="mb-4 flex justify-end">
-          <Button variant="outline" size="sm" onClick={() => { setMoveError(null); setMovePlanOpen(true); }}>
-            <ArrowRightLeft className="w-4 h-4 mr-2" /> Move / copy plan
-          </Button>
-        </div>
-      )}
-
       <MovePlanDialog
         open={movePlanOpen}
         onOpenChange={(o) => { setMovePlanOpen(o); if (!o) setMoveError(null); }}
@@ -356,19 +348,32 @@ export default function QuarterlyPlanning() {
               <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-transparent pb-4">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <CardTitle className="text-base font-bold text-foreground">Quarterly Plan — {selectedQuarter}</CardTitle>
-                  {bambooConfigured && canManageAllocations(user, effectiveTeamId) && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs gap-1.5"
-                      onClick={() => syncBambooAvailability.mutate(effectiveTeamId)}
-                      disabled={syncBambooAvailability.isPending}
-                      title="Set each mapped member's capacity for this quarter to working days minus approved BambooHR time off"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${syncBambooAvailability.isPending ? "animate-spin" : ""}`} />
-                      {syncBambooAvailability.isPending ? "Syncing…" : "Sync availability from BambooHR"}
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {canManageAllocations(user, effectiveTeamId) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1.5"
+                        onClick={() => { setMoveError(null); setMovePlanOpen(true); }}
+                        title="Move or copy this team's plan to another quarter"
+                      >
+                        <ArrowRightLeft className="w-3 h-3" /> Move / copy plan
+                      </Button>
+                    )}
+                    {bambooConfigured && canManageAllocations(user, effectiveTeamId) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1.5"
+                        onClick={() => syncBambooAvailability.mutate(effectiveTeamId)}
+                        disabled={syncBambooAvailability.isPending}
+                        title="Set each mapped member's capacity for this quarter to working days minus approved BambooHR time off"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${syncBambooAvailability.isPending ? "animate-spin" : ""}`} />
+                        {syncBambooAvailability.isPending ? "Syncing…" : "Sync availability from BambooHR"}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
