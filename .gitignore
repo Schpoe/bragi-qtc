@@ -28,5 +28,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.sql
+
+# Database dumps / backups
+*.sql
+*.dump
 .env
