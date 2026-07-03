@@ -31,5 +31,6 @@ dist-ssr
 
 # Database dumps / backups
 *.sql
+*.sql.bak
 *.dump
 .env
