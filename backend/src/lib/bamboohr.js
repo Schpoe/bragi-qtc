@@ -115,4 +115,4 @@ async function fetchVacationBalances(bamboohrIds) {
   return map;
 }
 
-module.exports = { isConfigured, countWeekdays, fetchDirectory, fetchApprovedTimeOffDays, fetchVacationBalances };
+module.exports = { isConfigured, countWeekdays, fetchDirectory, fetchApprovedTimeOffDays, fetchVacationBalances, CONSULTANT_POLICY_RE };

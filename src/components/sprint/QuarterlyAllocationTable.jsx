@@ -21,8 +21,9 @@ const DEFAULT_CAPACITY = 60;
 // Per-member vacation badge: balance for everyone, amber ⚠ when at-risk.
 function VacationBadge({ info }) {
   if (!info) return null;
-  const { balance, daysUntilRenewal, renewalDate, atRisk, policyName } = info;
+  const { balance, daysUntilRenewal, renewalDate, atRisk, policyName, deadlineType } = info;
   const label = balance > 0 ? `${balance}d` : balance < 0 ? "overdrawn" : "0d";
+  const deadlineVerb = deadlineType === "forfeiture" ? "Forfeits" : "Renews";
   return (
     <TooltipProvider delayDuration={100}>
       <Tooltip>
@@ -39,7 +40,7 @@ function VacationBadge({ info }) {
         <TooltipContent>
           <div>{balance} days unused</div>
           {renewalDate
-            ? <div>Renews {new Date(renewalDate).toLocaleDateString()} ({daysUntilRenewal} days)</div>
+            ? <div>{deadlineVerb} {new Date(renewalDate).toLocaleDateString()} ({daysUntilRenewal} days)</div>
             : <div>No hire date</div>}
           {policyName && <div className="opacity-70">{policyName}</div>}
         </TooltipContent>

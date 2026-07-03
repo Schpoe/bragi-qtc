@@ -818,12 +818,37 @@ router.post('/syncBambooHrAvailability', requireAuth, async (req, res) => {
 
 
 // Next anniversary of the hire date on/after today (the entitlement renewal anchor).
+// Still used for consultant/external policies, whose entitlement genuinely resets on a
+// per-employee anniversary rather than the calendar year.
 function nextHireAnniversary(hireDate, today) {
   const h = new Date(hireDate);
   if (Number.isNaN(h.getTime())) return null;
   const next = new Date(Date.UTC(today.getUTCFullYear(), h.getUTCMonth(), h.getUTCDate()));
   if (next < today) next.setUTCFullYear(today.getUTCFullYear() + 1);
   return next;
+}
+
+// Non-consultant vacation forfeits on Dec 31 each year, except up to this many days which
+// carry over into a grace period ending March 31 of the following year (per HR policy).
+const NON_CONSULTANT_CARRYOVER_CAP = 10;
+
+// Forfeiture deadline + at-risk amount for non-consultant policies (calendar-year based,
+// not hire-date based). Jan–Mar: still in the prior year's grace period, so only the carried
+// (capped) amount can be lost, by March 31. Apr–Dec: grace period has lapsed, so anything
+// above the cap will be lost at the Dec 31 anchor.
+function vacationDeadlineInfo(balance, today) {
+  const year = today.getUTCFullYear();
+  const inGracePeriod = today.getUTCMonth() <= 2; // Jan, Feb, Mar
+  if (inGracePeriod) {
+    return {
+      deadline: new Date(Date.UTC(year, 2, 31)),
+      atRiskAmount: Math.min(balance, NON_CONSULTANT_CARRYOVER_CAP),
+    };
+  }
+  return {
+    deadline: new Date(Date.UTC(year, 11, 31)),
+    atRiskAmount: Math.max(0, balance - NON_CONSULTANT_CARRYOVER_CAP),
+  };
 }
 
 router.post('/getVacationRisk', async (req, res) => {
@@ -843,13 +868,23 @@ router.post('/getVacationRisk', async (req, res) => {
       const bal = balances[member.bamboohr_id];
       if (!bal) return [];
       const { balance, hireDate, policyName } = bal;
-      const renewal = hireDate ? nextHireAnniversary(hireDate, today) : null;
+      const isConsultant = bamboohr.CONSULTANT_POLICY_RE.test(policyName || '');
+
+      let renewal, atRiskAmount, deadlineType;
+      if (isConsultant) {
+        renewal = hireDate ? nextHireAnniversary(hireDate, today) : null;
+        atRiskAmount = balance >= 10 ? balance : 0;
+        deadlineType = 'renewal';
+      } else {
+        ({ deadline: renewal, atRiskAmount } = vacationDeadlineInfo(balance, today));
+        deadlineType = 'forfeiture';
+      }
       const renewalDate = renewal ? renewal.toISOString().slice(0, 10) : null;
       const daysUntilRenewal = renewal
         ? Math.ceil((renewal - today) / (1000 * 60 * 60 * 24))
         : null;
-      const atRisk = balance >= 10 && daysUntilRenewal !== null && daysUntilRenewal <= 90;
-      return [{ memberId: member.id, memberName: member.name, balance: Math.round(balance * 10) / 10, hireDate, renewalDate, daysUntilRenewal, policyName, atRisk }];
+      const atRisk = atRiskAmount > 0 && daysUntilRenewal !== null && daysUntilRenewal <= 90;
+      return [{ memberId: member.id, memberName: member.name, balance: Math.round(balance * 10) / 10, hireDate, renewalDate, daysUntilRenewal, policyName, atRisk, deadlineType }];
     });
     result.sort((a, b) => b.balance - a.balance);
     res.json({ data: { members: result } });
@@ -860,3 +895,4 @@ router.post('/getVacationRisk', async (req, res) => {
 });
 
 module.exports = router;
+module.exports._internal = { vacationDeadlineInfo, nextHireAnniversary };
