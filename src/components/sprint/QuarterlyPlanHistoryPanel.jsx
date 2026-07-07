@@ -1183,7 +1183,6 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
         team_name: actuals.team?.name ?? null,
         days_per_sp: daysPerSp,
         qa_days_per_sp: qaDaysPerSp,
-        qa_effort_percent: actuals.team?.qa_effort_percent ?? 0,
         jira_base_url: jiraBaseUrl ?? null,
         date_start: actuals.dateRange?.start ?? null,
         date_end: actuals.dateRange?.end ?? null,

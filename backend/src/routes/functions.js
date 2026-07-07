@@ -438,10 +438,9 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
     }
 
     // QA discipline members — issues directly assigned to one of these convert
-    // fully at the QA rate; everything else gets the implicit QA effort overlay below.
+    // fully at the QA rate; every other issue converts at the Dev rate.
     const qaMembers = await prisma.teamMember.findMany({ where: { team_id: teamId, discipline: 'QA' } });
     const qaNames = new Set(qaMembers.map(m => (m.name || '').trim().toLowerCase()).filter(Boolean));
-    const qaEffortPercent = typeof team.qa_effort_percent === 'number' ? team.qa_effort_percent : 0;
 
     const dateRange = jira.getQuarterDateRange(quarter);
     if (!dateRange) return res.status(400).json({ error: `Cannot parse quarter: ${quarter}` });
@@ -639,13 +638,12 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
           };
         }
         // Issues directly assigned to a QA-discipline member convert fully at the
-        // QA rate; every other issue converts at the Dev rate, plus an implicit
-        // QA effort overlay (a % of its SP, representing untracked QA testing time).
+        // QA rate; every other issue converts at the Dev rate.
         const isQaAssignee = !!issue.assignee && qaNames.has(issue.assignee.trim().toLowerCase());
         groups[gKey].epics[eKey].count++;
         groups[gKey].epics[eKey].storyPoints += issue.storyPoints;
         groups[gKey].epics[eKey].devSP += isQaAssignee ? 0 : issue.storyPoints;
-        groups[gKey].epics[eKey].qaSP += isQaAssignee ? issue.storyPoints : issue.storyPoints * qaEffortPercent;
+        groups[gKey].epics[eKey].qaSP += isQaAssignee ? issue.storyPoints : 0;
       });
 
       return Object.values(groups)
@@ -677,7 +675,6 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
           jira_project_key: project,
           days_per_sp: team.days_per_sp ?? 1,
           qa_days_per_sp: team.qa_days_per_sp ?? 1,
-          qa_effort_percent: qaEffortPercent,
         },
         dateRange,
         storyPointsField: spField,
@@ -722,7 +719,7 @@ router.post('/fetchQuarterlyJiraActuals', requireAuth, async (req, res) => {
 // dedicated review page renders an immutable record without re-querying Jira.
 router.post('/saveQuarterlyComparison', requireAuth, async (req, res) => {
   try {
-    const { quarter, team_id, team_name, days_per_sp, qa_days_per_sp, qa_effort_percent, jira_base_url, date_start, date_end, has_initial, rows, excluded, summary } = req.body;
+    const { quarter, team_id, team_name, days_per_sp, qa_days_per_sp, jira_base_url, date_start, date_end, has_initial, rows, excluded, summary } = req.body;
     if (!quarter || !team_id || !Array.isArray(rows)) {
       return res.status(400).json({ error: 'quarter, team_id and rows are required' });
     }
@@ -735,7 +732,6 @@ router.post('/saveQuarterlyComparison', requireAuth, async (req, res) => {
       team_name: team_name || null,
       days_per_sp: typeof days_per_sp === 'number' ? days_per_sp : 1,
       qa_days_per_sp: typeof qa_days_per_sp === 'number' ? qa_days_per_sp : 1,
-      qa_effort_percent: typeof qa_effort_percent === 'number' ? qa_effort_percent : 0,
       jira_base_url: jira_base_url || null,
       date_start: date_start || null,
       date_end: date_end || null,
