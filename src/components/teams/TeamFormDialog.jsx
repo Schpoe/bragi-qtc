@@ -15,13 +15,21 @@ function toHex(color) {
 }
 
 export default function TeamFormDialog({ open, onOpenChange, team, onSave }) {
-  const [form, setForm] = useState({ name: "", description: "", color: "#3b82f6", jira_project_key: "", days_per_sp: "1" });
+  const [form, setForm] = useState({ name: "", description: "", color: "#3b82f6", jira_project_key: "", days_per_sp: "1", qa_days_per_sp: "1", qa_effort_percent: "0" });
 
   useEffect(() => {
     if (team) {
-      setForm({ name: team.name, description: team.description || "", color: toHex(team.color), jira_project_key: team.jira_project_key || "", days_per_sp: String(team.days_per_sp ?? 1) });
+      setForm({
+        name: team.name,
+        description: team.description || "",
+        color: toHex(team.color),
+        jira_project_key: team.jira_project_key || "",
+        days_per_sp: String(team.days_per_sp ?? 1),
+        qa_days_per_sp: String(team.qa_days_per_sp ?? 1),
+        qa_effort_percent: String(Math.round((team.qa_effort_percent ?? 0) * 100)),
+      });
     } else {
-      setForm({ name: "", description: "", color: "#3b82f6", jira_project_key: "", days_per_sp: "1" });
+      setForm({ name: "", description: "", color: "#3b82f6", jira_project_key: "", days_per_sp: "1", qa_days_per_sp: "1", qa_effort_percent: "0" });
     }
   }, [team, open]);
 
@@ -29,7 +37,11 @@ export default function TeamFormDialog({ open, onOpenChange, team, onSave }) {
     if (!form.name.trim()) return;
     const parsed = parseFloat(form.days_per_sp);
     const days_per_sp = isNaN(parsed) || parsed <= 0 ? 1 : parsed;
-    onSave({ ...form, days_per_sp });
+    const qaParsed = parseFloat(form.qa_days_per_sp);
+    const qa_days_per_sp = isNaN(qaParsed) || qaParsed <= 0 ? 1 : qaParsed;
+    const percentParsed = parseFloat(form.qa_effort_percent);
+    const qa_effort_percent = isNaN(percentParsed) ? 0 : Math.min(Math.max(percentParsed, 0), 100) / 100;
+    onSave({ ...form, days_per_sp, qa_days_per_sp, qa_effort_percent });
     onOpenChange(false);
   };
 
@@ -76,6 +88,35 @@ export default function TeamFormDialog({ open, onOpenChange, team, onSave }) {
             />
             <p className="text-xs text-muted-foreground">
               Converts delivered story points to days for plan-vs-actuals (1 SP = {form.days_per_sp || "1"} day{(form.days_per_sp || "1") === "1" ? "" : "s"}).
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>QA days per story point</Label>
+            <Input
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={form.qa_days_per_sp}
+              onChange={(e) => setForm({ ...form, qa_days_per_sp: e.target.value })}
+              placeholder="1"
+            />
+            <p className="text-xs text-muted-foreground">
+              Rate used for issues directly assigned to a QA team member (1 SP = {form.qa_days_per_sp || "1"} day{(form.qa_days_per_sp || "1") === "1" ? "" : "s"}).
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Implicit QA effort on other tickets (%)</Label>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              value={form.qa_effort_percent}
+              onChange={(e) => setForm({ ...form, qa_effort_percent: e.target.value })}
+              placeholder="0"
+            />
+            <p className="text-xs text-muted-foreground">
+              Extra QA days added on top of every other issue, at the QA rate above — covers testing effort not tracked as separate tickets.
             </p>
           </div>
         </div>

@@ -5,12 +5,33 @@
 const round1 = (n) => Math.round((n || 0) * 10) / 10;
 
 /**
- * @param {Array} rows - comparison rows (category, initialDays, currentDays, completedSP, inProgressSP, ...)
- * @param {number} daysPerSp - team factor converting story points to days
- * @param {{count?: number, storyPoints?: number}} [excluded] - cancelled totals
+ * Converts a row's SP for a given state ("completed"/"inProgress") to days. Uses the
+ * row's per-role split (e.g. completedDevSP/completedQaSP) when present, applying
+ * daysPerSp/qaDaysPerSp separately; otherwise falls back to applying daysPerSp to the
+ * plain <state>SP total (legacy behavior, e.g. for snapshots captured before the QA
+ * rate existed). Shared by summarizeComparison and any UI that needs the same
+ * per-row days figure it produces internally.
  */
-export function summarizeComparison(rows = [], daysPerSp = 1, excluded = null) {
-  const spToDays = (sp) => round1((sp || 0) * daysPerSp);
+export function rowDaysFor(r, state, daysPerSp = 1, qaDaysPerSp = daysPerSp) {
+  const devSP = r[`${state}DevSP`];
+  const qaSP = r[`${state}QaSP`];
+  if (devSP != null || qaSP != null) {
+    return round1((devSP || 0) * daysPerSp + (qaSP || 0) * qaDaysPerSp);
+  }
+  return round1((r[`${state}SP`] || 0) * daysPerSp);
+}
+
+/**
+ * @param {Array} rows - comparison rows (category, initialDays, currentDays, completedSP, inProgressSP, ...).
+ *   Rows may optionally carry completedDevSP/completedQaSP and inProgressDevSP/inProgressQaSP — a per-role
+ *   split of the SP total, used to apply daysPerSp/qaDaysPerSp separately. Rows without the split (e.g. older
+ *   finalized snapshots) fall back to applying daysPerSp to the plain completedSP/inProgressSP total.
+ * @param {number} daysPerSp - team factor converting Developer story points to days
+ * @param {{count?: number, storyPoints?: number}} [excluded] - cancelled totals
+ * @param {number} [qaDaysPerSp] - team factor converting QA story points to days (defaults to daysPerSp)
+ */
+export function summarizeComparison(rows = [], daysPerSp = 1, excluded = null, qaDaysPerSp = daysPerSp) {
+  const rowDays = (r, state) => rowDaysFor(r, state, daysPerSp, qaDaysPerSp);
   const sum = (arr, f) => round1(arr.reduce((s, r) => s + (f(r) || 0), 0));
 
   const planned          = rows.filter(r => r.category === "planned" || r.category === "planned-no-prod");
@@ -20,12 +41,12 @@ export function summarizeComparison(rows = [], daysPerSp = 1, excluded = null) {
   const plannedInitial = sum(planned, r => r.initialDays);
   const plannedCurrent = sum(planned, r => r.currentDays);
 
-  const deliveredPlanned  = sum(planned, r => spToDays(r.completedSP));
-  const inProgPlanned     = sum(planned, r => spToDays(r.inProgressSP));
-  const deliveredUnplProd = sum(unplannedProd, r => spToDays(r.completedSP));
-  const inProgUnplProd    = sum(unplannedProd, r => spToDays(r.inProgressSP));
-  const deliveredUnplNon  = sum(unplannedNonProd, r => spToDays(r.completedSP));
-  const inProgUnplNon     = sum(unplannedNonProd, r => spToDays(r.inProgressSP));
+  const deliveredPlanned  = sum(planned, r => rowDays(r, "completed"));
+  const inProgPlanned     = sum(planned, r => rowDays(r, "inProgress"));
+  const deliveredUnplProd = sum(unplannedProd, r => rowDays(r, "completed"));
+  const inProgUnplProd    = sum(unplannedProd, r => rowDays(r, "inProgress"));
+  const deliveredUnplNon  = sum(unplannedNonProd, r => rowDays(r, "completed"));
+  const inProgUnplNon     = sum(unplannedNonProd, r => rowDays(r, "inProgress"));
 
   const totalDelivered  = round1(deliveredPlanned + deliveredUnplProd + deliveredUnplNon);
   const totalInProgress = round1(inProgPlanned + inProgUnplProd + inProgUnplNon);
@@ -43,8 +64,8 @@ export function summarizeComparison(rows = [], daysPerSp = 1, excluded = null) {
   // unplanned PROD (5-6) and non-PROD (7-8) are the extra work on top.
   // Capacity buckets (planned, no PROD link — e.g. "Time Off") are NOT counted as a
   // delivery gap; they're planned days with no Jira delivery by nature.
-  const dlv = (r) => spToDays(r.completedSP);
-  const ip  = (r) => spToDays(r.inProgressSP);
+  const dlv = (r) => rowDays(r, "completed");
+  const ip  = (r) => rowDays(r, "inProgress");
   const prodPlanned     = rows.filter(r => r.category === "planned");
   const capacityPlanned = rows.filter(r => r.category === "planned-no-prod");
   const buckets = {

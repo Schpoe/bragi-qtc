@@ -5,7 +5,7 @@ import { bragiQTC } from "@/api/bragiQTCClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { canManageAllocations } from "@/lib/permissions";
 import JiraLink from "@/components/shared/JiraLink";
-import { summarizeComparison, COMPARISON_BUCKETS } from "@/lib/quarterly-comparison";
+import { summarizeComparison, rowDaysFor, COMPARISON_BUCKETS } from "@/lib/quarterly-comparison";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -354,7 +354,7 @@ function VersionsTab({ quarter, teamId, teamName, user, members, workAreas, quar
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations, workAreaSelections, jiraProjectKey, daysPerSp = 1 }) {
+export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, user, members, workAreas, quarterlyAllocations, workAreaSelections, jiraProjectKey, daysPerSp = 1, qaDaysPerSp = 1 }) {
   const [open, setOpen] = useState(false);
 
   const { data: allHistory = [], isLoading } = useQuery({
@@ -622,6 +622,7 @@ export default function QuarterlyPlanHistoryPanel({ quarter, teamId, teamName, u
                 quarterlyAllocations={quarterlyAllocations}
                 workAreas={workAreas}
                 daysPerSp={daysPerSp}
+                qaDaysPerSp={qaDaysPerSp}
               />
             </Tabs>
           </CardContent>
@@ -740,11 +741,9 @@ export function ComparisonDonut({ buckets, height = 260 }) {
   );
 }
 
-export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, hasInitial, quarter, teamName }) {
+export function PlanDeliverySummary({ rows, daysPerSp, qaDaysPerSp = daysPerSp, jiraBaseUrl, actuals, hasInitial, quarter, teamName }) {
   const exportRef = useRef(null);
   const [exporting, setExporting] = useState(false);
-
-  const spToDays = (sp) => Math.round((sp || 0) * daysPerSp * 10) / 10;
 
   const {
     planned, unplannedProd, unplannedNonProd,
@@ -755,7 +754,7 @@ export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, has
     totalDelivered, totalInProgress, totalUnplanned, totalActivity,
     excludedCount, excludedSP,
     deliveryPct, unplannedPct, plannedNotDelivered, buckets,
-  } = summarizeComparison(rows, daysPerSp, actuals?.excluded);
+  } = summarizeComparison(rows, daysPerSp, actuals?.excluded, qaDaysPerSp);
 
   const bucketRows = (arr, withPlan) => arr
     .map(r => ({
@@ -764,8 +763,8 @@ export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, has
       name: r.prodName,
       role: r.role,
       plannedDays: withPlan ? (r.initialDays ?? null) : null,
-      deliveredDays: spToDays(r.completedSP),
-      inProgressDays: spToDays(r.inProgressSP),
+      deliveredDays: rowDaysFor(r, "completed", daysPerSp, qaDaysPerSp),
+      inProgressDays: rowDaysFor(r, "inProgress", daysPerSp, qaDaysPerSp),
       completedSP: r.completedSP ?? 0,
       inProgressSP: r.inProgressSP ?? 0,
       completedCount: r.completedCount ?? 0,
@@ -778,7 +777,7 @@ export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, has
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = [
       ["Plan vs Delivered", quarter, teamName].map(esc).join(","),
-      [`Conversion: 1 SP = ${daysPerSp} day(s)`].map(esc).join(","),
+      [`Conversion: 1 SP = ${daysPerSp} day(s) (Dev), ${qaDaysPerSp} day(s) (QA)`].map(esc).join(","),
       [],
       ["Metric", "Days"].map(esc).join(","),
       ["Planned (initial)", plannedInitial].map(esc).join(","),
@@ -900,7 +899,9 @@ export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, has
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">Plan vs Delivered — Summary</p>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">1 SP = {daysPerSp} day{daysPerSp === 1 ? "" : "s"}</span>
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+            1 SP = {daysPerSp} day{daysPerSp === 1 ? "" : "s"}{qaDaysPerSp !== daysPerSp ? ` · QA: ${qaDaysPerSp} day${qaDaysPerSp === 1 ? "" : "s"}` : ""}
+          </span>
           <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={exportCSV}>
             <Download className="w-3 h-3" /> CSV
           </Button>
@@ -990,7 +991,7 @@ export function PlanDeliverySummary({ rows, daysPerSp, jiraBaseUrl, actuals, has
 
 // ── Plan vs Actuals comparison table ─────────────────────────────────────────
 
-function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocations, workAreas, quarter, daysPerSp = 1, jiraBaseUrl, teamId }) {
+function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocations, workAreas, quarter, daysPerSp = 1, qaDaysPerSp = daysPerSp, jiraBaseUrl, teamId }) {
   const rows = useMemo(() => {
     if (!actuals) return [];
 
@@ -1069,8 +1070,8 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
     // Build Jira actuals per groupKey
     const jiraByProd = {};
     const FIELD = {
-      completed:  { sp: 'completedSP',  count: 'completedCount' },
-      inProgress: { sp: 'inProgressSP', count: 'inProgressCount' },
+      completed:  { sp: 'completedSP',  count: 'completedCount', dev: 'completedDevSP',  qa: 'completedQaSP' },
+      inProgress: { sp: 'inProgressSP', count: 'inProgressCount', dev: 'inProgressDevSP', qa: 'inProgressQaSP' },
       excluded:   { sp: 'excludedSP',   count: 'excludedCount' },
     };
     const addJira = (byProd, field) => {
@@ -1078,10 +1079,12 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
       (byProd || []).forEach(p => {
         const key  = p.groupKey || p.prodKey || p.prodName || '__none__';
         const name = p.prodName || 'Not assigned to PROD';
-        if (!jiraByProd[key]) jiraByProd[key] = { prodKey: p.prodKey || null, prodName: name, isProd: !!p.isProd, isEpic: !!p.isEpic, completedSP: 0, inProgressSP: 0, excludedSP: 0, completedCount: 0, inProgressCount: 0, excludedCount: 0 };
+        if (!jiraByProd[key]) jiraByProd[key] = { prodKey: p.prodKey || null, prodName: name, isProd: !!p.isProd, isEpic: !!p.isEpic, completedSP: 0, inProgressSP: 0, excludedSP: 0, completedCount: 0, inProgressCount: 0, excludedCount: 0, completedDevSP: 0, completedQaSP: 0, inProgressDevSP: 0, inProgressQaSP: 0 };
         p.epics.forEach(e => {
           jiraByProd[key][f.sp]    += e.storyPoints;
           jiraByProd[key][f.count] += e.count;
+          if (f.dev) jiraByProd[key][f.dev] += e.devSP || 0;
+          if (f.qa)  jiraByProd[key][f.qa]  += e.qaSP || 0;
         });
       });
     };
@@ -1128,6 +1131,10 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
         completedCount: jira?.completedCount ?? 0,
         inProgressCount:jira?.inProgressCount ?? 0,
         excludedCount:  jira?.excludedCount  ?? 0,
+        completedDevSP:   jira?.completedDevSP   ?? null,
+        completedQaSP:    jira?.completedQaSP    ?? null,
+        inProgressDevSP:  jira?.inProgressDevSP  ?? null,
+        inProgressQaSP:   jira?.inProgressQaSP   ?? null,
       };
     }).sort((a, b) => {
       const order = { planned: 0, 'unplanned': 1, 'epic-only': 2, 'unassigned': 3, 'planned-no-prod': 4 };
@@ -1150,9 +1157,6 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
 
   const hasInitial = rows.some(r => r.category === 'planned');
 
-  // SP → days conversion (per-team factor). Round to 1 decimal for display.
-  const spToDays = (sp) => Math.round((sp || 0) * daysPerSp * 10) / 10;
-
   // Chart data — limit to top 15, story points converted to days via the team factor
   const chartData = rows
     .filter(r => r.category !== 'planned-no-prod')
@@ -1163,21 +1167,23 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
       fullName: r.prodName,
       planned: r.initialDays ?? 0,
       current: r.currentDays ?? 0,
-      done: spToDays(r.completedSP),
-      inProgress: spToDays(r.inProgressSP),
+      done: rowDaysFor(r, "completed", daysPerSp, qaDaysPerSp),
+      inProgress: rowDaysFor(r, "inProgress", daysPerSp, qaDaysPerSp),
       category: r.category,
     }));
 
   const doFinalize = async () => {
     setFinalizing(true);
     try {
-      const s = summarizeComparison(rows, daysPerSp, actuals.excluded);
+      const s = summarizeComparison(rows, daysPerSp, actuals.excluded, qaDaysPerSp);
       const { planned, unplannedProd, unplannedNonProd, ...summary } = s;
       await bragiQTC.functions.invoke("saveQuarterlyComparison", {
         quarter,
         team_id: teamId,
         team_name: actuals.team?.name ?? null,
         days_per_sp: daysPerSp,
+        qa_days_per_sp: qaDaysPerSp,
+        qa_effort_percent: actuals.team?.qa_effort_percent ?? 0,
         jira_base_url: jiraBaseUrl ?? null,
         date_start: actuals.dateRange?.start ?? null,
         date_end: actuals.dateRange?.end ?? null,
@@ -1237,6 +1243,7 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
       <PlanDeliverySummary
         rows={rows}
         daysPerSp={daysPerSp}
+        qaDaysPerSp={qaDaysPerSp}
         jiraBaseUrl={jiraBaseUrl}
         actuals={actuals}
         hasInitial={hasInitial}
@@ -1249,7 +1256,9 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
         <div className="rounded-lg border border-border bg-background p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold">Planned vs Delivered</p>
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">1 SP = {daysPerSp} day{daysPerSp === 1 ? "" : "s"}</span>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+              1 SP = {daysPerSp} day{daysPerSp === 1 ? "" : "s"}{qaDaysPerSp !== daysPerSp ? ` · QA: ${qaDaysPerSp} day${qaDaysPerSp === 1 ? "" : "s"}` : ""}
+            </span>
           </div>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 56 }} barCategoryGap="25%">
@@ -1306,7 +1315,7 @@ function PlanVsActualsTable({ actuals, initialPlan, members, quarterlyAllocation
 
 // ── Actuals tab ───────────────────────────────────────────────────────────────
 
-function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarterlyAllocations, workAreas = [], daysPerSp = 1 }) {
+function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarterlyAllocations, workAreas = [], daysPerSp = 1, qaDaysPerSp = 1 }) {
   const [actuals, setActuals] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1418,7 +1427,7 @@ function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarte
                 <li><strong className="text-green-700 dark:text-green-400">Completed</strong> — issues whose <em>resolution date</em> falls within the quarter. Work finished in an earlier quarter does not count, even if it was touched again this quarter.</li>
                 <li><strong className="text-blue-700 dark:text-blue-400">In Progress</strong> — open issues whose <em>status actually changed</em> during the quarter. Tickets merely touched to link a test case or add a comment only bump the "updated" date, not the status, so they are <strong>not</strong> counted.</li>
                 <li><strong className="text-muted-foreground">Cancelled</strong> — issues resolved in the quarter with a status like <code>Obsolete / Won't Do</code>; counted as neither delivered nor in progress.</li>
-                <li><strong>Days</strong> — story points are converted to days with this team's factor (<strong>1 SP = {daysPerSp} day{daysPerSp === 1 ? "" : "s"}</strong>, set on the Teams page). Planned days come from the quarterly allocations.</li>
+                <li><strong>Days</strong> — story points are converted to days with this team's factor (<strong>1 SP = {daysPerSp} day{daysPerSp === 1 ? "" : "s"}</strong> for Dev work{qaDaysPerSp !== daysPerSp ? <>, <strong>{qaDaysPerSp} day{qaDaysPerSp === 1 ? "" : "s"}</strong> for QA-assigned issues</> : null}, set on the Teams page). Planned days come from the quarterly allocations.</li>
                 <li><strong>PROD / Epic</strong> — each issue rolls up through its Epic to its PROD item (via an "implements" link or PROD parent). Genuine epics with no PROD link show as <em>Unplanned non-PROD</em>; loose work with no epic is grouped under <em>No epic / unassigned</em>.</li>
               </ul>
             </details>
@@ -1495,6 +1504,7 @@ function ActualsTab({ quarter, teamId, teamName, jiraProjectKey, members, quarte
               workAreas={workAreas}
               quarter={quarter}
               daysPerSp={daysPerSp}
+              qaDaysPerSp={qaDaysPerSp}
               jiraBaseUrl={actuals.jiraBaseUrl}
               teamId={teamId}
             />

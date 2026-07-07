@@ -22,16 +22,18 @@ model User {
 }
 
 model Team {
-  id               String   @id @default(uuid())
-  name             String
-  color            String?
-  description      String?
-  lead_id          String?
-  is_active        Boolean  @default(true)
-  jira_project_key String?
-  days_per_sp      Float    @default(1)
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  id                String   @id @default(uuid())
+  name              String
+  color             String?
+  description       String?
+  lead_id           String?
+  is_active         Boolean  @default(true)
+  jira_project_key  String?
+  days_per_sp       Float    @default(1)
+  qa_days_per_sp    Float    @default(1)
+  qa_effort_percent Float    @default(0)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
 }
 
 model TeamMember {
@@ -153,6 +155,8 @@ model QuarterlyComparisonSnapshot {
   team_id           String
   team_name         String?
   days_per_sp       Float    @default(1)
+  qa_days_per_sp    Float    @default(1)
+  qa_effort_percent Float    @default(0)
   jira_base_url     String?
   date_start        String?
   date_end          String?

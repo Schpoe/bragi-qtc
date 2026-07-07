@@ -17,7 +17,7 @@ import PageHeader from "../components/shared/PageHeader";
 import EmptyState from "../components/shared/EmptyState";
 import JiraLink from "@/components/shared/JiraLink";
 import { ComparisonDonut } from "../components/sprint/QuarterlyPlanHistoryPanel";
-import { summarizeComparison, COMPARISON_BUCKETS } from "@/lib/quarterly-comparison";
+import { summarizeComparison, rowDaysFor, COMPARISON_BUCKETS } from "@/lib/quarterly-comparison";
 
 const round1 = (n) => Math.round((n || 0) * 10) / 10;
 
@@ -100,6 +100,7 @@ function mergeRows(scope) {
   const map = new Map();
   scope.forEach(({ snap }) => {
     const factor = snap.days_per_sp ?? 1;
+    const qaFactor = snap.qa_days_per_sp ?? 1;
     (Array.isArray(snap.rows) ? snap.rows : []).forEach(r => {
       const mk = `${r.category}::${r.prodKey || r.key}`;
       if (!map.has(mk)) {
@@ -112,8 +113,8 @@ function mergeRows(scope) {
       }
       const m = map.get(mk);
       m.plannedDays    += r.initialDays || 0;
-      m.deliveredDays  += (r.completedSP || 0) * factor;
-      m.inProgressDays += (r.inProgressSP || 0) * factor;
+      m.deliveredDays  += rowDaysFor(r, "completed", factor, qaFactor);
+      m.inProgressDays += rowDaysFor(r, "inProgress", factor, qaFactor);
       m.completedSP    += r.completedSP || 0;
       m.inProgressSP   += r.inProgressSP || 0;
       m.completedCount += r.completedCount || 0;
@@ -170,7 +171,7 @@ export default function QuarterlyReview() {
   );
 
   const summaries = useMemo(
-    () => forQuarter.map(s => ({ snap: s, sm: summarizeComparison(Array.isArray(s.rows) ? s.rows : [], s.days_per_sp ?? 1, s.excluded) })),
+    () => forQuarter.map(s => ({ snap: s, sm: summarizeComparison(Array.isArray(s.rows) ? s.rows : [], s.days_per_sp ?? 1, s.excluded, s.qa_days_per_sp ?? 1) })),
     [forQuarter],
   );
 

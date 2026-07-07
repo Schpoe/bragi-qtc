@@ -412,6 +412,7 @@ export default function QuarterlyPlanning() {
               teamName={teams.find(t => t.id === effectiveTeamId)?.name ?? ""}
               jiraProjectKey={teams.find(t => t.id === effectiveTeamId)?.jira_project_key ?? null}
               daysPerSp={teams.find(t => t.id === effectiveTeamId)?.days_per_sp ?? 1}
+              qaDaysPerSp={teams.find(t => t.id === effectiveTeamId)?.qa_days_per_sp ?? 1}
               user={user}
               members={teamMembers}
               workAreas={quarterlyWorkAreas}
