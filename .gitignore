@@ -34,3 +34,7 @@ dist-ssr
 *.sql.bak
 *.dump
 .env
+
+# Python (mcp-server)
+__pycache__/
+*.pyc
